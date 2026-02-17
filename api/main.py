@@ -2,7 +2,7 @@
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -12,6 +12,7 @@ from schemas import (
     CategoryCreate,
     CategoryResponse,
     TaskCreate,
+    TaskReorder,
     TaskResponse,
     TaskUpdate,
 )
@@ -36,6 +37,7 @@ def _task_response(task: Task) -> TaskResponse:
         status=task.status,
         category_id=task.category_id,
         category_name=task.category.name if task.category else None,
+        position=task.position,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -108,7 +110,7 @@ async def list_tasks(
     session: AsyncSession = Depends(get_session),
 ) -> list[TaskResponse]:
     """List all tasks, optionally filtered by status and/or category."""
-    stmt = select(Task).options(selectinload(Task.category)).order_by(Task.created_at.desc())
+    stmt = select(Task).options(selectinload(Task.category)).order_by(Task.position.asc())
     if status is not None:
         stmt = stmt.where(Task.status == status)
     if category_id is not None:
@@ -122,16 +124,41 @@ async def create_task(
     body: TaskCreate,
     session: AsyncSession = Depends(get_session),
 ) -> TaskResponse:
-    """Create a new task."""
+    """Create a new task. New tasks are placed at the top (position 0)."""
     if body.category_id is not None:
         cat = await session.get(Category, body.category_id)
         if cat is None:
             raise HTTPException(status_code=404, detail="Category not found")
-    task = Task(**body.model_dump())
+    # Shift all existing tasks down by 1 to make room at position 0
+    await session.execute(update(Task).values(position=Task.position + 1))
+    task = Task(**body.model_dump(), position=0)
     session.add(task)
     await session.commit()
     task = await _get_task_with_category(session, task.id)
     return _task_response(task)
+
+
+@app.put("/tasks/reorder", response_model=list[TaskResponse])
+async def reorder_tasks(
+    body: TaskReorder,
+    session: AsyncSession = Depends(get_session),
+) -> list[TaskResponse]:
+    """Reorder tasks. Accepts an ordered list of task IDs; positions are assigned to match."""
+    for position, task_id in enumerate(body.task_ids):
+        result = await session.execute(select(Task).where(Task.id == task_id))
+        task = result.scalar_one_or_none()
+        if task is None:
+            raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+        task.position = position
+    await session.commit()
+    stmt = (
+        select(Task)
+        .options(selectinload(Task.category))
+        .where(Task.id.in_(body.task_ids))
+        .order_by(Task.position.asc())
+    )
+    result = await session.execute(stmt)
+    return [_task_response(t) for t in result.scalars().all()]
 
 
 @app.get("/tasks/{task_id}", response_model=TaskResponse)

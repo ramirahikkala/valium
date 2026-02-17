@@ -47,6 +47,7 @@ class Task(Base):
         default=TaskStatus.pending,
         server_default=TaskStatus.pending.value,
     )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     category_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("categories.id", ondelete="SET NULL"), nullable=True
     )

@@ -151,6 +151,8 @@
       : "";
 
     li.innerHTML =
+      '<span class="drag-handle" aria-label="Drag to reorder">&#x2630;</span>' +
+      '<div class="task-content">' +
       '<div class="task-header">' +
       '<span class="task-title">' +
       escapeHtml(task.title) +
@@ -176,6 +178,7 @@
       '<button type="button" class="btn btn-icon" data-action="edit" aria-label="Edit task">Edit</button>' +
       '<button type="button" class="btn btn-danger" data-action="delete" aria-label="Delete task">Delete</button>' +
       "</div>" +
+      "</div>" +
       "</div>";
 
     return li;
@@ -185,6 +188,31 @@
     var div = document.createElement("div");
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+  }
+
+  var sortableInstance = null;
+
+  function initSortable() {
+    if (sortableInstance) {
+      sortableInstance.destroy();
+    }
+    sortableInstance = new Sortable(taskListEl, {
+      handle: ".drag-handle",
+      animation: 150,
+      ghostClass: "sortable-ghost",
+      onEnd: function () {
+        var items = taskListEl.querySelectorAll(".task-item");
+        var ids = [];
+        items.forEach(function (item) {
+          ids.push(parseInt(item.dataset.id, 10));
+        });
+        apiFetch(API_BASE + "/reorder", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ task_ids: ids }),
+        });
+      },
+    });
   }
 
   function renderTasks(tasks) {
@@ -201,6 +229,7 @@
     tasks.forEach(function (task) {
       taskListEl.appendChild(createTaskElement(task));
     });
+    initSortable();
   }
 
   // ---------- Data loading ----------

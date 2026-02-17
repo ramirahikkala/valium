@@ -41,6 +41,12 @@ class TaskUpdate(BaseModel):
     category_id: int | None = None
 
 
+class TaskReorder(BaseModel):
+    """Schema for reordering tasks by providing an ordered list of task IDs."""
+
+    task_ids: list[int]
+
+
 class TaskResponse(BaseModel):
     """Schema returned for a single task."""
 
@@ -52,5 +58,6 @@ class TaskResponse(BaseModel):
     status: TaskStatus
     category_id: int | None
     category_name: str | None = None
+    position: int
     created_at: datetime
     updated_at: datetime

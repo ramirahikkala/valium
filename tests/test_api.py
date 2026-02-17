@@ -191,6 +191,55 @@ def test_filter_tasks_by_category(client: httpx.Client, category: dict) -> None:
     client.delete(f"/tasks/{task2_id}")
 
 
+# ---------- Reorder / Position ----------
+
+
+def test_new_task_at_top(client: httpx.Client) -> None:
+    """Newly created tasks should appear at position 0 (top of list)."""
+    resp1 = client.post("/tasks", json={"title": "First"})
+    resp2 = client.post("/tasks", json={"title": "Second"})
+    id1, id2 = resp1.json()["id"], resp2.json()["id"]
+
+    tasks = client.get("/tasks").json()
+    # Second task should be first in the list (position 0)
+    assert tasks[0]["id"] == id2
+    assert tasks[0]["position"] == 0
+    # First task should be second (position 1)
+    first_task = next(t for t in tasks if t["id"] == id1)
+    assert first_task["position"] == 1
+
+    # cleanup
+    client.delete(f"/tasks/{id1}")
+    client.delete(f"/tasks/{id2}")
+
+
+def test_reorder_tasks(client: httpx.Client) -> None:
+    """PUT /tasks/reorder should update positions to match the given order."""
+    r1 = client.post("/tasks", json={"title": "A"})
+    r2 = client.post("/tasks", json={"title": "B"})
+    r3 = client.post("/tasks", json={"title": "C"})
+    id1, id2, id3 = r1.json()["id"], r2.json()["id"], r3.json()["id"]
+
+    # Reorder: put id1 first, id3 second, id2 third
+    resp = client.put("/tasks/reorder", json={"task_ids": [id1, id3, id2]})
+    assert resp.status_code == 200
+
+    tasks = client.get("/tasks").json()
+    order = [t["id"] for t in tasks if t["id"] in (id1, id2, id3)]
+    assert order == [id1, id3, id2]
+
+    # cleanup
+    client.delete(f"/tasks/{id1}")
+    client.delete(f"/tasks/{id2}")
+    client.delete(f"/tasks/{id3}")
+
+
+def test_reorder_invalid_task_id(client: httpx.Client) -> None:
+    """PUT /tasks/reorder with a non-existent task ID should return 404."""
+    resp = client.put("/tasks/reorder", json={"task_ids": [999999]})
+    assert resp.status_code == 404
+
+
 def test_delete_category_nullifies_task(client: httpx.Client) -> None:
     """Deleting a category should set category_id to null on associated tasks."""
     cat_resp = client.post("/categories", json={"name": "Ephemeral"})
