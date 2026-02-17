@@ -6,15 +6,25 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from auth import (
+    GOOGLE_CLIENT_ID,
+    create_jwt,
+    get_current_user,
+    verify_google_token,
+)
 from database import get_session
-from models import Category, Task, TaskStatus
+from models import List, Task, TaskStatus, User
 from schemas import (
-    CategoryCreate,
-    CategoryResponse,
+    AuthConfigResponse,
+    AuthRequest,
+    AuthResponse,
+    ListCreate,
+    ListResponse,
     TaskCreate,
     TaskReorder,
     TaskResponse,
     TaskUpdate,
+    UserResponse,
 )
 
 app = FastAPI(title="Valium", description="A simple todo API")
@@ -29,14 +39,14 @@ app.add_middleware(
 
 
 def _task_response(task: Task) -> TaskResponse:
-    """Build a TaskResponse with the category_name resolved."""
+    """Build a TaskResponse with the list_name resolved."""
     return TaskResponse(
         id=task.id,
         title=task.title,
         description=task.description,
         status=task.status,
-        category_id=task.category_id,
-        category_name=task.category.name if task.category else None,
+        list_id=task.list_id,
+        list_name=task.list.name if task.list else None,
         position=task.position,
         created_at=task.created_at,
         updated_at=task.updated_at,
@@ -49,72 +59,155 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
-# ---------- Categories ----------
+# ---------- Auth ----------
 
 
-@app.get("/categories", response_model=list[CategoryResponse])
-async def list_categories(
+@app.get("/auth/config", response_model=AuthConfigResponse)
+async def auth_config() -> AuthConfigResponse:
+    """Return the Google client ID so the frontend can initialize GIS."""
+    return AuthConfigResponse(client_id=GOOGLE_CLIENT_ID)
+
+
+@app.post("/auth/google", response_model=AuthResponse)
+async def google_sign_in(
+    body: AuthRequest,
     session: AsyncSession = Depends(get_session),
-) -> list[Category]:
-    """List all categories."""
-    result = await session.execute(select(Category).order_by(Category.name))
+) -> AuthResponse:
+    """Exchange a Google ID token for a JWT session token."""
+    idinfo = verify_google_token(body.credential)
+    google_id = idinfo["sub"]
+    email = idinfo.get("email", "")
+    name = idinfo.get("name", "")
+    picture = idinfo.get("picture")
+
+    # Find or create user
+    result = await session.execute(select(User).where(User.google_id == google_id))
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(google_id=google_id, email=email, name=name, picture=picture)
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+
+        # Auto-create default "My Tasks" list for new users
+        default_list = List(name="My Tasks", user_id=user.id)
+        session.add(default_list)
+        await session.commit()
+    else:
+        # Update profile info on each login
+        user.email = email
+        user.name = name
+        user.picture = picture
+        await session.commit()
+
+    token = create_jwt(user.id)
+    return AuthResponse(
+        token=token,
+        user=UserResponse(
+            id=user.id,
+            email=user.email,
+            name=user.name,
+            picture=user.picture,
+        ),
+    )
+
+
+@app.get("/auth/me", response_model=UserResponse)
+async def get_me(
+    current_user: User = Depends(get_current_user),
+) -> UserResponse:
+    """Return the current authenticated user's info."""
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        name=current_user.name,
+        picture=current_user.picture,
+    )
+
+
+# ---------- Lists ----------
+
+
+async def _verify_list_ownership(session: AsyncSession, list_id: int, user: User) -> List:
+    """Load a list and verify the current user owns it. Raises 404 if not found/owned."""
+    lst = await session.get(List, list_id)
+    if lst is None or lst.user_id != user.id:
+        raise HTTPException(status_code=404, detail="List not found")
+    return lst
+
+
+@app.get("/lists", response_model=list[ListResponse])
+async def list_lists(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[List]:
+    """List all lists belonging to the current user."""
+    result = await session.execute(
+        select(List).where(List.user_id == current_user.id).order_by(List.name)
+    )
     return list(result.scalars().all())
 
 
-@app.post("/categories", response_model=CategoryResponse, status_code=201)
-async def create_category(
-    body: CategoryCreate,
+@app.post("/lists", response_model=ListResponse, status_code=201)
+async def create_list(
+    body: ListCreate,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> Category:
-    """Create a new category. Name must be unique."""
+) -> List:
+    """Create a new list for the current user. Name must be unique per user."""
     existing = await session.execute(
-        select(Category).where(Category.name == body.name)
+        select(List).where(List.user_id == current_user.id, List.name == body.name)
     )
     if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="Category name already exists")
-    category = Category(name=body.name)
-    session.add(category)
+        raise HTTPException(status_code=409, detail="List name already exists")
+    lst = List(name=body.name, user_id=current_user.id)
+    session.add(lst)
     await session.commit()
-    await session.refresh(category)
-    return category
+    await session.refresh(lst)
+    return lst
 
 
-@app.delete("/categories/{category_id}", status_code=204)
-async def delete_category(
-    category_id: int,
+@app.delete("/lists/{list_id}", status_code=204)
+async def delete_list(
+    list_id: int,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> None:
-    """Delete a category. Tasks in this category will have category_id set to null."""
-    category = await session.get(Category, category_id)
-    if category is None:
-        raise HTTPException(status_code=404, detail="Category not found")
-    await session.delete(category)
+    """Delete a list. Tasks in this list will have list_id set to null."""
+    lst = await _verify_list_ownership(session, list_id, current_user)
+    await session.delete(lst)
     await session.commit()
 
 
 # ---------- Tasks ----------
 
 
-async def _get_task_with_category(session: AsyncSession, task_id: int) -> Task | None:
-    """Load a task with its category relationship eagerly loaded."""
+async def _get_task_with_list(session: AsyncSession, task_id: int) -> Task | None:
+    """Load a task with its list relationship eagerly loaded."""
     result = await session.execute(
-        select(Task).options(selectinload(Task.category)).where(Task.id == task_id)
+        select(Task).options(selectinload(Task.list)).where(Task.id == task_id)
     )
     return result.scalar_one_or_none()
 
 
 @app.get("/tasks", response_model=list[TaskResponse])
 async def list_tasks(
+    list_id: int = Query(..., description="Filter tasks by list"),
     status: TaskStatus | None = Query(None),
-    category_id: int | None = Query(None),
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[TaskResponse]:
-    """List all tasks, optionally filtered by status and/or category."""
-    stmt = select(Task).options(selectinload(Task.category)).order_by(Task.position.asc())
+    """List tasks for a given list, optionally filtered by status."""
+    await _verify_list_ownership(session, list_id, current_user)
+    stmt = (
+        select(Task)
+        .options(selectinload(Task.list))
+        .where(Task.list_id == list_id)
+        .order_by(Task.position.asc())
+    )
     if status is not None:
         stmt = stmt.where(Task.status == status)
-    if category_id is not None:
-        stmt = stmt.where(Task.category_id == category_id)
     result = await session.execute(stmt)
     return [_task_response(t) for t in result.scalars().all()]
 
@@ -122,38 +215,42 @@ async def list_tasks(
 @app.post("/tasks", response_model=TaskResponse, status_code=201)
 async def create_task(
     body: TaskCreate,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> TaskResponse:
-    """Create a new task. New tasks are placed at the top (position 0)."""
-    if body.category_id is not None:
-        cat = await session.get(Category, body.category_id)
-        if cat is None:
-            raise HTTPException(status_code=404, detail="Category not found")
-    # Shift all existing tasks down by 1 to make room at position 0
-    await session.execute(update(Task).values(position=Task.position + 1))
+    """Create a new task in the specified list. New tasks are placed at the top (position 0)."""
+    await _verify_list_ownership(session, body.list_id, current_user)
+
+    # Shift existing tasks in the same list down by 1 to make room at position 0
+    await session.execute(
+        update(Task).where(Task.list_id == body.list_id).values(position=Task.position + 1)
+    )
     task = Task(**body.model_dump(), position=0)
     session.add(task)
     await session.commit()
-    task = await _get_task_with_category(session, task.id)
+    task = await _get_task_with_list(session, task.id)
     return _task_response(task)
 
 
 @app.put("/tasks/reorder", response_model=list[TaskResponse])
 async def reorder_tasks(
     body: TaskReorder,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[TaskResponse]:
     """Reorder tasks. Accepts an ordered list of task IDs; positions are assigned to match."""
     for position, task_id in enumerate(body.task_ids):
-        result = await session.execute(select(Task).where(Task.id == task_id))
-        task = result.scalar_one_or_none()
+        task = await _get_task_with_list(session, task_id)
         if task is None:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+        # Verify user owns the list this task belongs to
+        if task.list_id is not None:
+            await _verify_list_ownership(session, task.list_id, current_user)
         task.position = position
     await session.commit()
     stmt = (
         select(Task)
-        .options(selectinload(Task.category))
+        .options(selectinload(Task.list))
         .where(Task.id.in_(body.task_ids))
         .order_by(Task.position.asc())
     )
@@ -164,12 +261,16 @@ async def reorder_tasks(
 @app.get("/tasks/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: int,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> TaskResponse:
     """Get a single task by ID."""
-    task = await _get_task_with_category(session, task_id)
+    task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    # Verify ownership through the list
+    if task.list_id is not None:
+        await _verify_list_ownership(session, task.list_id, current_user)
     return _task_response(task)
 
 
@@ -177,32 +278,40 @@ async def get_task(
 async def update_task(
     task_id: int,
     body: TaskUpdate,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> TaskResponse:
     """Update an existing task."""
-    task = await session.get(Task, task_id)
+    task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    # Verify ownership through current list
+    if task.list_id is not None:
+        await _verify_list_ownership(session, task.list_id, current_user)
     update_data = body.model_dump(exclude_unset=True)
-    if "category_id" in update_data and update_data["category_id"] is not None:
-        cat = await session.get(Category, update_data["category_id"])
-        if cat is None:
-            raise HTTPException(status_code=404, detail="Category not found")
+    # If moving to a different list, verify ownership of the target list
+    if "list_id" in update_data and update_data["list_id"] is not None:
+        await _verify_list_ownership(session, update_data["list_id"], current_user)
     for field, value in update_data.items():
         setattr(task, field, value)
     await session.commit()
-    task = await _get_task_with_category(session, task_id)
+    session.expire(task)
+    task = await _get_task_with_list(session, task_id)
     return _task_response(task)
 
 
 @app.delete("/tasks/{task_id}", status_code=204)
 async def delete_task(
     task_id: int,
+    current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a task by ID."""
-    task = await session.get(Task, task_id)
+    task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
+    # Verify ownership through the list
+    if task.list_id is not None:
+        await _verify_list_ownership(session, task.list_id, current_user)
     await session.delete(task)
     await session.commit()

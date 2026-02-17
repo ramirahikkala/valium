@@ -1,9 +1,82 @@
 """Integration tests for the Valium API (requires running docker-compose stack)."""
 
 import httpx
+import jwt
 import pytest
 
 BASE_URL = "http://localhost:8000"
+JWT_SECRET = "dev-secret-change-in-production"
+
+
+def _create_test_user(client: httpx.Client, suffix: str = "") -> tuple[dict, str]:
+    """Create a test user directly in the DB via a helper and return (user, token).
+
+    Since we can't do a real Google Sign-In in tests, we create a user by
+    calling the API with a mock approach. Instead, we'll create the user
+    via direct DB insertion through a test-only endpoint or by mocking.
+
+    For integration tests against the running stack, we use the JWT directly
+    by crafting a token for a known test user.
+    """
+    # We need to create a user in the DB first. Since there's no test-only
+    # endpoint, we'll use a raw SQL approach via the health endpoint pattern.
+    # Actually, for integration tests, let's create a lightweight test helper.
+    #
+    # The simplest approach: create user via POST to a test setup endpoint,
+    # or insert directly. Since we're testing against a live stack, we'll
+    # use the DB directly via the API's internal mechanism.
+    #
+    # For now, use a helper that inserts via psycopg2 and returns a JWT.
+    import psycopg2
+
+    conn = psycopg2.connect(
+        host="localhost", port=5432, dbname="valium", user="valium", password="valium"
+    )
+    conn.autocommit = True
+    cur = conn.cursor()
+
+    google_id = f"test-google-id-{suffix or id(object())}"
+    email = f"test{suffix}@example.com"
+    name = f"Test User {suffix}"
+
+    cur.execute(
+        """INSERT INTO users (google_id, email, name)
+           VALUES (%s, %s, %s)
+           ON CONFLICT (google_id) DO UPDATE SET email = EXCLUDED.email
+           RETURNING id, email, name""",
+        (google_id, email, name),
+    )
+    user_id, db_email, db_name = cur.fetchone()
+
+    # Create default list if not exists
+    cur.execute(
+        """INSERT INTO lists (name, user_id)
+           VALUES ('My Tasks', %s)
+           ON CONFLICT ON CONSTRAINT lists_user_id_name_key DO NOTHING""",
+        (user_id,),
+    )
+
+    cur.close()
+    conn.close()
+
+    token = jwt.encode({"sub": str(user_id)}, JWT_SECRET, algorithm="HS256")
+    user = {"id": user_id, "email": db_email, "name": db_name, "picture": None}
+    return user, token
+
+
+def _cleanup_test_user(user_id: int) -> None:
+    """Remove a test user and all their data from the DB."""
+    import psycopg2
+
+    conn = psycopg2.connect(
+        host="localhost", port=5432, dbname="valium", user="valium", password="valium"
+    )
+    conn.autocommit = True
+    cur = conn.cursor()
+    # CASCADE will delete lists and tasks via FK
+    cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
+    cur.close()
+    conn.close()
 
 
 @pytest.fixture()
@@ -14,23 +87,70 @@ def client() -> httpx.Client:
 
 
 @pytest.fixture()
-def task(client: httpx.Client) -> dict:
-    """Create a throwaway task and clean it up after the test."""
-    resp = client.post("/tasks", json={"title": "Test task", "description": "auto"})
-    assert resp.status_code == 201
-    data = resp.json()
-    yield data
-    client.delete(f"/tasks/{data['id']}")
+def auth_client() -> httpx.Client:
+    """Return an authenticated httpx client with a test user."""
+    user, token = _create_test_user(httpx.Client(), suffix="main")
+    with httpx.Client(
+        base_url=BASE_URL,
+        timeout=10,
+        headers={"Authorization": f"Bearer {token}"},
+    ) as c:
+        c._test_user = user  # type: ignore[attr-defined]
+        c._test_token = token  # type: ignore[attr-defined]
+        yield c
+    _cleanup_test_user(user["id"])
 
 
 @pytest.fixture()
-def category(client: httpx.Client) -> dict:
-    """Create a throwaway category and clean it up after the test."""
-    resp = client.post("/categories", json={"name": f"TestCat-{id(object())}"})
+def auth_client_b() -> httpx.Client:
+    """Return a second authenticated httpx client (different user) for scoping tests."""
+    user, token = _create_test_user(httpx.Client(), suffix="other")
+    with httpx.Client(
+        base_url=BASE_URL,
+        timeout=10,
+        headers={"Authorization": f"Bearer {token}"},
+    ) as c:
+        c._test_user = user  # type: ignore[attr-defined]
+        c._test_token = token  # type: ignore[attr-defined]
+        yield c
+    _cleanup_test_user(user["id"])
+
+
+@pytest.fixture()
+def default_list(auth_client: httpx.Client) -> dict:
+    """Return the default 'My Tasks' list for the test user."""
+    resp = auth_client.get("/lists")
+    assert resp.status_code == 200
+    lists = resp.json()
+    my_tasks = [l for l in lists if l["name"] == "My Tasks"]
+    assert len(my_tasks) == 1
+    return my_tasks[0]
+
+
+@pytest.fixture()
+def task(auth_client: httpx.Client, default_list: dict) -> dict:
+    """Create a throwaway task and clean it up after the test."""
+    resp = auth_client.post(
+        "/tasks",
+        json={"title": "Test task", "description": "auto", "list_id": default_list["id"]},
+    )
     assert resp.status_code == 201
     data = resp.json()
     yield data
-    client.delete(f"/categories/{data['id']}")
+    auth_client.delete(f"/tasks/{data['id']}")
+
+
+@pytest.fixture()
+def test_list(auth_client: httpx.Client) -> dict:
+    """Create a throwaway list and clean it up after the test."""
+    resp = auth_client.post("/lists", json={"name": f"TestList-{id(object())}"})
+    assert resp.status_code == 201
+    data = resp.json()
+    yield data
+    auth_client.delete(f"/lists/{data['id']}")
+
+
+# ---------- Health ----------
 
 
 def test_health(client: httpx.Client) -> None:
@@ -39,168 +159,240 @@ def test_health(client: httpx.Client) -> None:
     assert resp.json() == {"status": "ok"}
 
 
-def test_create_task(client: httpx.Client) -> None:
-    resp = client.post("/tasks", json={"title": "Buy groceries"})
-    assert resp.status_code == 201
+# ---------- Auth ----------
+
+
+def test_auth_config(client: httpx.Client) -> None:
+    """GET /auth/config should return a client_id."""
+    resp = client.get("/auth/config")
+    assert resp.status_code == 200
+    assert "client_id" in resp.json()
+
+
+def test_auth_me(auth_client: httpx.Client) -> None:
+    """GET /auth/me should return the current user."""
+    resp = auth_client.get("/auth/me")
+    assert resp.status_code == 200
     data = resp.json()
-    assert data["title"] == "Buy groceries"
-    assert data["status"] == "pending"
+    assert data["email"] == auth_client._test_user["email"]  # type: ignore[attr-defined]
     assert "id" in data
-    # cleanup
-    client.delete(f"/tasks/{data['id']}")
 
 
-def test_create_task_missing_title(client: httpx.Client) -> None:
-    resp = client.post("/tasks", json={})
-    assert resp.status_code == 422
+def test_auth_me_no_token(client: httpx.Client) -> None:
+    """GET /auth/me without a token should return 401/403."""
+    resp = client.get("/auth/me")
+    assert resp.status_code in (401, 403)
 
 
-def test_list_tasks(client: httpx.Client, task: dict) -> None:
-    resp = client.get("/tasks")
+def test_auth_invalid_token(client: httpx.Client) -> None:
+    """GET /auth/me with an invalid token should return 401."""
+    resp = client.get("/auth/me", headers={"Authorization": "Bearer invalid-token"})
+    assert resp.status_code == 401
+
+
+# ---------- Lists ----------
+
+
+def test_list_lists(auth_client: httpx.Client, default_list: dict) -> None:
+    """GET /lists should include the default 'My Tasks' list."""
+    resp = auth_client.get("/lists")
     assert resp.status_code == 200
-    tasks = resp.json()
-    assert any(t["id"] == task["id"] for t in tasks)
+    lists = resp.json()
+    assert any(l["id"] == default_list["id"] for l in lists)
 
 
-def test_list_tasks_filter_status(client: httpx.Client, task: dict) -> None:
-    resp = client.get("/tasks", params={"status": "pending"})
-    assert resp.status_code == 200
-    assert all(t["status"] == "pending" for t in resp.json())
-
-
-def test_get_task(client: httpx.Client, task: dict) -> None:
-    resp = client.get(f"/tasks/{task['id']}")
-    assert resp.status_code == 200
-    assert resp.json()["id"] == task["id"]
-
-
-def test_get_task_not_found(client: httpx.Client) -> None:
-    resp = client.get("/tasks/999999")
-    assert resp.status_code == 404
-
-
-def test_update_task(client: httpx.Client, task: dict) -> None:
-    resp = client.put(f"/tasks/{task['id']}", json={"status": "done"})
-    assert resp.status_code == 200
-    assert resp.json()["status"] == "done"
-
-
-def test_delete_task(client: httpx.Client) -> None:
-    create_resp = client.post("/tasks", json={"title": "To be deleted"})
-    task_id = create_resp.json()["id"]
-    resp = client.delete(f"/tasks/{task_id}")
-    assert resp.status_code == 204
-    # verify gone
-    assert client.get(f"/tasks/{task_id}").status_code == 404
-
-
-# ---------- Category CRUD ----------
-
-
-def test_create_category(client: httpx.Client) -> None:
+def test_create_list(auth_client: httpx.Client) -> None:
+    """POST /lists should create a new list."""
     name = f"TestCreate-{id(object())}"
-    resp = client.post("/categories", json={"name": name})
+    resp = auth_client.post("/lists", json={"name": name})
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == name
     assert "id" in data
     # cleanup
-    client.delete(f"/categories/{data['id']}")
+    auth_client.delete(f"/lists/{data['id']}")
 
 
-def test_create_category_duplicate(client: httpx.Client, category: dict) -> None:
-    resp = client.post("/categories", json={"name": category["name"]})
+def test_create_list_duplicate(auth_client: httpx.Client, test_list: dict) -> None:
+    """POST /lists with a duplicate name should return 409."""
+    resp = auth_client.post("/lists", json={"name": test_list["name"]})
     assert resp.status_code == 409
 
 
-def test_list_categories(client: httpx.Client, category: dict) -> None:
-    resp = client.get("/categories")
-    assert resp.status_code == 200
-    cats = resp.json()
-    assert any(c["id"] == category["id"] for c in cats)
-
-
-def test_delete_category(client: httpx.Client) -> None:
-    create_resp = client.post("/categories", json={"name": "ToDelete"})
-    cat_id = create_resp.json()["id"]
-    resp = client.delete(f"/categories/{cat_id}")
+def test_delete_list(auth_client: httpx.Client) -> None:
+    """DELETE /lists/{id} should remove the list."""
+    create_resp = auth_client.post("/lists", json={"name": "ToDelete"})
+    list_id = create_resp.json()["id"]
+    resp = auth_client.delete(f"/lists/{list_id}")
     assert resp.status_code == 204
 
 
-def test_delete_category_not_found(client: httpx.Client) -> None:
-    resp = client.delete("/categories/999999")
+def test_delete_list_not_found(auth_client: httpx.Client) -> None:
+    """DELETE /lists/{id} for a non-existent list should return 404."""
+    resp = auth_client.delete("/lists/999999")
     assert resp.status_code == 404
 
 
-# ---------- Tasks with categories ----------
+# ---------- Tasks ----------
 
 
-def test_create_task_with_category(client: httpx.Client, category: dict) -> None:
-    resp = client.post(
-        "/tasks",
-        json={"title": "Categorized task", "category_id": category["id"]},
+def test_create_task(auth_client: httpx.Client, default_list: dict) -> None:
+    """POST /tasks should create a task in the specified list."""
+    resp = auth_client.post(
+        "/tasks", json={"title": "Buy groceries", "list_id": default_list["id"]}
     )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["category_id"] == category["id"]
-    assert data["category_name"] == category["name"]
+    assert data["title"] == "Buy groceries"
+    assert data["status"] == "pending"
+    assert data["list_id"] == default_list["id"]
+    assert "id" in data
     # cleanup
-    client.delete(f"/tasks/{data['id']}")
+    auth_client.delete(f"/tasks/{data['id']}")
 
 
-def test_create_task_with_invalid_category(client: httpx.Client) -> None:
-    resp = client.post(
+def test_create_task_missing_title(auth_client: httpx.Client, default_list: dict) -> None:
+    """POST /tasks without a title should return 422."""
+    resp = auth_client.post("/tasks", json={"list_id": default_list["id"]})
+    assert resp.status_code == 422
+
+
+def test_create_task_missing_list_id(auth_client: httpx.Client) -> None:
+    """POST /tasks without a list_id should return 422."""
+    resp = auth_client.post("/tasks", json={"title": "No list"})
+    assert resp.status_code == 422
+
+
+def test_list_tasks(auth_client: httpx.Client, default_list: dict, task: dict) -> None:
+    """GET /tasks?list_id=X should include the created task."""
+    resp = auth_client.get("/tasks", params={"list_id": default_list["id"]})
+    assert resp.status_code == 200
+    tasks = resp.json()
+    assert any(t["id"] == task["id"] for t in tasks)
+
+
+def test_list_tasks_filter_status(
+    auth_client: httpx.Client, default_list: dict, task: dict
+) -> None:
+    """GET /tasks with status filter should only return matching tasks."""
+    resp = auth_client.get(
+        "/tasks", params={"list_id": default_list["id"], "status": "pending"}
+    )
+    assert resp.status_code == 200
+    assert all(t["status"] == "pending" for t in resp.json())
+
+
+def test_list_tasks_requires_list_id(auth_client: httpx.Client) -> None:
+    """GET /tasks without list_id should return 422."""
+    resp = auth_client.get("/tasks")
+    assert resp.status_code == 422
+
+
+def test_get_task(auth_client: httpx.Client, task: dict) -> None:
+    """GET /tasks/{id} should return the task."""
+    resp = auth_client.get(f"/tasks/{task['id']}")
+    assert resp.status_code == 200
+    assert resp.json()["id"] == task["id"]
+
+
+def test_get_task_not_found(auth_client: httpx.Client) -> None:
+    """GET /tasks/{id} for a non-existent task should return 404."""
+    resp = auth_client.get("/tasks/999999")
+    assert resp.status_code == 404
+
+
+def test_update_task(auth_client: httpx.Client, task: dict) -> None:
+    """PUT /tasks/{id} should update the task."""
+    resp = auth_client.put(f"/tasks/{task['id']}", json={"status": "done"})
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "done"
+
+
+def test_delete_task(auth_client: httpx.Client, default_list: dict) -> None:
+    """DELETE /tasks/{id} should remove the task."""
+    create_resp = auth_client.post(
+        "/tasks", json={"title": "To be deleted", "list_id": default_list["id"]}
+    )
+    task_id = create_resp.json()["id"]
+    resp = auth_client.delete(f"/tasks/{task_id}")
+    assert resp.status_code == 204
+    # verify gone
+    assert auth_client.get(f"/tasks/{task_id}").status_code == 404
+
+
+# ---------- Tasks with lists ----------
+
+
+def test_create_task_with_list(auth_client: httpx.Client, test_list: dict) -> None:
+    """POST /tasks with a specific list_id should assign the task to that list."""
+    resp = auth_client.post(
         "/tasks",
-        json={"title": "Bad category", "category_id": 999999},
+        json={"title": "Listed task", "list_id": test_list["id"]},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["list_id"] == test_list["id"]
+    assert data["list_name"] == test_list["name"]
+    # cleanup
+    auth_client.delete(f"/tasks/{data['id']}")
+
+
+def test_create_task_with_invalid_list(auth_client: httpx.Client) -> None:
+    """POST /tasks with a non-existent list_id should return 404."""
+    resp = auth_client.post(
+        "/tasks",
+        json={"title": "Bad list", "list_id": 999999},
     )
     assert resp.status_code == 404
 
 
-def test_update_task_category(client: httpx.Client, task: dict, category: dict) -> None:
-    resp = client.put(
+def test_update_task_list(
+    auth_client: httpx.Client, task: dict, test_list: dict
+) -> None:
+    """PUT /tasks/{id} can move a task to a different list."""
+    resp = auth_client.put(
         f"/tasks/{task['id']}",
-        json={"category_id": category["id"]},
+        json={"list_id": test_list["id"]},
     )
     assert resp.status_code == 200
-    assert resp.json()["category_id"] == category["id"]
-    assert resp.json()["category_name"] == category["name"]
+    assert resp.json()["list_id"] == test_list["id"]
+    assert resp.json()["list_name"] == test_list["name"]
 
 
-def test_filter_tasks_by_category(client: httpx.Client, category: dict) -> None:
-    # Create a task with category
-    resp = client.post(
+def test_filter_tasks_by_list(auth_client: httpx.Client, test_list: dict) -> None:
+    """GET /tasks?list_id=X should only return tasks in that list."""
+    # Create a task in the test list
+    resp = auth_client.post(
         "/tasks",
-        json={"title": "Filtered task", "category_id": category["id"]},
+        json={"title": "In test list", "list_id": test_list["id"]},
     )
     task_id = resp.json()["id"]
 
-    # Create a task without category
-    resp2 = client.post("/tasks", json={"title": "No category task"})
-    task2_id = resp2.json()["id"]
-
-    # Filter by category
-    resp = client.get("/tasks", params={"category_id": category["id"]})
+    # Filter by that list
+    resp = auth_client.get("/tasks", params={"list_id": test_list["id"]})
     assert resp.status_code == 200
     tasks = resp.json()
-    assert all(t["category_id"] == category["id"] for t in tasks)
+    assert all(t["list_id"] == test_list["id"] for t in tasks)
     assert any(t["id"] == task_id for t in tasks)
-    assert not any(t["id"] == task2_id for t in tasks)
 
     # cleanup
-    client.delete(f"/tasks/{task_id}")
-    client.delete(f"/tasks/{task2_id}")
+    auth_client.delete(f"/tasks/{task_id}")
 
 
 # ---------- Reorder / Position ----------
 
 
-def test_new_task_at_top(client: httpx.Client) -> None:
+def test_new_task_at_top(auth_client: httpx.Client, default_list: dict) -> None:
     """Newly created tasks should appear at position 0 (top of list)."""
-    resp1 = client.post("/tasks", json={"title": "First"})
-    resp2 = client.post("/tasks", json={"title": "Second"})
+    resp1 = auth_client.post(
+        "/tasks", json={"title": "First", "list_id": default_list["id"]}
+    )
+    resp2 = auth_client.post(
+        "/tasks", json={"title": "Second", "list_id": default_list["id"]}
+    )
     id1, id2 = resp1.json()["id"], resp2.json()["id"]
 
-    tasks = client.get("/tasks").json()
+    tasks = auth_client.get("/tasks", params={"list_id": default_list["id"]}).json()
     # Second task should be first in the list (position 0)
     assert tasks[0]["id"] == id2
     assert tasks[0]["position"] == 0
@@ -209,56 +401,134 @@ def test_new_task_at_top(client: httpx.Client) -> None:
     assert first_task["position"] == 1
 
     # cleanup
-    client.delete(f"/tasks/{id1}")
-    client.delete(f"/tasks/{id2}")
+    auth_client.delete(f"/tasks/{id1}")
+    auth_client.delete(f"/tasks/{id2}")
 
 
-def test_reorder_tasks(client: httpx.Client) -> None:
+def test_reorder_tasks(auth_client: httpx.Client, default_list: dict) -> None:
     """PUT /tasks/reorder should update positions to match the given order."""
-    r1 = client.post("/tasks", json={"title": "A"})
-    r2 = client.post("/tasks", json={"title": "B"})
-    r3 = client.post("/tasks", json={"title": "C"})
+    r1 = auth_client.post(
+        "/tasks", json={"title": "A", "list_id": default_list["id"]}
+    )
+    r2 = auth_client.post(
+        "/tasks", json={"title": "B", "list_id": default_list["id"]}
+    )
+    r3 = auth_client.post(
+        "/tasks", json={"title": "C", "list_id": default_list["id"]}
+    )
     id1, id2, id3 = r1.json()["id"], r2.json()["id"], r3.json()["id"]
 
     # Reorder: put id1 first, id3 second, id2 third
-    resp = client.put("/tasks/reorder", json={"task_ids": [id1, id3, id2]})
+    resp = auth_client.put("/tasks/reorder", json={"task_ids": [id1, id3, id2]})
     assert resp.status_code == 200
 
-    tasks = client.get("/tasks").json()
+    tasks = auth_client.get("/tasks", params={"list_id": default_list["id"]}).json()
     order = [t["id"] for t in tasks if t["id"] in (id1, id2, id3)]
     assert order == [id1, id3, id2]
 
     # cleanup
-    client.delete(f"/tasks/{id1}")
-    client.delete(f"/tasks/{id2}")
-    client.delete(f"/tasks/{id3}")
+    auth_client.delete(f"/tasks/{id1}")
+    auth_client.delete(f"/tasks/{id2}")
+    auth_client.delete(f"/tasks/{id3}")
 
 
-def test_reorder_invalid_task_id(client: httpx.Client) -> None:
+def test_reorder_invalid_task_id(auth_client: httpx.Client) -> None:
     """PUT /tasks/reorder with a non-existent task ID should return 404."""
-    resp = client.put("/tasks/reorder", json={"task_ids": [999999]})
+    resp = auth_client.put("/tasks/reorder", json={"task_ids": [999999]})
     assert resp.status_code == 404
 
 
-def test_delete_category_nullifies_task(client: httpx.Client) -> None:
-    """Deleting a category should set category_id to null on associated tasks."""
-    cat_resp = client.post("/categories", json={"name": "Ephemeral"})
-    cat_id = cat_resp.json()["id"]
+def test_delete_list_nullifies_task(auth_client: httpx.Client) -> None:
+    """Deleting a list should set list_id to null on associated tasks."""
+    list_resp = auth_client.post("/lists", json={"name": "Ephemeral"})
+    list_id = list_resp.json()["id"]
 
-    task_resp = client.post(
+    task_resp = auth_client.post(
         "/tasks",
-        json={"title": "Will lose category", "category_id": cat_id},
+        json={"title": "Will lose list", "list_id": list_id},
     )
     task_id = task_resp.json()["id"]
 
-    # Delete category
-    client.delete(f"/categories/{cat_id}")
+    # Delete list
+    auth_client.delete(f"/lists/{list_id}")
 
-    # Check task
-    resp = client.get(f"/tasks/{task_id}")
+    # Check task — it should still exist but with null list
+    resp = auth_client.get(f"/tasks/{task_id}")
     assert resp.status_code == 200
-    assert resp.json()["category_id"] is None
-    assert resp.json()["category_name"] is None
+    assert resp.json()["list_id"] is None
+    assert resp.json()["list_name"] is None
 
     # cleanup
-    client.delete(f"/tasks/{task_id}")
+    auth_client.delete(f"/tasks/{task_id}")
+
+
+# ---------- User scoping ----------
+
+
+def test_user_cannot_see_other_users_lists(
+    auth_client: httpx.Client, auth_client_b: httpx.Client
+) -> None:
+    """User A should not see User B's lists."""
+    # User B creates a list
+    resp = auth_client_b.post("/lists", json={"name": "Secret List"})
+    assert resp.status_code == 201
+    secret_list_id = resp.json()["id"]
+
+    # User A lists their lists — should not include User B's
+    resp = auth_client.get("/lists")
+    assert resp.status_code == 200
+    assert not any(l["id"] == secret_list_id for l in resp.json())
+
+    # cleanup
+    auth_client_b.delete(f"/lists/{secret_list_id}")
+
+
+def test_user_cannot_access_other_users_tasks(
+    auth_client: httpx.Client, auth_client_b: httpx.Client
+) -> None:
+    """User A should not be able to access User B's tasks via list_id."""
+    # Get User B's default list
+    resp = auth_client_b.get("/lists")
+    b_list = resp.json()[0]
+
+    # User B creates a task
+    resp = auth_client_b.post(
+        "/tasks", json={"title": "B's task", "list_id": b_list["id"]}
+    )
+    assert resp.status_code == 201
+    task_id = resp.json()["id"]
+
+    # User A tries to list tasks in User B's list — should get 404
+    resp = auth_client.get("/tasks", params={"list_id": b_list["id"]})
+    assert resp.status_code == 404
+
+    # User A tries to get User B's task directly — should get 404
+    resp = auth_client.get(f"/tasks/{task_id}")
+    assert resp.status_code == 404
+
+    # cleanup
+    auth_client_b.delete(f"/tasks/{task_id}")
+
+
+def test_user_cannot_create_task_in_other_users_list(
+    auth_client: httpx.Client, auth_client_b: httpx.Client
+) -> None:
+    """User A should not be able to create tasks in User B's lists."""
+    # Get User B's default list
+    resp = auth_client_b.get("/lists")
+    b_list = resp.json()[0]
+
+    # User A tries to create a task in User B's list
+    resp = auth_client.post(
+        "/tasks", json={"title": "Sneaky task", "list_id": b_list["id"]}
+    )
+    assert resp.status_code == 404
+
+
+def test_unauthenticated_cannot_access_tasks(client: httpx.Client) -> None:
+    """Unauthenticated requests to task endpoints should return 401/403."""
+    resp = client.get("/tasks", params={"list_id": 1})
+    assert resp.status_code in (401, 403)
+
+    resp = client.get("/lists")
+    assert resp.status_code in (401, 403)

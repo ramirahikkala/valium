@@ -22,6 +22,8 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://valium:valium@db:5432/valium
       API_PORT: "8000"
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
     depends_on:
       db:
         condition: service_healthy

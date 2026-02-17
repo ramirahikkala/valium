@@ -2,14 +2,31 @@
   "use strict";
 
   var API_BASE = "/api/tasks";
-  var API_CATEGORIES = "/api/categories";
+  var API_LISTS = "/api/lists";
+  var API_AUTH = "/api/auth";
+
+  // DOM elements — login
+  var loginScreen = document.getElementById("login-screen");
+  var loginError = document.getElementById("login-error");
+  var googleSigninBtn = document.getElementById("google-signin-btn");
+
+  // DOM elements — app
+  var appContainer = document.getElementById("app-container");
+  var userAvatar = document.getElementById("user-avatar");
+  var userName = document.getElementById("user-name");
+  var signOutBtn = document.getElementById("sign-out-btn");
+
+  // DOM elements — lists
+  var listTabs = document.getElementById("list-tabs");
+  var addListForm = document.getElementById("add-list-form");
+  var newListNameInput = document.getElementById("new-list-name");
+
+  // DOM elements — tasks
   var taskListEl = document.getElementById("task-list");
   var emptyStateEl = document.getElementById("empty-state");
   var errorEl = document.getElementById("error-message");
   var addForm = document.getElementById("add-task-form");
   var filterButtons = document.querySelectorAll(".btn-filter");
-  var categoryFilterEl = document.getElementById("category-filter");
-  var taskCategoryEl = document.getElementById("task-category");
 
   // Edit modal elements
   var editModal = document.getElementById("edit-modal");
@@ -18,12 +35,15 @@
   var editTitleInput = document.getElementById("edit-title");
   var editDescInput = document.getElementById("edit-description");
   var editStatusInput = document.getElementById("edit-status");
-  var editCategoryInput = document.getElementById("edit-category");
+  var editListInput = document.getElementById("edit-list");
   var editCancelBtn = document.getElementById("edit-cancel");
 
+  // State
+  var authToken = localStorage.getItem("authToken") || null;
+  var currentUser = null;
+  var lists = [];
+  var currentListId = null;
   var currentFilter = "all";
-  var currentCategoryFilter = "";
-  var categories = [];
 
   // ---------- API helpers ----------
 
@@ -41,7 +61,17 @@
 
   async function apiFetch(url, options) {
     try {
+      options = options || {};
+      options.headers = options.headers || {};
+      if (authToken) {
+        options.headers["Authorization"] = "Bearer " + authToken;
+      }
       var res = await fetch(url, options);
+      if (res.status === 401) {
+        // Token expired or invalid — redirect to login
+        signOut();
+        return null;
+      }
       if (!res.ok) {
         var body = null;
         try {
@@ -60,36 +90,199 @@
     }
   }
 
-  // ---------- Categories ----------
+  // ---------- Auth ----------
 
-  function populateCategorySelect(selectEl, selectedId) {
-    // Keep the first "No category" / "All Categories" option
-    var firstOption = selectEl.options[0];
-    selectEl.innerHTML = "";
-    selectEl.appendChild(firstOption);
-    categories.forEach(function (cat) {
-      var opt = document.createElement("option");
-      opt.value = cat.id;
-      opt.textContent = cat.name;
-      selectEl.appendChild(opt);
-    });
-    if (selectedId !== undefined && selectedId !== null) {
-      selectEl.value = String(selectedId);
-    } else {
-      selectEl.value = "";
+  function showLogin() {
+    loginScreen.hidden = false;
+    appContainer.hidden = true;
+  }
+
+  function showApp() {
+    loginScreen.hidden = true;
+    appContainer.hidden = false;
+  }
+
+  function signOut() {
+    authToken = null;
+    currentUser = null;
+    currentListId = null;
+    lists = [];
+    localStorage.removeItem("authToken");
+    showLogin();
+    // Re-render Google button so it's clickable again
+    initGoogleSignIn();
+  }
+
+  async function handleGoogleCredential(response) {
+    try {
+      var data = await apiFetch(API_AUTH + "/google", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ credential: response.credential }),
+      });
+      if (!data) return;
+      authToken = data.token;
+      currentUser = data.user;
+      localStorage.setItem("authToken", authToken);
+      loginError.hidden = true;
+      await initApp();
+    } catch (err) {
+      loginError.textContent = "Sign-in failed: " + (err.message || "Unknown error");
+      loginError.hidden = false;
     }
   }
 
-  async function loadCategories() {
+  async function checkAuthAndInit() {
+    if (!authToken) {
+      showLogin();
+      return;
+    }
     try {
-      categories = await apiFetch(API_CATEGORIES);
-      populateCategorySelect(categoryFilterEl, currentCategoryFilter);
-      populateCategorySelect(taskCategoryEl);
-      populateCategorySelect(editCategoryInput);
+      var user = await apiFetch(API_AUTH + "/me");
+      if (!user) return; // 401 handled by apiFetch
+      currentUser = user;
+      await initApp();
+    } catch (_) {
+      showLogin();
+    }
+  }
+
+  function initGoogleSignIn() {
+    // Wait for GIS library to load
+    if (typeof google === "undefined" || !google.accounts) {
+      setTimeout(initGoogleSignIn, 200);
+      return;
+    }
+    // Fetch client ID from backend
+    fetch(API_AUTH + "/config")
+      .then(function (res) { return res.json(); })
+      .then(function (config) {
+        if (!config.client_id) {
+          loginError.textContent = "Google Client ID not configured on server";
+          loginError.hidden = false;
+          return;
+        }
+        google.accounts.id.initialize({
+          client_id: config.client_id,
+          callback: handleGoogleCredential,
+        });
+        // Clear previous button content
+        googleSigninBtn.innerHTML = "";
+        google.accounts.id.renderButton(googleSigninBtn, {
+          theme: "outline",
+          size: "large",
+          width: 280,
+          text: "signin_with",
+        });
+      })
+      .catch(function () {
+        loginError.textContent = "Could not load auth configuration";
+        loginError.hidden = false;
+      });
+  }
+
+  signOutBtn.addEventListener("click", signOut);
+
+  // ---------- Lists ----------
+
+  function renderListTabs() {
+    listTabs.innerHTML = "";
+    lists.forEach(function (lst) {
+      var tab = document.createElement("button");
+      tab.className = "list-tab" + (lst.id === currentListId ? " active" : "");
+      tab.dataset.listId = lst.id;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", lst.id === currentListId ? "true" : "false");
+      tab.textContent = lst.name;
+
+      // Delete button (don't allow deleting last list)
+      if (lists.length > 1) {
+        var delBtn = document.createElement("span");
+        delBtn.className = "list-tab-delete";
+        delBtn.textContent = "\u00d7";
+        delBtn.title = "Delete list";
+        delBtn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          if (confirm('Delete list "' + lst.name + '" and all its tasks?')) {
+            deleteList(lst.id);
+          }
+        });
+        tab.appendChild(delBtn);
+      }
+
+      tab.addEventListener("click", function () {
+        currentListId = lst.id;
+        renderListTabs();
+        loadTasks();
+      });
+
+      listTabs.appendChild(tab);
+    });
+  }
+
+  async function loadLists() {
+    try {
+      lists = await apiFetch(API_LISTS);
+      if (!lists) return;
+      // If no current list selected, pick the first one
+      if (!currentListId && lists.length > 0) {
+        currentListId = lists[0].id;
+      }
+      renderListTabs();
+      populateEditListSelect();
     } catch (_) {
       // error already shown
     }
   }
+
+  async function createList(name) {
+    try {
+      var newList = await apiFetch(API_LISTS, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      if (!newList) return;
+      currentListId = newList.id;
+      await loadLists();
+      await loadTasks();
+    } catch (_) {
+      // error already shown
+    }
+  }
+
+  async function deleteList(listId) {
+    try {
+      await apiFetch(API_LISTS + "/" + listId, { method: "DELETE" });
+      // If we deleted the current list, switch to the first available
+      if (currentListId === listId) {
+        currentListId = null;
+      }
+      await loadLists();
+      await loadTasks();
+    } catch (_) {
+      // error already shown
+    }
+  }
+
+  function populateEditListSelect() {
+    editListInput.innerHTML = "";
+    lists.forEach(function (lst) {
+      var opt = document.createElement("option");
+      opt.value = lst.id;
+      opt.textContent = lst.name;
+      editListInput.appendChild(opt);
+    });
+  }
+
+  addListForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = newListNameInput.value.trim();
+    if (!name) return;
+    createList(name).then(function () {
+      newListNameInput.value = "";
+    });
+  });
 
   // ---------- Render ----------
 
@@ -120,7 +313,7 @@
     var li = document.createElement("li");
     li.className = "task-item status-" + task.status;
     li.dataset.id = task.id;
-    li.dataset.categoryId = task.category_id || "";
+    li.dataset.listId = task.list_id || "";
 
     var statuses = ["pending", "in_progress", "done"];
     var statusButtonsHtml = statuses
@@ -144,12 +337,6 @@
       ? '<p class="task-description">' + escapeHtml(task.description) + "</p>"
       : "";
 
-    var categoryBadgeHtml = task.category_name
-      ? '<span class="category-badge">' +
-        escapeHtml(task.category_name) +
-        "</span>"
-      : "";
-
     li.innerHTML =
       '<span class="drag-handle" aria-label="Drag to reorder">&#x2630;</span>' +
       '<div class="task-content">' +
@@ -157,14 +344,11 @@
       '<span class="task-title">' +
       escapeHtml(task.title) +
       "</span>" +
-      '<div class="task-badges">' +
-      categoryBadgeHtml +
       '<span class="status-badge ' +
       task.status +
       '">' +
       statusLabel(task.status) +
       "</span>" +
-      "</div>" +
       "</div>" +
       descHtml +
       '<div class="task-meta">' +
@@ -220,9 +404,9 @@
     if (tasks.length === 0) {
       emptyStateEl.hidden = false;
       emptyStateEl.textContent =
-        currentFilter === "all" && !currentCategoryFilter
+        currentFilter === "all"
           ? "No tasks yet. Add one above!"
-          : "No tasks matching the current filters.";
+          : "No tasks matching the current filter.";
       return;
     }
     emptyStateEl.hidden = true;
@@ -235,21 +419,19 @@
   // ---------- Data loading ----------
 
   async function loadTasks() {
+    if (!currentListId) {
+      renderTasks([]);
+      return;
+    }
     hideError();
-    var params = [];
+    var params = ["list_id=" + currentListId];
     if (currentFilter !== "all") {
       params.push("status=" + encodeURIComponent(currentFilter));
     }
-    if (currentCategoryFilter) {
-      params.push("category_id=" + encodeURIComponent(currentCategoryFilter));
-    }
-    var url = API_BASE;
-    if (params.length > 0) {
-      url += "?" + params.join("&");
-    }
+    var url = API_BASE + "?" + params.join("&");
     try {
       var tasks = await apiFetch(url);
-      renderTasks(tasks);
+      if (tasks) renderTasks(tasks);
     } catch (_) {
       // error already shown
     }
@@ -257,10 +439,9 @@
 
   // ---------- Actions ----------
 
-  async function addTask(title, description, categoryId) {
-    var body = { title: title };
+  async function addTask(title, description) {
+    var body = { title: title, list_id: currentListId };
     if (description) body.description = description;
-    if (categoryId) body.category_id = parseInt(categoryId, 10);
     await apiFetch(API_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -289,9 +470,12 @@
     e.preventDefault();
     var title = document.getElementById("task-title").value.trim();
     var desc = document.getElementById("task-description").value.trim();
-    var catId = taskCategoryEl.value;
     if (!title) return;
-    addTask(title, desc, catId).then(function () {
+    if (!currentListId) {
+      showError("Please select a list first");
+      return;
+    }
+    addTask(title, desc).then(function () {
       addForm.reset();
       document.getElementById("task-title").focus();
     });
@@ -306,11 +490,6 @@
       currentFilter = btn.dataset.filter;
       loadTasks();
     });
-  });
-
-  categoryFilterEl.addEventListener("change", function () {
-    currentCategoryFilter = categoryFilterEl.value;
-    loadTasks();
   });
 
   taskListEl.addEventListener("click", function (e) {
@@ -355,8 +534,9 @@
     else statusClass = "pending";
     editStatusInput.value = statusClass;
 
-    // set category
-    populateCategorySelect(editCategoryInput, li.dataset.categoryId);
+    // set list
+    populateEditListSelect();
+    editListInput.value = li.dataset.listId || "";
 
     editModal.hidden = false;
     editTitleInput.focus();
@@ -382,18 +562,37 @@
     var title = editTitleInput.value.trim();
     var desc = editDescInput.value.trim();
     var status = editStatusInput.value;
-    var catVal = editCategoryInput.value;
-    var categoryId = catVal ? parseInt(catVal, 10) : null;
+    var listId = editListInput.value ? parseInt(editListInput.value, 10) : null;
     if (!title) return;
     updateTask(id, {
       title: title,
       description: desc,
       status: status,
-      category_id: categoryId,
+      list_id: listId,
     }).then(closeEditModal);
   });
 
-  // ---------- Init ----------
+  // ---------- App init ----------
 
-  loadCategories().then(loadTasks);
+  async function initApp() {
+    // Set user info in header
+    if (currentUser) {
+      userName.textContent = currentUser.name;
+      if (currentUser.picture) {
+        userAvatar.src = currentUser.picture;
+        userAvatar.alt = currentUser.name;
+        userAvatar.hidden = false;
+      } else {
+        userAvatar.hidden = true;
+      }
+    }
+    showApp();
+    await loadLists();
+    await loadTasks();
+  }
+
+  // ---------- Bootstrap ----------
+
+  initGoogleSignIn();
+  checkAuthAndInit();
 })();

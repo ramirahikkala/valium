@@ -7,14 +7,50 @@ from pydantic import BaseModel, ConfigDict
 from models import TaskStatus
 
 
-class CategoryCreate(BaseModel):
-    """Schema for creating a new category."""
+# ---------- Auth ----------
+
+
+class AuthRequest(BaseModel):
+    """Schema for Google Sign-In token exchange."""
+
+    credential: str
+
+
+class UserResponse(BaseModel):
+    """Schema returned for user info."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    email: str
+    name: str
+    picture: str | None
+
+
+class AuthResponse(BaseModel):
+    """Schema returned after successful authentication."""
+
+    token: str
+    user: UserResponse
+
+
+class AuthConfigResponse(BaseModel):
+    """Schema returned for auth configuration."""
+
+    client_id: str
+
+
+# ---------- Lists ----------
+
+
+class ListCreate(BaseModel):
+    """Schema for creating a new list."""
 
     name: str
 
 
-class CategoryResponse(BaseModel):
-    """Schema returned for a single category."""
+class ListResponse(BaseModel):
+    """Schema returned for a single list."""
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -23,13 +59,16 @@ class CategoryResponse(BaseModel):
     created_at: datetime
 
 
+# ---------- Tasks ----------
+
+
 class TaskCreate(BaseModel):
     """Schema for creating a new task."""
 
     title: str
     description: str | None = None
     status: TaskStatus = TaskStatus.pending
-    category_id: int | None = None
+    list_id: int
 
 
 class TaskUpdate(BaseModel):
@@ -38,7 +77,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     status: TaskStatus | None = None
-    category_id: int | None = None
+    list_id: int | None = None
 
 
 class TaskReorder(BaseModel):
@@ -56,8 +95,8 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None
     status: TaskStatus
-    category_id: int | None
-    category_name: str | None = None
+    list_id: int | None
+    list_name: str | None = None
     position: int
     created_at: datetime
     updated_at: datetime
