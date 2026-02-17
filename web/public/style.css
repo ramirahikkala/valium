@@ -195,6 +195,43 @@ select:focus {
   border-color: var(--color-primary);
 }
 
+/* ---------- Category filter ---------- */
+
+.category-filter {
+  margin-top: 0.5rem;
+}
+
+.category-filter select {
+  width: auto;
+  min-width: 160px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+}
+
+/* ---------- Category badge ---------- */
+
+.category-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.18rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #e8e0f5;
+  color: #5b4a8a;
+}
+
+.task-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
 /* ---------- Task list ---------- */
 
 .task-list {

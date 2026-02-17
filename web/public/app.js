@@ -1,23 +1,29 @@
 (function () {
   "use strict";
 
-  const API_BASE = "/api/tasks";
-  const taskListEl = document.getElementById("task-list");
-  const emptyStateEl = document.getElementById("empty-state");
-  const errorEl = document.getElementById("error-message");
-  const addForm = document.getElementById("add-task-form");
-  const filterButtons = document.querySelectorAll(".btn-filter");
+  var API_BASE = "/api/tasks";
+  var API_CATEGORIES = "/api/categories";
+  var taskListEl = document.getElementById("task-list");
+  var emptyStateEl = document.getElementById("empty-state");
+  var errorEl = document.getElementById("error-message");
+  var addForm = document.getElementById("add-task-form");
+  var filterButtons = document.querySelectorAll(".btn-filter");
+  var categoryFilterEl = document.getElementById("category-filter");
+  var taskCategoryEl = document.getElementById("task-category");
 
   // Edit modal elements
-  const editModal = document.getElementById("edit-modal");
-  const editForm = document.getElementById("edit-task-form");
-  const editIdInput = document.getElementById("edit-task-id");
-  const editTitleInput = document.getElementById("edit-title");
-  const editDescInput = document.getElementById("edit-description");
-  const editStatusInput = document.getElementById("edit-status");
-  const editCancelBtn = document.getElementById("edit-cancel");
+  var editModal = document.getElementById("edit-modal");
+  var editForm = document.getElementById("edit-task-form");
+  var editIdInput = document.getElementById("edit-task-id");
+  var editTitleInput = document.getElementById("edit-title");
+  var editDescInput = document.getElementById("edit-description");
+  var editStatusInput = document.getElementById("edit-status");
+  var editCategoryInput = document.getElementById("edit-category");
+  var editCancelBtn = document.getElementById("edit-cancel");
 
-  let currentFilter = "all";
+  var currentFilter = "all";
+  var currentCategoryFilter = "";
+  var categories = [];
 
   // ---------- API helpers ----------
 
@@ -54,6 +60,37 @@
     }
   }
 
+  // ---------- Categories ----------
+
+  function populateCategorySelect(selectEl, selectedId) {
+    // Keep the first "No category" / "All Categories" option
+    var firstOption = selectEl.options[0];
+    selectEl.innerHTML = "";
+    selectEl.appendChild(firstOption);
+    categories.forEach(function (cat) {
+      var opt = document.createElement("option");
+      opt.value = cat.id;
+      opt.textContent = cat.name;
+      selectEl.appendChild(opt);
+    });
+    if (selectedId !== undefined && selectedId !== null) {
+      selectEl.value = String(selectedId);
+    } else {
+      selectEl.value = "";
+    }
+  }
+
+  async function loadCategories() {
+    try {
+      categories = await apiFetch(API_CATEGORIES);
+      populateCategorySelect(categoryFilterEl, currentCategoryFilter);
+      populateCategorySelect(taskCategoryEl);
+      populateCategorySelect(editCategoryInput);
+    } catch (_) {
+      // error already shown
+    }
+  }
+
   // ---------- Render ----------
 
   function formatDate(dateStr) {
@@ -83,6 +120,7 @@
     var li = document.createElement("li");
     li.className = "task-item status-" + task.status;
     li.dataset.id = task.id;
+    li.dataset.categoryId = task.category_id || "";
 
     var statuses = ["pending", "in_progress", "done"];
     var statusButtonsHtml = statuses
@@ -106,16 +144,25 @@
       ? '<p class="task-description">' + escapeHtml(task.description) + "</p>"
       : "";
 
+    var categoryBadgeHtml = task.category_name
+      ? '<span class="category-badge">' +
+        escapeHtml(task.category_name) +
+        "</span>"
+      : "";
+
     li.innerHTML =
       '<div class="task-header">' +
       '<span class="task-title">' +
       escapeHtml(task.title) +
       "</span>" +
+      '<div class="task-badges">' +
+      categoryBadgeHtml +
       '<span class="status-badge ' +
       task.status +
       '">' +
       statusLabel(task.status) +
       "</span>" +
+      "</div>" +
       "</div>" +
       descHtml +
       '<div class="task-meta">' +
@@ -145,9 +192,9 @@
     if (tasks.length === 0) {
       emptyStateEl.hidden = false;
       emptyStateEl.textContent =
-        currentFilter === "all"
+        currentFilter === "all" && !currentCategoryFilter
           ? "No tasks yet. Add one above!"
-          : 'No tasks with status "' + statusLabel(currentFilter) + '".';
+          : "No tasks matching the current filters.";
       return;
     }
     emptyStateEl.hidden = true;
@@ -160,9 +207,16 @@
 
   async function loadTasks() {
     hideError();
-    var url = API_BASE;
+    var params = [];
     if (currentFilter !== "all") {
-      url += "?status=" + encodeURIComponent(currentFilter);
+      params.push("status=" + encodeURIComponent(currentFilter));
+    }
+    if (currentCategoryFilter) {
+      params.push("category_id=" + encodeURIComponent(currentCategoryFilter));
+    }
+    var url = API_BASE;
+    if (params.length > 0) {
+      url += "?" + params.join("&");
     }
     try {
       var tasks = await apiFetch(url);
@@ -174,9 +228,10 @@
 
   // ---------- Actions ----------
 
-  async function addTask(title, description) {
+  async function addTask(title, description, categoryId) {
     var body = { title: title };
     if (description) body.description = description;
+    if (categoryId) body.category_id = parseInt(categoryId, 10);
     await apiFetch(API_BASE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -205,8 +260,9 @@
     e.preventDefault();
     var title = document.getElementById("task-title").value.trim();
     var desc = document.getElementById("task-description").value.trim();
+    var catId = taskCategoryEl.value;
     if (!title) return;
-    addTask(title, desc).then(function () {
+    addTask(title, desc, catId).then(function () {
       addForm.reset();
       document.getElementById("task-title").focus();
     });
@@ -221,6 +277,11 @@
       currentFilter = btn.dataset.filter;
       loadTasks();
     });
+  });
+
+  categoryFilterEl.addEventListener("change", function () {
+    currentCategoryFilter = categoryFilterEl.value;
+    loadTasks();
   });
 
   taskListEl.addEventListener("click", function (e) {
@@ -265,6 +326,9 @@
     else statusClass = "pending";
     editStatusInput.value = statusClass;
 
+    // set category
+    populateCategorySelect(editCategoryInput, li.dataset.categoryId);
+
     editModal.hidden = false;
     editTitleInput.focus();
   }
@@ -289,13 +353,18 @@
     var title = editTitleInput.value.trim();
     var desc = editDescInput.value.trim();
     var status = editStatusInput.value;
+    var catVal = editCategoryInput.value;
+    var categoryId = catVal ? parseInt(catVal, 10) : null;
     if (!title) return;
-    updateTask(id, { title: title, description: desc, status: status }).then(
-      closeEditModal
-    );
+    updateTask(id, {
+      title: title,
+      description: desc,
+      status: status,
+      category_id: categoryId,
+    }).then(closeEditModal);
   });
 
   // ---------- Init ----------
 
-  loadTasks();
+  loadCategories().then(loadTasks);
 })();

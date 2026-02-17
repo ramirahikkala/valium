@@ -7,12 +7,29 @@ from pydantic import BaseModel, ConfigDict
 from models import TaskStatus
 
 
+class CategoryCreate(BaseModel):
+    """Schema for creating a new category."""
+
+    name: str
+
+
+class CategoryResponse(BaseModel):
+    """Schema returned for a single category."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+
+
 class TaskCreate(BaseModel):
     """Schema for creating a new task."""
 
     title: str
     description: str | None = None
     status: TaskStatus = TaskStatus.pending
+    category_id: int | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -21,6 +38,7 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     status: TaskStatus | None = None
+    category_id: int | None = None
 
 
 class TaskResponse(BaseModel):
@@ -32,5 +50,7 @@ class TaskResponse(BaseModel):
     title: str
     description: str | None
     status: TaskStatus
+    category_id: int | None
+    category_name: str | None = None
     created_at: datetime
     updated_at: datetime

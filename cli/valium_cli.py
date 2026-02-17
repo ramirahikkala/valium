@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import os
-import sys
 
 import click
 import httpx
@@ -67,6 +66,7 @@ def _print_task(task: dict) -> None:
     console.print(f"[bold]Title:[/bold]       {task['title']}")
     console.print(f"[bold]Description:[/bold] {task.get('description') or '—'}")
     console.print(f"[bold]Status:[/bold]      {_status_style(task['status'])}")
+    console.print(f"[bold]Category:[/bold]    {task.get('category_name') or '—'}")
     console.print(f"[bold]Created:[/bold]     {task['created_at']}")
     console.print(f"[bold]Updated:[/bold]     {task['updated_at']}")
 
@@ -90,11 +90,14 @@ def cli() -> None:
 @cli.command()
 @click.argument("title")
 @click.option("--desc", default=None, help="Optional task description.")
-def add(title: str, desc: str | None) -> None:
+@click.option("--category", default=None, type=int, help="Category ID to assign.")
+def add(title: str, desc: str | None, category: int | None) -> None:
     """Create a new task."""
     payload: dict = {"title": title}
     if desc is not None:
         payload["description"] = desc
+    if category is not None:
+        payload["category_id"] = category
     resp = _api("POST", "/tasks/", json=payload)
     task = resp.json()
     console.print(f"[green]Created task #{task['id']}:[/green] {task['title']}")
@@ -112,11 +115,14 @@ def add(title: str, desc: str | None) -> None:
     default=None,
     help="Filter tasks by status.",
 )
-def list_tasks(status: str | None) -> None:
-    """List tasks in a table. Optionally filter by --status."""
+@click.option("--category", default=None, type=int, help="Filter tasks by category ID.")
+def list_tasks(status: str | None, category: int | None) -> None:
+    """List tasks in a table. Optionally filter by --status or --category."""
     params: dict = {}
     if status is not None:
         params["status"] = status
+    if category is not None:
+        params["category_id"] = category
     resp = _api("GET", "/tasks/", params=params)
     tasks: list[dict] = resp.json()
 
@@ -128,6 +134,7 @@ def list_tasks(status: str | None) -> None:
     table.add_column("ID", style="cyan", justify="right")
     table.add_column("Title")
     table.add_column("Status")
+    table.add_column("Category")
     table.add_column("Created")
 
     for t in tasks:
@@ -136,6 +143,7 @@ def list_tasks(status: str | None) -> None:
             str(t["id"]),
             t["title"],
             _status_style(t["status"]),
+            t.get("category_name") or "—",
             created,
         )
 
@@ -170,8 +178,9 @@ def show(id: int) -> None:
     default=None,
     help="New status.",
 )
-def update(id: int, title: str | None, desc: str | None, status: str | None) -> None:
-    """Update a task's title, description, or status."""
+@click.option("--category", default=None, type=int, help="Category ID (0 to remove).")
+def update(id: int, title: str | None, desc: str | None, status: str | None, category: int | None) -> None:
+    """Update a task's title, description, status, or category."""
     payload: dict = {}
     if title is not None:
         payload["title"] = title
@@ -179,6 +188,8 @@ def update(id: int, title: str | None, desc: str | None, status: str | None) -> 
         payload["description"] = desc
     if status is not None:
         payload["status"] = status
+    if category is not None:
+        payload["category_id"] = category if category != 0 else None
 
     if not payload:
         err_console.print("[yellow]Nothing to update.[/yellow] Provide at least one option.")
@@ -224,6 +235,66 @@ def delete(id: int, yes: bool) -> None:
 
     _api("DELETE", f"/tasks/{id}")
     console.print(f"[red]Deleted task #{id}.[/red]")
+
+
+# ---------------------------------------------------------------------------
+# categories
+# ---------------------------------------------------------------------------
+
+
+@cli.command("categories")
+def list_categories() -> None:
+    """List all categories."""
+    resp = _api("GET", "/categories/")
+    cats: list[dict] = resp.json()
+
+    if not cats:
+        console.print("[dim]No categories found.[/dim]")
+        return
+
+    table = Table(title="Categories")
+    table.add_column("ID", style="cyan", justify="right")
+    table.add_column("Name")
+    table.add_column("Created")
+
+    for c in cats:
+        created = c["created_at"][:10] if c.get("created_at") else ""
+        table.add_row(str(c["id"]), c["name"], created)
+
+    console.print(table)
+
+
+# ---------------------------------------------------------------------------
+# add-category
+# ---------------------------------------------------------------------------
+
+
+@cli.command("add-category")
+@click.argument("name")
+def add_category(name: str) -> None:
+    """Create a new category."""
+    resp = _api("POST", "/categories/", json={"name": name})
+    cat = resp.json()
+    console.print(f"[green]Created category #{cat['id']}:[/green] {cat['name']}")
+
+
+# ---------------------------------------------------------------------------
+# delete-category
+# ---------------------------------------------------------------------------
+
+
+@cli.command("delete-category")
+@click.argument("id", type=int)
+@click.option("--yes", "-y", is_flag=True, help="Skip confirmation prompt.")
+def delete_category(id: int, yes: bool) -> None:
+    """Delete a category (tasks keep their data, category_id becomes null)."""
+    if not yes:
+        if not click.confirm(f"Delete category #{id}?"):
+            console.print("Aborted.")
+            return
+
+    _api("DELETE", f"/categories/{id}")
+    console.print(f"[red]Deleted category #{id}.[/red]")
 
 
 # ---------------------------------------------------------------------------

@@ -35,6 +35,12 @@
             rows="2"
           ></textarea>
         </div>
+        <div class="form-group">
+          <label for="task-category">Category (optional)</label>
+          <select id="task-category" name="category_id">
+            <option value="">No category</option>
+          </select>
+        </div>
         <button type="submit" class="btn btn-primary">Add Task</button>
       </form>
     </section>
@@ -45,6 +51,11 @@
         <button class="btn btn-filter" data-filter="pending">Pending</button>
         <button class="btn btn-filter" data-filter="in_progress">In Progress</button>
         <button class="btn btn-filter" data-filter="done">Done</button>
+      </div>
+      <div class="category-filter">
+        <select id="category-filter" aria-label="Filter by category">
+          <option value="">All Categories</option>
+        </select>
       </div>
     </section>
 
@@ -75,6 +86,12 @@
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
             <option value="done">Done</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-category">Category</label>
+          <select id="edit-category">
+            <option value="">No category</option>
           </select>
         </div>
         <div class="modal-actions">
