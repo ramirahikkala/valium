@@ -2,7 +2,7 @@
 
 *Your little helper for getting things done.*
 
-A todo task manager with a web UI, CLI, and REST API, backed by PostgreSQL and orchestrated with Docker Compose.
+A todo task manager with a web UI and REST API, backed by PostgreSQL and orchestrated with Docker Compose.
 
 ## Quick Start
 
@@ -22,27 +22,7 @@ docker compose up --build -d
 | Web | Node.js / Express + vanilla JS | 3000 |
 | Database | PostgreSQL 16 | 5432 |
 
-The web frontend proxies `/api/*` requests to the FastAPI backend. Both the web UI and CLI talk to the same REST API.
-
-## CLI
-
-The CLI requires Python 3.11+ with `click`, `httpx`, and `rich`:
-
-```bash
-cd cli
-uv pip install -r requirements.txt
-
-# Point at the running API
-export VALIUM_API_URL=http://localhost:8000
-
-python valium_cli.py add "Buy milk" --desc "Get 2% from the store"
-python valium_cli.py list
-python valium_cli.py list --status pending
-python valium_cli.py show 1
-python valium_cli.py update 1 --status in_progress
-python valium_cli.py done 1
-python valium_cli.py delete 1
-```
+The web frontend proxies `/api/*` requests to the FastAPI backend.
 
 ## API Endpoints
 
@@ -81,4 +61,3 @@ uv run --with httpx --with pytest pytest tests/ -v
 | `DATABASE_URL` | `postgresql+asyncpg://valium:valium@localhost:5432/valium` | API |
 | `API_PORT` | `8000` | API |
 | `API_URL` | `http://localhost:8000` | Web |
-| `VALIUM_API_URL` | `http://localhost:8000` | CLI |
