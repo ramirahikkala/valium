@@ -2,7 +2,13 @@
 
 import asyncio
 import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
+
+# Ensure the api/ directory (parent of alembic/) is on sys.path so that
+# ``from models import Base`` works when alembic is invoked from any cwd.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from alembic import context
 from sqlalchemy import pool
