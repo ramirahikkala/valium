@@ -4,9 +4,19 @@
       <stop offset="0%" stop-color="#6c7bb5"/>
       <stop offset="100%" stop-color="#a08bc0"/>
     </linearGradient>
+    <clipPath id="left">
+      <rect x="0" y="0" width="32" height="64"/>
+    </clipPath>
+    <clipPath id="right">
+      <rect x="32" y="0" width="32" height="64"/>
+    </clipPath>
   </defs>
-  <rect x="8" y="16" width="48" height="32" rx="16" fill="url(#g)"/>
-  <line x1="32" y1="16" x2="32" y2="48" stroke="#fff" stroke-width="2" stroke-dasharray="4 3"/>
-  <text x="20" y="38" font-family="sans-serif" font-size="14" font-weight="bold" fill="#fff" text-anchor="middle">V</text>
-  <circle cx="44" cy="32" r="3" fill="rgba(255,255,255,0.5)"/>
+  <g transform="rotate(-35 32 32)">
+    <!-- Full pill outline -->
+    <rect x="8" y="16" width="48" height="32" rx="16" fill="none" stroke="#6c7bb5" stroke-width="2.5"/>
+    <!-- Left half filled -->
+    <rect x="8" y="16" width="48" height="32" rx="16" fill="url(#g)" clip-path="url(#left)"/>
+    <!-- Center divider -->
+    <line x1="32" y1="16" x2="32" y2="48" stroke="#6c7bb5" stroke-width="2"/>
+  </g>
 </svg>
