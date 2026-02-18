@@ -3,12 +3,38 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(DeclarativeBase):
     """Base class for all ORM models."""
+
+
+class RecurrenceType(str, enum.Enum):
+    """Allowed recurrence types for alarms."""
+
+    none = "none"
+    daily = "daily"
+    weekly = "weekly"
+    monthly = "monthly"
+
+
+class NotificationChannel(str, enum.Enum):
+    """Supported notification channels."""
+
+    email = "email"
 
 
 class TaskStatus(str, enum.Enum):
@@ -88,3 +114,46 @@ class Task(Base):
     )
 
     list: Mapped[List | None] = relationship("List", back_populates="tasks")
+    alarms: Mapped[list["Alarm"]] = relationship(
+        "Alarm", back_populates="task", cascade="all, delete-orphan"
+    )
+
+
+class Alarm(Base):
+    """Represents an alarm/reminder attached to a task."""
+
+    __tablename__ = "alarms"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    task_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False
+    )
+    channel: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=NotificationChannel.email.value,
+        server_default=NotificationChannel.email.value,
+    )
+    alarm_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recurrence: Mapped[str] = mapped_column(
+        String(20), nullable=False, default=RecurrenceType.none.value,
+        server_default=RecurrenceType.none.value,
+    )
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    last_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    task: Mapped[Task] = relationship("Task", back_populates="alarms")
+
+    __table_args__ = (
+        UniqueConstraint("task_id", "channel", name="uq_alarm_task_channel"),
+        Index("ix_alarm_enabled_at", "enabled", "alarm_at"),
+    )

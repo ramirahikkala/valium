@@ -37,6 +37,9 @@
   var editStatusInput = document.getElementById("edit-status");
   var editListInput = document.getElementById("edit-list");
   var editCancelBtn = document.getElementById("edit-cancel");
+  var editAlarmAtInput = document.getElementById("edit-alarm-at");
+  var editAlarmRecurrenceInput = document.getElementById("edit-alarm-recurrence");
+  var editAlarmEnabledInput = document.getElementById("edit-alarm-enabled");
 
   // State
   var authToken = localStorage.getItem("authToken") || null;
@@ -333,6 +336,15 @@
       })
       .join("");
 
+    var alarmHtml = "";
+    if (task.has_alarm && task.alarm) {
+      var alarmIcon = task.alarm.enabled ? "\uD83D\uDD14" : "\uD83D\uDD15";
+      var alarmTime = formatDate(task.alarm.alarm_at);
+      var recLabel = task.alarm.recurrence !== "none" ? " (" + task.alarm.recurrence + ")" : "";
+      alarmHtml = '<span class="alarm-indicator' + (task.alarm.enabled ? "" : " disabled") +
+        '" title="Alarm: ' + alarmTime + recLabel + '">' + alarmIcon + '</span>';
+    }
+
     var descHtml = task.description
       ? '<p class="task-description">' + escapeHtml(task.description) + "</p>"
       : "";
@@ -344,6 +356,7 @@
       '<span class="task-title">' +
       escapeHtml(task.title) +
       "</span>" +
+      alarmHtml +
       '<span class="status-badge ' +
       task.status +
       '">' +
@@ -538,6 +551,26 @@
     populateEditListSelect();
     editListInput.value = li.dataset.listId || "";
 
+    // Load alarm data
+    editAlarmAtInput.value = "";
+    editAlarmRecurrenceInput.value = "none";
+    editAlarmEnabledInput.checked = true;
+
+    apiFetch(API_BASE + "/" + id + "/alarm")
+      .then(function (alarm) {
+        if (alarm) {
+          // Convert UTC ISO to local datetime-local format
+          var dt = new Date(alarm.alarm_at);
+          var local = new Date(dt.getTime() - dt.getTimezoneOffset() * 60000);
+          editAlarmAtInput.value = local.toISOString().slice(0, 16);
+          editAlarmRecurrenceInput.value = alarm.recurrence || "none";
+          editAlarmEnabledInput.checked = alarm.enabled;
+        }
+      })
+      .catch(function () {
+        // No alarm set — fields stay empty
+      });
+
     editModal.hidden = false;
     editTitleInput.focus();
   }
@@ -556,6 +589,44 @@
     if (e.key === "Escape" && !editModal.hidden) closeEditModal();
   });
 
+  async function saveAlarm(taskId) {
+    var alarmAt = editAlarmAtInput.value;
+    if (!alarmAt) {
+      // No datetime → delete alarm if it exists
+      try {
+        await apiFetch(API_BASE + "/" + taskId + "/alarm", { method: "DELETE" });
+      } catch (_) {
+        // 404 is fine — no alarm to delete
+      }
+      return;
+    }
+
+    var alarmData = {
+      alarm_at: new Date(alarmAt).toISOString(),
+      recurrence: editAlarmRecurrenceInput.value,
+      enabled: editAlarmEnabledInput.checked,
+    };
+
+    // Try PUT first (update existing), fall back to POST (create new)
+    try {
+      await apiFetch(API_BASE + "/" + taskId + "/alarm", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(alarmData),
+      });
+    } catch (_) {
+      try {
+        await apiFetch(API_BASE + "/" + taskId + "/alarm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(alarmData),
+        });
+      } catch (_) {
+        // error already shown
+      }
+    }
+  }
+
   editForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var id = editIdInput.value;
@@ -569,7 +640,9 @@
       description: desc,
       status: status,
       list_id: listId,
-    }).then(closeEditModal);
+    })
+      .then(function () { return saveAlarm(id); })
+      .then(function () { closeEditModal(); return loadTasks(); });
   });
 
   // ---------- App init ----------

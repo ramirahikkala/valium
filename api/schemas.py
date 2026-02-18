@@ -4,7 +4,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from models import TaskStatus
+from models import NotificationChannel, RecurrenceType, TaskStatus
 
 
 # ---------- Auth ----------
@@ -86,6 +86,39 @@ class TaskReorder(BaseModel):
     task_ids: list[int]
 
 
+class AlarmCreate(BaseModel):
+    """Schema for creating an alarm on a task."""
+
+    alarm_at: datetime
+    recurrence: RecurrenceType = RecurrenceType.none
+    channel: NotificationChannel = NotificationChannel.email
+    enabled: bool = True
+
+
+class AlarmUpdate(BaseModel):
+    """Schema for updating an alarm. All fields are optional."""
+
+    alarm_at: datetime | None = None
+    recurrence: RecurrenceType | None = None
+    enabled: bool | None = None
+
+
+class AlarmResponse(BaseModel):
+    """Schema returned for a single alarm."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    task_id: int
+    channel: str
+    alarm_at: datetime
+    recurrence: str
+    enabled: bool
+    last_sent_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+
 class TaskResponse(BaseModel):
     """Schema returned for a single task."""
 
@@ -98,5 +131,7 @@ class TaskResponse(BaseModel):
     list_id: int | None
     list_name: str | None = None
     position: int
+    has_alarm: bool = False
+    alarm: AlarmResponse | None = None
     created_at: datetime
     updated_at: datetime

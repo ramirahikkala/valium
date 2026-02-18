@@ -532,3 +532,136 @@ def test_unauthenticated_cannot_access_tasks(client: httpx.Client) -> None:
 
     resp = client.get("/lists")
     assert resp.status_code in (401, 403)
+
+
+# ---------- Alarms ----------
+
+
+def test_create_alarm(auth_client: httpx.Client, task: dict) -> None:
+    """POST /tasks/{id}/alarm should create an alarm."""
+    resp = auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z", "recurrence": "none"},
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["task_id"] == task["id"]
+    assert data["channel"] == "email"
+    assert data["recurrence"] == "none"
+    assert data["enabled"] is True
+    assert "id" in data
+    # cleanup
+    auth_client.delete(f"/tasks/{task['id']}/alarm")
+
+
+def test_create_alarm_duplicate(auth_client: httpx.Client, task: dict) -> None:
+    """POST /tasks/{id}/alarm twice should return 409."""
+    auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z"},
+    )
+    resp = auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-06-01T12:00:00Z"},
+    )
+    assert resp.status_code == 409
+    # cleanup
+    auth_client.delete(f"/tasks/{task['id']}/alarm")
+
+
+def test_get_alarm(auth_client: httpx.Client, task: dict) -> None:
+    """GET /tasks/{id}/alarm should return the alarm."""
+    auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z", "recurrence": "daily"},
+    )
+    resp = auth_client.get(f"/tasks/{task['id']}/alarm")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["task_id"] == task["id"]
+    assert data["recurrence"] == "daily"
+    # cleanup
+    auth_client.delete(f"/tasks/{task['id']}/alarm")
+
+
+def test_get_alarm_not_found(auth_client: httpx.Client, task: dict) -> None:
+    """GET /tasks/{id}/alarm with no alarm set should return 404."""
+    resp = auth_client.get(f"/tasks/{task['id']}/alarm")
+    assert resp.status_code == 404
+
+
+def test_update_alarm(auth_client: httpx.Client, task: dict) -> None:
+    """PUT /tasks/{id}/alarm should update the alarm."""
+    auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z"},
+    )
+    resp = auth_client.put(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-06-15T08:00:00Z", "recurrence": "weekly", "enabled": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["recurrence"] == "weekly"
+    assert data["enabled"] is False
+    # cleanup
+    auth_client.delete(f"/tasks/{task['id']}/alarm")
+
+
+def test_delete_alarm(auth_client: httpx.Client, task: dict) -> None:
+    """DELETE /tasks/{id}/alarm should remove the alarm."""
+    auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z"},
+    )
+    resp = auth_client.delete(f"/tasks/{task['id']}/alarm")
+    assert resp.status_code == 204
+    # Verify gone
+    assert auth_client.get(f"/tasks/{task['id']}/alarm").status_code == 404
+
+
+def test_delete_alarm_not_found(auth_client: httpx.Client, task: dict) -> None:
+    """DELETE /tasks/{id}/alarm with no alarm should return 404."""
+    resp = auth_client.delete(f"/tasks/{task['id']}/alarm")
+    assert resp.status_code == 404
+
+
+def test_task_response_includes_alarm(auth_client: httpx.Client, task: dict) -> None:
+    """GET /tasks/{id} should include has_alarm and alarm fields."""
+    # No alarm yet
+    resp = auth_client.get(f"/tasks/{task['id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["has_alarm"] is False
+    assert data["alarm"] is None
+
+    # Create alarm
+    auth_client.post(
+        f"/tasks/{task['id']}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z", "recurrence": "monthly"},
+    )
+    resp = auth_client.get(f"/tasks/{task['id']}")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["has_alarm"] is True
+    assert data["alarm"]["recurrence"] == "monthly"
+    # cleanup
+    auth_client.delete(f"/tasks/{task['id']}/alarm")
+
+
+def test_alarm_deleted_with_task(auth_client: httpx.Client, default_list: dict) -> None:
+    """Deleting a task should cascade-delete its alarm."""
+    resp = auth_client.post(
+        "/tasks",
+        json={"title": "Alarm cascade", "list_id": default_list["id"]},
+    )
+    task_id = resp.json()["id"]
+    auth_client.post(
+        f"/tasks/{task_id}/alarm",
+        json={"alarm_at": "2099-01-01T12:00:00Z"},
+    )
+    # Delete the task
+    auth_client.delete(f"/tasks/{task_id}")
+    # Task is gone, so alarm endpoint returns 404
+    resp = auth_client.get(f"/tasks/{task_id}/alarm")
+    assert resp.status_code == 404

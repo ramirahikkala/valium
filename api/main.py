@@ -1,5 +1,8 @@
 """FastAPI application with CRUD endpoints for tasks."""
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select, update
@@ -13,8 +16,12 @@ from auth import (
     verify_google_token,
 )
 from database import get_session
-from models import List, Task, TaskStatus, User
+from models import Alarm, List, Task, TaskStatus, User
+from scheduler import start_scheduler, stop_scheduler
 from schemas import (
+    AlarmCreate,
+    AlarmResponse,
+    AlarmUpdate,
     AuthConfigResponse,
     AuthRequest,
     AuthResponse,
@@ -27,7 +34,18 @@ from schemas import (
     UserResponse,
 )
 
-app = FastAPI(title="Valium", description="A simple todo API")
+logging.basicConfig(level=logging.INFO)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start scheduler on startup, stop on shutdown."""
+    start_scheduler()
+    yield
+    stop_scheduler()
+
+
+app = FastAPI(title="Valium", description="A simple todo API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,7 +57,15 @@ app.add_middleware(
 
 
 def _task_response(task: Task) -> TaskResponse:
-    """Build a TaskResponse with the list_name resolved."""
+    """Build a TaskResponse with the list_name and alarm info resolved."""
+    # Pick the first alarm (one alarm per task per channel; we show the email one)
+    alarms_raw = task.alarms
+    if isinstance(alarms_raw, Alarm):
+        alarm = alarms_raw
+    elif alarms_raw:
+        alarm = alarms_raw[0]
+    else:
+        alarm = None
     return TaskResponse(
         id=task.id,
         title=task.title,
@@ -48,6 +74,8 @@ def _task_response(task: Task) -> TaskResponse:
         list_id=task.list_id,
         list_name=task.list.name if task.list else None,
         position=task.position,
+        has_alarm=alarm is not None,
+        alarm=AlarmResponse.model_validate(alarm) if alarm else None,
         created_at=task.created_at,
         updated_at=task.updated_at,
     )
@@ -184,9 +212,11 @@ async def delete_list(
 
 
 async def _get_task_with_list(session: AsyncSession, task_id: int) -> Task | None:
-    """Load a task with its list relationship eagerly loaded."""
+    """Load a task with its list and alarms relationships eagerly loaded."""
     result = await session.execute(
-        select(Task).options(selectinload(Task.list)).where(Task.id == task_id)
+        select(Task)
+        .options(selectinload(Task.list), selectinload(Task.alarms))
+        .where(Task.id == task_id)
     )
     return result.scalar_one_or_none()
 
@@ -202,7 +232,7 @@ async def list_tasks(
     await _verify_list_ownership(session, list_id, current_user)
     stmt = (
         select(Task)
-        .options(selectinload(Task.list))
+        .options(selectinload(Task.list), selectinload(Task.alarms))
         .where(Task.list_id == list_id)
         .order_by(Task.position.asc())
     )
@@ -250,7 +280,7 @@ async def reorder_tasks(
     await session.commit()
     stmt = (
         select(Task)
-        .options(selectinload(Task.list))
+        .options(selectinload(Task.list), selectinload(Task.alarms))
         .where(Task.id.in_(body.task_ids))
         .order_by(Task.position.asc())
     )
@@ -314,4 +344,114 @@ async def delete_task(
     if task.list_id is not None:
         await _verify_list_ownership(session, task.list_id, current_user)
     await session.delete(task)
+    await session.commit()
+
+
+# ---------- Alarms ----------
+
+
+async def _verify_task_ownership(
+    session: AsyncSession, task_id: int, user: User,
+) -> Task:
+    """Load a task and verify the current user owns it via its list. Raises 404 if not found/owned."""
+    task = await _get_task_with_list(session, task_id)
+    if task is None:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.list_id is not None:
+        await _verify_list_ownership(session, task.list_id, user)
+    return task
+
+
+@app.post("/tasks/{task_id}/alarm", response_model=AlarmResponse, status_code=201)
+async def create_alarm(
+    task_id: int,
+    body: AlarmCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> AlarmResponse:
+    """Create an alarm on a task."""
+    await _verify_task_ownership(session, task_id, current_user)
+
+    # Check for existing alarm on same channel
+    existing = await session.execute(
+        select(Alarm).where(Alarm.task_id == task_id, Alarm.channel == body.channel.value)
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Alarm already exists for this channel")
+
+    alarm = Alarm(
+        task_id=task_id,
+        channel=body.channel.value,
+        alarm_at=body.alarm_at,
+        recurrence=body.recurrence.value,
+        enabled=body.enabled,
+    )
+    session.add(alarm)
+    await session.commit()
+    await session.refresh(alarm)
+    return AlarmResponse.model_validate(alarm)
+
+
+@app.get("/tasks/{task_id}/alarm", response_model=AlarmResponse)
+async def get_alarm(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> AlarmResponse:
+    """Get the alarm for a task (email channel)."""
+    await _verify_task_ownership(session, task_id, current_user)
+
+    result = await session.execute(
+        select(Alarm).where(Alarm.task_id == task_id, Alarm.channel == "email")
+    )
+    alarm = result.scalar_one_or_none()
+    if alarm is None:
+        raise HTTPException(status_code=404, detail="No alarm set for this task")
+    return AlarmResponse.model_validate(alarm)
+
+
+@app.put("/tasks/{task_id}/alarm", response_model=AlarmResponse)
+async def update_alarm(
+    task_id: int,
+    body: AlarmUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> AlarmResponse:
+    """Update the alarm for a task."""
+    await _verify_task_ownership(session, task_id, current_user)
+
+    result = await session.execute(
+        select(Alarm).where(Alarm.task_id == task_id, Alarm.channel == "email")
+    )
+    alarm = result.scalar_one_or_none()
+    if alarm is None:
+        raise HTTPException(status_code=404, detail="No alarm set for this task")
+
+    update_data = body.model_dump(exclude_unset=True)
+    # Convert enum values to strings for DB storage
+    if "recurrence" in update_data and update_data["recurrence"] is not None:
+        update_data["recurrence"] = update_data["recurrence"].value
+    for field, value in update_data.items():
+        setattr(alarm, field, value)
+    await session.commit()
+    await session.refresh(alarm)
+    return AlarmResponse.model_validate(alarm)
+
+
+@app.delete("/tasks/{task_id}/alarm", status_code=204)
+async def delete_alarm(
+    task_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Remove the alarm from a task."""
+    await _verify_task_ownership(session, task_id, current_user)
+
+    result = await session.execute(
+        select(Alarm).where(Alarm.task_id == task_id, Alarm.channel == "email")
+    )
+    alarm = result.scalar_one_or_none()
+    if alarm is None:
+        raise HTTPException(status_code=404, detail="No alarm set for this task")
+    await session.delete(alarm)
     await session.commit()

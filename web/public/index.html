@@ -121,6 +121,28 @@
           <label for="edit-list">Move to list</label>
           <select id="edit-list"></select>
         </div>
+        <fieldset class="alarm-fieldset">
+          <legend>Alarm / Reminder</legend>
+          <div class="form-group">
+            <label for="edit-alarm-at">Remind at</label>
+            <input type="datetime-local" id="edit-alarm-at">
+          </div>
+          <div class="form-group">
+            <label for="edit-alarm-recurrence">Recurrence</label>
+            <select id="edit-alarm-recurrence">
+              <option value="none">None (one-shot)</option>
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="form-group form-group-inline">
+            <label>
+              <input type="checkbox" id="edit-alarm-enabled" checked>
+              Enabled
+            </label>
+          </div>
+        </fieldset>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="edit-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
