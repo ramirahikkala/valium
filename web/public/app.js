@@ -292,12 +292,13 @@
   function formatDate(dateStr) {
     if (!dateStr) return "";
     var d = new Date(dateStr);
-    return d.toLocaleDateString(undefined, {
+    return d.toLocaleDateString("fi-FI", {
       month: "short",
       day: "numeric",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   }
 
