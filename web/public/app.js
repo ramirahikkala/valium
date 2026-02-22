@@ -680,11 +680,14 @@
   var GYM_API = "/api/gym";
 
   // Gym state
+  var gymExerciseLibrary = [];   // global exercise library
   var gymActiveSession = null;
   var gymActiveExercises = [];
-  var gymSetsDone = {};
+  var gymSetsDone = {};          // program_exercise_id → sets done count
   var gymExerciseTimers = {};
-  var gymExerciseStates = {};   // exId -> "idle" | "resting" | "done"
+  var gymExerciseStates = {};    // program_exercise_id → "idle" | "resting" | "done"
+  var gymWorkoutWeights = {};    // program_exercise_id → current weight override
+  var gymWorkoutRests = {};      // program_exercise_id → current rest override
   var gymCurrentTab = "programs";
   var gymPrograms = [];
 
@@ -722,13 +725,23 @@
   // Gym DOM elements — history
   var sessionsListEl = document.getElementById("sessions-list");
 
+  // Gym DOM elements — exercise library
+  var addLibraryExerciseBtn = document.getElementById("add-library-exercise-btn");
+  var addLibraryExerciseForm = document.getElementById("add-library-exercise-form");
+  var newLibraryExerciseNameInput = document.getElementById("new-library-exercise-name");
+  var cancelLibraryExerciseBtn = document.getElementById("cancel-library-exercise-btn");
+  var libraryExercisesListEl = document.getElementById("library-exercises-list");
+
   // Gym DOM elements — modal
   var gymModal = document.getElementById("gym-modal");
   var gymModalTitle = document.getElementById("gym-modal-title");
   var gymModalForm = document.getElementById("gym-modal-form");
   var gymModalProgramId = document.getElementById("gym-modal-program-id");
   var gymModalExerciseId = document.getElementById("gym-modal-exercise-id");
-  var gymExNameInput = document.getElementById("gym-ex-name");
+  var gymModalSelectGroup = document.getElementById("gym-modal-select-group");
+  var gymModalNameDisplay = document.getElementById("gym-modal-name-display");
+  var gymModalExerciseNameEl = document.getElementById("gym-modal-exercise-name");
+  var gymExSelectInput = document.getElementById("gym-ex-select");
   var gymExWeightInput = document.getElementById("gym-ex-weight");
   var gymExSetsInput = document.getElementById("gym-ex-sets");
   var gymExRepsInput = document.getElementById("gym-ex-reps");
@@ -776,7 +789,97 @@
 
   // ---------- Programs ----------
 
+  async function loadExerciseLibrary() {
+    try {
+      var exs = await apiFetch(GYM_API + "/exercises");
+      if (exs) {
+        gymExerciseLibrary = exs;
+        renderExerciseLibrary();
+      }
+    } catch (_) {}
+  }
+
+  function renderExerciseLibrary() {
+    libraryExercisesListEl.innerHTML = "";
+    if (gymExerciseLibrary.length === 0) {
+      libraryExercisesListEl.innerHTML = '<p class="library-empty">Ei liikkeitä. Lisää liike yllä.</p>';
+      return;
+    }
+    gymExerciseLibrary.forEach(function (ex) {
+      var row = document.createElement("div");
+      row.className = "library-exercise-row";
+      row.innerHTML =
+        '<span class="library-exercise-name">' + escapeHtml(ex.name) + "</span>" +
+        '<div class="library-exercise-btns">' +
+        '<button class="btn btn-icon btn-sm" data-action="rename-library-exercise" data-id="' + ex.id +
+        '" data-name="' + escapeHtml(ex.name) + '">Nimeä</button>' +
+        '<button class="btn btn-danger btn-sm" data-action="delete-library-exercise" data-id="' + ex.id + '">Poista</button>' +
+        "</div>";
+      libraryExercisesListEl.appendChild(row);
+    });
+  }
+
+  libraryExercisesListEl.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    var id = parseInt(btn.dataset.id, 10);
+    if (btn.dataset.action === "rename-library-exercise") {
+      var newName = prompt("Uusi nimi:", btn.dataset.name);
+      if (newName && newName.trim()) renameLibraryExercise(id, newName.trim());
+    } else if (btn.dataset.action === "delete-library-exercise") {
+      if (confirm("Poistetaanko liike? Se poistetaan myös kaikista ohjelmista.")) {
+        deleteLibraryExercise(id);
+      }
+    }
+  });
+
+  addLibraryExerciseBtn.addEventListener("click", function () {
+    addLibraryExerciseForm.hidden = false;
+    newLibraryExerciseNameInput.focus();
+  });
+
+  cancelLibraryExerciseBtn.addEventListener("click", function () {
+    addLibraryExerciseForm.hidden = true;
+    addLibraryExerciseForm.reset();
+  });
+
+  addLibraryExerciseForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = newLibraryExerciseNameInput.value.trim();
+    if (!name) return;
+    addLibraryExerciseForm.hidden = true;
+    addLibraryExerciseForm.reset();
+    try {
+      await apiFetch(GYM_API + "/exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      await loadExerciseLibrary();
+    } catch (_) {}
+  });
+
+  async function renameLibraryExercise(id, name) {
+    try {
+      await apiFetch(GYM_API + "/exercises/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      await loadExerciseLibrary();
+    } catch (_) {}
+  }
+
+  async function deleteLibraryExercise(id) {
+    try {
+      await apiFetch(GYM_API + "/exercises/" + id, { method: "DELETE" });
+      await loadExerciseLibrary();
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
   async function loadGymPrograms() {
+    await loadExerciseLibrary();
     var url = GYM_API + "/programs";
     if (!showArchivedCheckbox.checked) url += "?active=true";
     try {
@@ -806,16 +909,19 @@
     var exercisesHtml;
     if (program.exercises && program.exercises.length > 0) {
       exercisesHtml = program.exercises.map(function (ex) {
+        var lastPerfStr = ex.last_performance
+          ? ' · Ed: ' + ex.last_performance.weight_used + 'kg×' + ex.last_performance.reps_done
+          : '';
         return (
           '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
           '<div class="exercise-info">' +
-          '<span class="exercise-name">' + escapeHtml(ex.name) + "</span>" +
-          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa \u00b7 lepo\u00a0" + ex.rest_seconds + "s</span>" +
+          '<span class="exercise-name">' + escapeHtml(ex.exercise_name) + "</span>" +
+          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa \u00b7 lepo\u00a0" + ex.rest_seconds + "s" + lastPerfStr + "</span>" +
           "</div>" +
           '<div class="exercise-btns">' +
           '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
-          ' data-ex-name="' + escapeHtml(ex.name) + '" data-ex-weight="' + ex.weight +
+          ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
           '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
           '" data-ex-rest="' + ex.rest_seconds + '">Muokkaa</button>' +
           '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
@@ -878,7 +984,7 @@
       openGymModal("edit", {
         programId: parseInt(btn.dataset.programId, 10),
         exerciseId: parseInt(btn.dataset.exId, 10),
-        name: btn.dataset.exName,
+        exerciseName: btn.dataset.exExerciseName,
         weight: parseFloat(btn.dataset.exWeight),
         sets: parseInt(btn.dataset.exSets, 10),
         reps: parseInt(btn.dataset.exReps, 10),
@@ -984,14 +1090,36 @@
   function openGymModal(mode, data) {
     gymModalProgramId.value = data.programId;
     gymModalExerciseId.value = data.exerciseId || "";
-    gymExNameInput.value = data.name || "";
     gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
     gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
     gymModalTitle.textContent = mode === "edit" ? "Muokkaa liikettä" : "Lisää liike";
+
+    if (mode === "edit") {
+      // Show static exercise name, hide dropdown
+      gymModalSelectGroup.hidden = true;
+      gymModalNameDisplay.hidden = false;
+      gymModalExerciseNameEl.textContent = data.exerciseName || "";
+    } else {
+      // Populate dropdown from library
+      gymModalSelectGroup.hidden = false;
+      gymModalNameDisplay.hidden = true;
+      gymExSelectInput.innerHTML = '<option value="">Valitse liike...</option>';
+      gymExerciseLibrary.forEach(function (ex) {
+        var opt = document.createElement("option");
+        opt.value = ex.id;
+        opt.textContent = ex.name;
+        gymExSelectInput.appendChild(opt);
+      });
+    }
+
     gymModal.hidden = false;
-    gymExNameInput.focus();
+    if (mode === "edit") {
+      gymExWeightInput.focus();
+    } else {
+      gymExSelectInput.focus();
+    }
   }
 
   function closeGymModal() {
@@ -1009,17 +1137,28 @@
     e.preventDefault();
     var programId = parseInt(gymModalProgramId.value, 10);
     var exerciseId = gymModalExerciseId.value ? parseInt(gymModalExerciseId.value, 10) : null;
-    var data = {
-      name: gymExNameInput.value.trim(),
-      weight: parseFloat(gymExWeightInput.value) || 0,
-      sets: parseInt(gymExSetsInput.value, 10) || 3,
-      reps: parseInt(gymExRepsInput.value, 10) || 10,
-      rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
-    };
-    closeGymModal();
     if (exerciseId) {
+      // Edit: only update weight/sets/reps/rest
+      var data = {
+        weight: parseFloat(gymExWeightInput.value) || 0,
+        sets: parseInt(gymExSetsInput.value, 10) || 3,
+        reps: parseInt(gymExRepsInput.value, 10) || 10,
+        rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
+      };
+      closeGymModal();
       updateExercise(programId, exerciseId, data);
     } else {
+      // Add: send exercise_id from library
+      var selectedExId = parseInt(gymExSelectInput.value, 10);
+      if (!selectedExId) return;
+      var data = {
+        exercise_id: selectedExId,
+        weight: parseFloat(gymExWeightInput.value) || 0,
+        sets: parseInt(gymExSetsInput.value, 10) || 3,
+        reps: parseInt(gymExRepsInput.value, 10) || 10,
+        rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
+      };
+      closeGymModal();
       createExercise(programId, data);
     }
   });
@@ -1082,7 +1221,11 @@
       if (sets) {
         sets.forEach(function (s) {
           if (s.exercise_id) {
-            gymSetsDone[s.exercise_id] = (gymSetsDone[s.exercise_id] || 0) + 1;
+            // s.exercise_id is the global exercise ID; map to program_exercise_id
+            var pe = gymActiveExercises.find(function (ex) {
+              return ex.exercise_id === s.exercise_id;
+            });
+            if (pe) gymSetsDone[pe.id] = (gymSetsDone[pe.id] || 0) + 1;
           }
         });
       }
@@ -1119,12 +1262,16 @@
     stopAllGymTimers();
     gymExerciseTimers = {};
     gymExerciseStates = {};
+    gymWorkoutWeights = {};
+    gymWorkoutRests = {};
     workoutIdleEl.hidden = true;
     workoutActiveEl.hidden = false;
     activeProgramNameEl.textContent = gymActiveSession.program_name;
     workoutStartTimeEl.textContent = "Aloitettu: " + formatDate(gymActiveSession.started_at);
     activeExercisesEl.innerHTML = "";
     gymActiveExercises.forEach(function (ex) {
+      gymWorkoutWeights[ex.id] = ex.weight;
+      gymWorkoutRests[ex.id] = ex.rest_seconds;
       var done = gymSetsDone[ex.id] || 0;
       var state = done >= ex.sets ? "done" : "idle";
       gymExerciseStates[ex.id] = state;
@@ -1136,17 +1283,36 @@
     var card = document.createElement("div");
     card.className = "exercise-workout-card" + (state === "done" ? " done" : "");
     card.dataset.exId = ex.id;
-    var restText = ex.rest_seconds > 0
-      ? " \u00b7 lepo\u00a0" + ex.rest_seconds + "\u00a0s"
-      : "";
+    var currentWeight = gymWorkoutWeights[ex.id] !== undefined ? gymWorkoutWeights[ex.id] : ex.weight;
+    var currentRest = gymWorkoutRests[ex.id] !== undefined ? gymWorkoutRests[ex.id] : ex.rest_seconds;
+    var lastPerfHtml = "";
+    if (ex.last_performance) {
+      lastPerfHtml =
+        '<span class="ewc-last-perf">Edellinen: ' +
+        ex.last_performance.weight_used + "\u00a0kg \u00d7 " +
+        ex.last_performance.reps_done + "</span>";
+    }
     card.innerHTML =
       '<div class="ewc-header">' +
-      '<span class="ewc-name">' + escapeHtml(ex.name) + "</span>" +
-      '<span class="ewc-target">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + "\u00a0toistoa" + restText + "</span>" +
+      '<span class="ewc-name">' + escapeHtml(ex.exercise_name) + "</span>" +
+      lastPerfHtml +
+      "</div>" +
+      '<div class="ewc-weight-row">' +
+      '<button class="ewc-adj-btn" data-adj-weight="-5" data-ex-id="' + ex.id + '">-5</button>' +
+      '<button class="ewc-adj-btn" data-adj-weight="-2.5" data-ex-id="' + ex.id + '">-2.5</button>' +
+      '<span class="ewc-weight-display" id="weight-display-' + ex.id + '">' + currentWeight + "\u00a0kg</span>" +
+      '<span class="ewc-target-reps">\u00d7\u00a0' + ex.reps + "\u00a0toistoa</span>" +
+      '<button class="ewc-adj-btn" data-adj-weight="+2.5" data-ex-id="' + ex.id + '">+2.5</button>' +
+      '<button class="ewc-adj-btn" data-adj-weight="+5" data-ex-id="' + ex.id + '">+5</button>' +
+      "</div>" +
+      '<div class="ewc-rest-row">' +
+      '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="-30" data-ex-id="' + ex.id + '">-30s</button>' +
+      '<span class="ewc-rest-display" id="rest-display-' + ex.id + '">lepo\u00a0' + currentRest + "\u00a0s</span>" +
+      '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="+30" data-ex-id="' + ex.id + '">+30s</button>' +
       "</div>" +
       '<div class="ewc-progress">Sarjat: <strong class="ewc-sets-done">' + done + "</strong>\u00a0/\u00a0" + ex.sets + "</div>" +
       '<div class="ewc-rest-info" hidden>' +
-      '<span class="ewc-countdown" id="countdown-' + ex.id + '">' + formatGymSeconds(ex.rest_seconds) + "</span>" +
+      '<span class="ewc-countdown" id="countdown-' + ex.id + '">' + formatGymSeconds(currentRest) + "</span>" +
       '<span class="ewc-rest-label">lepotauko</span>' +
       "</div>" +
       '<div class="ewc-done-banner" ' + (state === "done" ? "" : "hidden") + ">\u2713 Kaikki sarjat tehty!</div>" +
@@ -1178,7 +1344,8 @@
     card.querySelector(".ewc-skip-btn").hidden = false;
     card.querySelector(".ewc-rest-info").hidden = false;
     card.classList.add("resting");
-    startRestCountdown(exId, exercise.rest_seconds);
+    var restSecs = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : exercise.rest_seconds;
+    startRestCountdown(exId, restSecs);
   }
 
   function transitionToDone(exId) {
@@ -1261,12 +1428,38 @@
   }
 
   activeExercisesEl.addEventListener("click", async function (e) {
+    // Weight adjuster buttons
+    var adjWeightBtn = e.target.closest(".ewc-adj-btn[data-adj-weight]");
+    if (adjWeightBtn) {
+      var exId = parseInt(adjWeightBtn.dataset.exId, 10);
+      var delta = parseFloat(adjWeightBtn.dataset.adjWeight);
+      var current = gymWorkoutWeights[exId] !== undefined ? gymWorkoutWeights[exId] : 0;
+      gymWorkoutWeights[exId] = Math.max(0, Math.round((current + delta) * 10) / 10);
+      var displayEl = document.getElementById("weight-display-" + exId);
+      if (displayEl) displayEl.textContent = gymWorkoutWeights[exId] + "\u00a0kg";
+      return;
+    }
+
+    // Rest adjuster buttons
+    var adjRestBtn = e.target.closest(".ewc-adj-btn[data-adj-rest]");
+    if (adjRestBtn) {
+      var exId = parseInt(adjRestBtn.dataset.exId, 10);
+      var delta = parseInt(adjRestBtn.dataset.adjRest, 10);
+      var current = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : 0;
+      gymWorkoutRests[exId] = Math.max(0, current + delta);
+      var displayEl = document.getElementById("rest-display-" + exId);
+      if (displayEl) displayEl.textContent = "lepo\u00a0" + gymWorkoutRests[exId] + "\u00a0s";
+      return;
+    }
+
     // "Sarja tehty"
     var logBtn = e.target.closest(".ewc-log-btn");
     if (logBtn && gymActiveSession) {
       var exId = parseInt(logBtn.dataset.exId, 10);
       var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
       if (!exercise || gymExerciseStates[exId] !== "idle") return;
+      var weightUsed = gymWorkoutWeights[exId] !== undefined ? gymWorkoutWeights[exId] : exercise.weight;
+      var restSecs = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : exercise.rest_seconds;
       var done = gymSetsDone[exId] || 0;
       var setNumber = done + 1;
       try {
@@ -1274,10 +1467,10 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            exercise_id: exId,
-            exercise_name: exercise.name,
+            exercise_id: exercise.exercise_id,   // global exercise library ID
+            exercise_name: exercise.exercise_name,
             set_number: setNumber,
-            weight_used: exercise.weight,
+            weight_used: weightUsed,
             reps_done: exercise.reps,
           }),
         });
@@ -1289,10 +1482,10 @@
         }
         if (setNumber >= exercise.sets) {
           transitionToDone(exId);
-        } else if (exercise.rest_seconds > 0) {
+        } else if (restSecs > 0) {
           transitionToResting(exId);
         }
-        // rest_seconds = 0 → stay idle, no countdown
+        // restSecs = 0 → stay idle, no countdown
       } catch (_) {}
       return;
     }

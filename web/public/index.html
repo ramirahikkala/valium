@@ -119,6 +119,21 @@
               <input type="checkbox" id="show-archived"> Näytä arkistoidut
             </label>
           </div>
+
+          <!-- Exercise library (Liikepankki) -->
+          <div class="exercise-library">
+            <div class="library-header">
+              <h3>Liikepankki</h3>
+              <button class="btn btn-icon btn-sm" id="add-library-exercise-btn">+ Lisää</button>
+            </div>
+            <form id="add-library-exercise-form" class="inline-form" hidden>
+              <input type="text" id="new-library-exercise-name" placeholder="Liikkeen nimi" required autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm">Lisää</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn">Peruuta</button>
+            </form>
+            <div id="library-exercises-list"></div>
+          </div>
+
           <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
             <form id="add-program-form" class="inline-form">
               <input type="text" id="new-program-name" placeholder="Ohjelman nimi" required autocomplete="off">
@@ -221,9 +236,15 @@
       <form id="gym-modal-form">
         <input type="hidden" id="gym-modal-program-id">
         <input type="hidden" id="gym-modal-exercise-id">
-        <div class="form-group">
-          <label for="gym-ex-name">Nimi</label>
-          <input type="text" id="gym-ex-name" required autocomplete="off">
+        <div class="form-group" id="gym-modal-select-group">
+          <label for="gym-ex-select">Liike</label>
+          <select id="gym-ex-select" required>
+            <option value="">Valitse liike...</option>
+          </select>
+        </div>
+        <div class="form-group" id="gym-modal-name-display" hidden>
+          <label>Liike</label>
+          <p id="gym-modal-exercise-name" class="modal-static-value"></p>
         </div>
         <div class="form-group">
           <label for="gym-ex-weight">Paino (kg)</label>
