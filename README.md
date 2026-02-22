@@ -1,50 +1,46 @@
 # Valium
 
-*Your little helper for getting things done.*
+*Your little helper for getting things done. Inspired by the Rolling Stones' "Mother's Little Helper".*
 
-A todo task manager with a web UI and REST API, backed by PostgreSQL and orchestrated with Docker Compose.
+A todo app with a gym workout tracker. Sign in with Google, manage task lists with drag-and-drop, and track your gym sessions with a live rest timer.
+
+## Features
+
+- **Tasks** — create lists, add tasks with status (pending / in progress / done), drag to reorder, set email reminders
+- **Gym** — build workout programs with exercises, start sessions, log sets with a per-exercise rest timer, browse history
 
 ## Quick Start
 
 ```bash
-docker compose up --build -d
+cp .env.example .env
+# Fill in GOOGLE_CLIENT_ID and optionally SMTP settings
+docker compose up --build
 ```
 
 - **Web UI**: http://localhost:3000
-- **API**: http://localhost:8000
-- **API docs (Swagger)**: http://localhost:8000/docs
+- **API + Swagger docs**: http://localhost:8000/docs
 
 ## Architecture
 
 | Service | Tech | Port |
 |---------|------|------|
-| API | Python / FastAPI | 8000 |
+| API | Python / FastAPI + SQLAlchemy | 8000 |
 | Web | Node.js / Express + vanilla JS | 3000 |
 | Database | PostgreSQL 16 | 5432 |
 
-The web frontend proxies `/api/*` requests to the FastAPI backend.
+Authentication is Google Sign-In (OAuth 2.0). The web server proxies `/api/*` to the FastAPI backend.
 
-## API Endpoints
+## Environment Variables
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Health check |
-| GET | `/tasks` | List tasks (optional `?status=` filter) |
-| POST | `/tasks` | Create a task |
-| GET | `/tasks/{id}` | Get a task |
-| PUT | `/tasks/{id}` | Update a task |
-| DELETE | `/tasks/{id}` | Delete a task |
-
-## Task Model
-
-| Field | Type | Description |
-|-------|------|-------------|
-| id | int | Auto-increment primary key |
-| title | string | Required |
-| description | string | Optional |
-| status | enum | `pending`, `in_progress`, `done` |
-| created_at | datetime | Auto-set on creation |
-| updated_at | datetime | Auto-updated on change |
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `GOOGLE_CLIENT_ID` | Yes | Google OAuth client ID |
+| `JWT_SECRET` | Yes (prod) | Secret for signing session tokens |
+| `DATABASE_URL` | Auto | Set by Docker Compose |
+| `SMTP_HOST` | Optional | For email reminders |
+| `SMTP_PORT` | Optional | Default 587 |
+| `SMTP_USER` | Optional | SMTP username |
+| `SMTP_PASSWORD` | Optional | SMTP password |
 
 ## Running Tests
 
@@ -54,10 +50,6 @@ With the Docker stack running:
 uv run --with httpx --with pytest pytest tests/ -v
 ```
 
-## Environment Variables
+## License
 
-| Variable | Default | Used by |
-|----------|---------|---------|
-| `DATABASE_URL` | `postgresql+asyncpg://valium:valium@localhost:5432/valium` | API |
-| `API_PORT` | `8000` | API |
-| `API_URL` | `http://localhost:8000` | Web |
+MIT — see [LICENSE](LICENSE).
