@@ -16,6 +16,7 @@ from auth import (
     verify_google_token,
 )
 from database import get_session
+from gym_router import router as gym_router
 from models import Alarm, List, Task, TaskStatus, User
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
@@ -46,6 +47,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Valium", description="A simple todo API", lifespan=lifespan)
+
+app.include_router(gym_router)
 
 app.add_middleware(
     CORSMiddleware,

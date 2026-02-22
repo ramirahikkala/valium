@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -60,6 +61,12 @@ class User(Base):
     )
 
     lists: Mapped[list["List"]] = relationship("List", back_populates="user")
+    workout_programs: Mapped[list["WorkoutProgram"]] = relationship(
+        "WorkoutProgram", back_populates="user"
+    )
+    workout_sessions: Mapped[list["WorkoutSession"]] = relationship(
+        "WorkoutSession", back_populates="user"
+    )
 
 
 class List(Base):
@@ -157,3 +164,110 @@ class Alarm(Base):
         UniqueConstraint("task_id", "channel", name="uq_alarm_task_channel"),
         Index("ix_alarm_enabled_at", "enabled", "alarm_at"),
     )
+
+
+# ---------- Gym models ----------
+
+
+class WorkoutProgram(Base):
+    """Represents a named workout program belonging to a user."""
+
+    __tablename__ = "workout_programs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="workout_programs")
+    exercises: Mapped[list["ProgramExercise"]] = relationship(
+        "ProgramExercise",
+        back_populates="program",
+        cascade="all, delete-orphan",
+        order_by="ProgramExercise.position",
+    )
+    sessions: Mapped[list["WorkoutSession"]] = relationship(
+        "WorkoutSession", back_populates="program"
+    )
+
+
+class ProgramExercise(Base):
+    """Represents a single exercise within a workout program."""
+
+    __tablename__ = "program_exercises"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    program_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("workout_programs.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    weight: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
+    sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
+    reps: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
+
+
+class WorkoutSession(Base):
+    """Represents a single completed or ongoing workout session."""
+
+    __tablename__ = "workout_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    program_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("workout_programs.id", ondelete="SET NULL"), nullable=True
+    )
+    program_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    user: Mapped[User] = relationship("User", back_populates="workout_sessions")
+    program: Mapped[WorkoutProgram | None] = relationship(
+        "WorkoutProgram", back_populates="sessions"
+    )
+    sets: Mapped[list["SessionSet"]] = relationship(
+        "SessionSet", back_populates="session", cascade="all, delete-orphan"
+    )
+
+
+class SessionSet(Base):
+    """Represents a single logged set within a workout session."""
+
+    __tablename__ = "session_sets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("workout_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    exercise_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("program_exercises.id", ondelete="SET NULL"), nullable=True
+    )
+    exercise_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    set_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    weight_used: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
+    reps_done: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    completed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    session: Mapped[WorkoutSession] = relationship("WorkoutSession", back_populates="sets")
+    exercise: Mapped[ProgramExercise | None] = relationship("ProgramExercise")
