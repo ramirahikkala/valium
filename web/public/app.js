@@ -106,6 +106,8 @@
   }
 
   function signOut() {
+    stopAllGymTimers();
+    localStorage.removeItem("gymActiveSessionId");
     authToken = null;
     currentUser = null;
     currentListId = null;
@@ -587,7 +589,10 @@
   });
 
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && !editModal.hidden) closeEditModal();
+    if (e.key === "Escape") {
+      if (!editModal.hidden) closeEditModal();
+      if (!gymModal.hidden) closeGymModal();
+    }
   });
 
   async function saveAlarm(taskId) {
@@ -669,4 +674,673 @@
 
   initGoogleSignIn();
   checkAuthAndInit();
+
+  // ========== GYM MODULE ==========
+
+  var GYM_API = "/api/gym";
+
+  // Gym state
+  var gymActiveSession = null;
+  var gymActiveExercises = [];
+  var gymSetsDone = {};
+  var gymExerciseTimers = {};
+  var gymCurrentTab = "programs";
+  var gymPrograms = [];
+
+  // Gym DOM elements — view toggle
+  var viewTabTasks = document.getElementById("view-tab-tasks");
+  var viewTabGym = document.getElementById("view-tab-gym");
+  var tasksView = document.getElementById("tasks-view");
+  var gymView = document.getElementById("gym-view");
+  var gymTabButtons = document.querySelectorAll(".gym-tab");
+
+  // Gym DOM elements — sections
+  var gymProgramsSection = document.getElementById("gym-programs");
+  var gymWorkoutSection = document.getElementById("gym-workout");
+  var gymHistorySection = document.getElementById("gym-history");
+
+  // Gym DOM elements — programs
+  var programsListEl = document.getElementById("programs-list");
+  var addProgramBtn = document.getElementById("add-program-btn");
+  var addProgramFormWrap = document.getElementById("add-program-form-wrap");
+  var addProgramForm = document.getElementById("add-program-form");
+  var newProgramNameInput = document.getElementById("new-program-name");
+  var cancelAddProgramBtn = document.getElementById("cancel-add-program");
+  var showArchivedCheckbox = document.getElementById("show-archived");
+
+  // Gym DOM elements — workout
+  var workoutIdleEl = document.getElementById("workout-idle");
+  var workoutActiveEl = document.getElementById("workout-active");
+  var workoutProgramSelect = document.getElementById("workout-program-select");
+  var startWorkoutBtn = document.getElementById("start-workout-btn");
+  var completeWorkoutBtn = document.getElementById("complete-workout-btn");
+  var activeProgramNameEl = document.getElementById("active-program-name");
+  var workoutStartTimeEl = document.getElementById("workout-start-time");
+  var activeExercisesEl = document.getElementById("active-exercises");
+
+  // Gym DOM elements — history
+  var sessionsListEl = document.getElementById("sessions-list");
+
+  // Gym DOM elements — modal
+  var gymModal = document.getElementById("gym-modal");
+  var gymModalTitle = document.getElementById("gym-modal-title");
+  var gymModalForm = document.getElementById("gym-modal-form");
+  var gymModalProgramId = document.getElementById("gym-modal-program-id");
+  var gymModalExerciseId = document.getElementById("gym-modal-exercise-id");
+  var gymExNameInput = document.getElementById("gym-ex-name");
+  var gymExWeightInput = document.getElementById("gym-ex-weight");
+  var gymExSetsInput = document.getElementById("gym-ex-sets");
+  var gymExRepsInput = document.getElementById("gym-ex-reps");
+  var gymModalCancelBtn = document.getElementById("gym-modal-cancel");
+
+  // ---------- View toggle ----------
+
+  viewTabTasks.addEventListener("click", function () { switchToView("tasks"); });
+  viewTabGym.addEventListener("click", function () { switchToView("gym"); });
+
+  function switchToView(view) {
+    if (view === "gym") {
+      tasksView.hidden = true;
+      gymView.hidden = false;
+      viewTabTasks.classList.remove("active");
+      viewTabGym.classList.add("active");
+      switchGymTab(gymCurrentTab);
+    } else {
+      tasksView.hidden = false;
+      gymView.hidden = true;
+      viewTabTasks.classList.add("active");
+      viewTabGym.classList.remove("active");
+    }
+  }
+
+  // ---------- Gym tab switching ----------
+
+  gymTabButtons.forEach(function (btn) {
+    btn.addEventListener("click", function () { switchGymTab(btn.dataset.gymTab); });
+  });
+
+  function switchGymTab(tab) {
+    gymCurrentTab = tab;
+    gymTabButtons.forEach(function (btn) {
+      btn.classList.toggle("active", btn.dataset.gymTab === tab);
+    });
+    gymProgramsSection.hidden = tab !== "programs";
+    gymWorkoutSection.hidden = tab !== "workout";
+    gymHistorySection.hidden = tab !== "history";
+    if (tab === "programs") loadGymPrograms();
+    else if (tab === "workout") loadWorkoutTab();
+    else if (tab === "history") loadGymHistory();
+  }
+
+  // ---------- Programs ----------
+
+  async function loadGymPrograms() {
+    var url = GYM_API + "/programs";
+    if (!showArchivedCheckbox.checked) url += "?active=true";
+    try {
+      var programs = await apiFetch(url);
+      if (!programs) return;
+      gymPrograms = programs;
+      renderProgramsList();
+    } catch (_) {}
+  }
+
+  function renderProgramsList() {
+    programsListEl.innerHTML = "";
+    if (gymPrograms.length === 0) {
+      programsListEl.innerHTML = '<p class="empty-state">Ei ohjelmia. Luo uusi ohjelma ylhäältä.</p>';
+      return;
+    }
+    gymPrograms.forEach(function (program) {
+      programsListEl.appendChild(createProgramCard(program));
+    });
+  }
+
+  function createProgramCard(program) {
+    var card = document.createElement("div");
+    card.className = "program-card" + (program.is_active ? "" : " archived");
+    card.dataset.id = program.id;
+
+    var exercisesHtml;
+    if (program.exercises && program.exercises.length > 0) {
+      exercisesHtml = program.exercises.map(function (ex) {
+        return (
+          '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
+          '<div class="exercise-info">' +
+          '<span class="exercise-name">' + escapeHtml(ex.name) + "</span>" +
+          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa</span>" +
+          "</div>" +
+          '<div class="exercise-btns">' +
+          '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
+          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
+          ' data-ex-name="' + escapeHtml(ex.name) + '" data-ex-weight="' + ex.weight +
+          '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps + '">Muokkaa</button>' +
+          '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
+          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">Poista</button>' +
+          "</div></div>"
+        );
+      }).join("");
+    } else {
+      exercisesHtml = '<p class="exercise-empty">Ei liikkeitä. Lisää alla.</p>';
+    }
+
+    card.innerHTML =
+      '<div class="program-card-header">' +
+      '<div class="program-title-row">' +
+      '<h3 class="program-name">' + escapeHtml(program.name) + "</h3>" +
+      '<span class="program-badge ' + (program.is_active ? "active" : "archived") + '">' +
+      (program.is_active ? "Aktiivinen" : "Arkistoitu") + "</span>" +
+      "</div>" +
+      '<div class="program-header-btns">' +
+      '<button class="btn btn-icon btn-sm" data-action="rename-program" data-id="' + program.id +
+      '" data-name="' + escapeHtml(program.name) + '">Nimeä</button>' +
+      (program.is_active
+        ? '<button class="btn btn-secondary btn-sm" data-action="archive-program" data-id="' + program.id + '">Arkistoi</button>'
+        : '<button class="btn btn-secondary btn-sm" data-action="restore-program" data-id="' + program.id + '">Palauta</button>') +
+      '<button class="btn btn-danger btn-sm" data-action="delete-program" data-id="' + program.id + '">Poista</button>' +
+      "</div></div>" +
+      '<div class="exercises-list">' + exercisesHtml + "</div>" +
+      '<button class="btn btn-icon btn-sm add-exercise-btn" data-action="add-exercise" data-program-id="' + program.id + '">+ Lisää liike</button>';
+
+    return card;
+  }
+
+  programsListEl.addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-action]");
+    if (!btn) return;
+    var action = btn.dataset.action;
+    var id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
+
+    if (action === "rename-program") {
+      var name = prompt("Uusi nimi:", btn.dataset.name);
+      if (name && name.trim()) updateProgram(id, { name: name.trim() });
+
+    } else if (action === "archive-program") {
+      updateProgram(id, { is_active: false });
+
+    } else if (action === "restore-program") {
+      updateProgram(id, { is_active: true });
+
+    } else if (action === "delete-program") {
+      var card = btn.closest(".program-card");
+      var pname = card ? card.querySelector(".program-name").textContent : "ohjelma";
+      if (confirm('Poistetaanko ohjelma "' + pname + '" ja kaikki sen liikkeet?')) {
+        deleteProgram(id);
+      }
+
+    } else if (action === "add-exercise") {
+      openGymModal("add", { programId: parseInt(btn.dataset.programId, 10) });
+
+    } else if (action === "edit-exercise") {
+      openGymModal("edit", {
+        programId: parseInt(btn.dataset.programId, 10),
+        exerciseId: parseInt(btn.dataset.exId, 10),
+        name: btn.dataset.exName,
+        weight: parseFloat(btn.dataset.exWeight),
+        sets: parseInt(btn.dataset.exSets, 10),
+        reps: parseInt(btn.dataset.exReps, 10),
+      });
+
+    } else if (action === "delete-exercise") {
+      var programId = parseInt(btn.dataset.programId, 10);
+      var exerciseId = parseInt(btn.dataset.exId, 10);
+      var row = btn.closest(".exercise-row");
+      var ename = row ? row.querySelector(".exercise-name").textContent : "liike";
+      if (confirm('Poistetaanko liike "' + ename + '"?')) {
+        deleteExercise(programId, exerciseId);
+      }
+    }
+  });
+
+  async function createProgram(name) {
+    try {
+      await apiFetch(GYM_API + "/programs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name }),
+      });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  async function updateProgram(id, data) {
+    try {
+      await apiFetch(GYM_API + "/programs/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  async function deleteProgram(id) {
+    try {
+      await apiFetch(GYM_API + "/programs/" + id, { method: "DELETE" });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  async function createExercise(programId, data) {
+    try {
+      await apiFetch(GYM_API + "/programs/" + programId + "/exercises", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  async function updateExercise(programId, exerciseId, data) {
+    try {
+      await apiFetch(GYM_API + "/programs/" + programId + "/exercises/" + exerciseId, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  async function deleteExercise(programId, exerciseId) {
+    try {
+      await apiFetch(GYM_API + "/programs/" + programId + "/exercises/" + exerciseId, {
+        method: "DELETE",
+      });
+      await loadGymPrograms();
+    } catch (_) {}
+  }
+
+  // Add program form
+
+  addProgramBtn.addEventListener("click", function () {
+    addProgramFormWrap.hidden = false;
+    newProgramNameInput.focus();
+  });
+
+  cancelAddProgramBtn.addEventListener("click", function () {
+    addProgramFormWrap.hidden = true;
+    addProgramForm.reset();
+  });
+
+  addProgramForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = newProgramNameInput.value.trim();
+    if (!name) return;
+    addProgramFormWrap.hidden = true;
+    addProgramForm.reset();
+    createProgram(name);
+  });
+
+  showArchivedCheckbox.addEventListener("change", loadGymPrograms);
+
+  // ---------- Gym exercise modal ----------
+
+  function openGymModal(mode, data) {
+    gymModalProgramId.value = data.programId;
+    gymModalExerciseId.value = data.exerciseId || "";
+    gymExNameInput.value = data.name || "";
+    gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
+    gymExSetsInput.value = data.sets || 3;
+    gymExRepsInput.value = data.reps || 10;
+    gymModalTitle.textContent = mode === "edit" ? "Muokkaa liikettä" : "Lisää liike";
+    gymModal.hidden = false;
+    gymExNameInput.focus();
+  }
+
+  function closeGymModal() {
+    gymModal.hidden = true;
+    gymModalForm.reset();
+  }
+
+  gymModalCancelBtn.addEventListener("click", closeGymModal);
+
+  gymModal.addEventListener("click", function (e) {
+    if (e.target === gymModal) closeGymModal();
+  });
+
+  gymModalForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var programId = parseInt(gymModalProgramId.value, 10);
+    var exerciseId = gymModalExerciseId.value ? parseInt(gymModalExerciseId.value, 10) : null;
+    var data = {
+      name: gymExNameInput.value.trim(),
+      weight: parseFloat(gymExWeightInput.value) || 0,
+      sets: parseInt(gymExSetsInput.value, 10) || 3,
+      reps: parseInt(gymExRepsInput.value, 10) || 10,
+    };
+    closeGymModal();
+    if (exerciseId) {
+      updateExercise(programId, exerciseId, data);
+    } else {
+      createExercise(programId, data);
+    }
+  });
+
+  // ---------- Workout ----------
+
+  async function loadWorkoutTab() {
+    try {
+      var programs = await apiFetch(GYM_API + "/programs?active=true");
+      if (!programs) return;
+      workoutProgramSelect.innerHTML = "";
+      if (programs.length === 0) {
+        workoutProgramSelect.innerHTML = '<option value="">Ei aktiivisia ohjelmia</option>';
+      } else {
+        programs.forEach(function (p) {
+          var opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = p.name;
+          workoutProgramSelect.appendChild(opt);
+        });
+      }
+    } catch (_) {}
+
+    // Restore active session from localStorage if any
+    var savedId = localStorage.getItem("gymActiveSessionId");
+    if (savedId) {
+      try {
+        var sessions = await apiFetch(GYM_API + "/sessions");
+        if (sessions) {
+          var found = sessions.find(function (s) {
+            return String(s.id) === savedId && !s.completed_at;
+          });
+          if (found) {
+            await restoreWorkoutSession(found);
+            return;
+          }
+        }
+      } catch (_) {}
+      localStorage.removeItem("gymActiveSessionId");
+    }
+
+    workoutIdleEl.hidden = false;
+    workoutActiveEl.hidden = true;
+  }
+
+  async function restoreWorkoutSession(session) {
+    gymActiveSession = session;
+    gymSetsDone = {};
+    gymActiveExercises = [];
+
+    if (session.program_id) {
+      try {
+        var exercises = await apiFetch(GYM_API + "/programs/" + session.program_id + "/exercises");
+        if (exercises) gymActiveExercises = exercises;
+      } catch (_) {}
+    }
+
+    try {
+      var sets = await apiFetch(GYM_API + "/sessions/" + session.id + "/sets");
+      if (sets) {
+        sets.forEach(function (s) {
+          if (s.exercise_id) {
+            gymSetsDone[s.exercise_id] = (gymSetsDone[s.exercise_id] || 0) + 1;
+          }
+        });
+      }
+    } catch (_) {}
+
+    renderActiveWorkout();
+  }
+
+  startWorkoutBtn.addEventListener("click", async function () {
+    var programId = parseInt(workoutProgramSelect.value, 10);
+    if (!programId) return;
+    try {
+      var session = await apiFetch(GYM_API + "/sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ program_id: programId }),
+      });
+      if (!session) return;
+      gymActiveSession = session;
+      gymSetsDone = {};
+      gymActiveExercises = [];
+      localStorage.setItem("gymActiveSessionId", session.id);
+
+      try {
+        var exercises = await apiFetch(GYM_API + "/programs/" + programId + "/exercises");
+        if (exercises) gymActiveExercises = exercises;
+      } catch (_) {}
+
+      renderActiveWorkout();
+    } catch (_) {}
+  });
+
+  function renderActiveWorkout() {
+    stopAllGymTimers();
+    gymExerciseTimers = {};
+    workoutIdleEl.hidden = true;
+    workoutActiveEl.hidden = false;
+    activeProgramNameEl.textContent = gymActiveSession.program_name;
+    workoutStartTimeEl.textContent = "Aloitettu: " + formatDate(gymActiveSession.started_at);
+    activeExercisesEl.innerHTML = "";
+    gymActiveExercises.forEach(function (ex) {
+      activeExercisesEl.appendChild(createExerciseWorkoutCard(ex));
+      startExerciseTimer(ex.id);
+    });
+  }
+
+  function createExerciseWorkoutCard(ex) {
+    var done = gymSetsDone[ex.id] || 0;
+    var card = document.createElement("div");
+    card.className = "exercise-workout-card" + (done >= ex.sets ? " all-sets-done" : "");
+    card.dataset.exId = ex.id;
+    card.innerHTML =
+      '<div class="ewc-header">' +
+      '<span class="ewc-name">' + escapeHtml(ex.name) + "</span>" +
+      '<span class="ewc-target">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + "\u00a0toistoa</span>" +
+      "</div>" +
+      '<div class="ewc-progress">' +
+      '<span class="ewc-sets-label">Sarjat: <strong class="ewc-sets-done">' + done + "</strong> / " + ex.sets + "</span>" +
+      '<span class="ewc-timer" id="timer-' + ex.id + '">00:00</span>' +
+      "</div>" +
+      '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '">' +
+      (done >= ex.sets ? "Valmis!" : "Sarja tehty") +
+      "</button>";
+    return card;
+  }
+
+  function startExerciseTimer(exId) {
+    var timerEl = document.getElementById("timer-" + exId);
+    if (!timerEl) return;
+    gymExerciseTimers[exId] = {
+      seconds: 0,
+      timerEl: timerEl,
+      intervalId: setInterval(function () {
+        if (!gymExerciseTimers[exId]) return;
+        gymExerciseTimers[exId].seconds++;
+        timerEl.textContent = formatGymSeconds(gymExerciseTimers[exId].seconds);
+      }, 1000),
+    };
+  }
+
+  function resetExerciseTimer(exId) {
+    if (gymExerciseTimers[exId]) {
+      clearInterval(gymExerciseTimers[exId].intervalId);
+    }
+    var timerEl = document.getElementById("timer-" + exId);
+    if (timerEl) timerEl.textContent = "00:00";
+    gymExerciseTimers[exId] = {
+      seconds: 0,
+      timerEl: timerEl,
+      intervalId: setInterval(function () {
+        if (!gymExerciseTimers[exId]) return;
+        gymExerciseTimers[exId].seconds++;
+        timerEl.textContent = formatGymSeconds(gymExerciseTimers[exId].seconds);
+      }, 1000),
+    };
+  }
+
+  function stopAllGymTimers() {
+    if (!gymExerciseTimers) return;
+    Object.keys(gymExerciseTimers).forEach(function (exId) {
+      if (gymExerciseTimers[exId] && gymExerciseTimers[exId].intervalId) {
+        clearInterval(gymExerciseTimers[exId].intervalId);
+      }
+    });
+    gymExerciseTimers = {};
+  }
+
+  function formatGymSeconds(s) {
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
+  }
+
+  activeExercisesEl.addEventListener("click", async function (e) {
+    var btn = e.target.closest(".ewc-log-btn");
+    if (!btn || !gymActiveSession) return;
+    var exId = parseInt(btn.dataset.exId, 10);
+    var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
+    if (!exercise) return;
+    var done = gymSetsDone[exId] || 0;
+    if (done >= exercise.sets) return;
+    var setNumber = done + 1;
+    try {
+      await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/sets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          exercise_id: exId,
+          exercise_name: exercise.name,
+          set_number: setNumber,
+          weight_used: exercise.weight,
+          reps_done: exercise.reps,
+        }),
+      });
+      gymSetsDone[exId] = setNumber;
+      resetExerciseTimer(exId);
+      var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+      if (card) {
+        var doneEl = card.querySelector(".ewc-sets-done");
+        if (doneEl) doneEl.textContent = setNumber;
+        if (setNumber >= exercise.sets) {
+          card.classList.add("all-sets-done");
+          btn.textContent = "Valmis!";
+        }
+      }
+    } catch (_) {}
+  });
+
+  completeWorkoutBtn.addEventListener("click", async function () {
+    if (!gymActiveSession) return;
+    if (!confirm("Merkitäänkö treeni valmiiksi?")) return;
+    try {
+      await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/complete", {
+        method: "PUT",
+      });
+      stopAllGymTimers();
+      gymActiveSession = null;
+      gymActiveExercises = [];
+      gymSetsDone = {};
+      localStorage.removeItem("gymActiveSessionId");
+      workoutActiveEl.hidden = true;
+      workoutIdleEl.hidden = false;
+    } catch (_) {}
+  });
+
+  // ---------- History ----------
+
+  async function loadGymHistory() {
+    try {
+      var sessions = await apiFetch(GYM_API + "/sessions");
+      if (!sessions) return;
+      renderSessionsList(sessions);
+    } catch (_) {}
+  }
+
+  function renderSessionsList(sessions) {
+    sessionsListEl.innerHTML = "";
+    if (sessions.length === 0) {
+      sessionsListEl.innerHTML = '<p class="empty-state">Ei treenejä vielä.</p>';
+      return;
+    }
+    sessions.forEach(function (s) {
+      var item = document.createElement("div");
+      item.className = "session-item";
+      item.dataset.sessionId = s.id;
+
+      var duration = "";
+      if (s.completed_at && s.started_at) {
+        var diffMs = new Date(s.completed_at) - new Date(s.started_at);
+        var diffMin = Math.round(diffMs / 60000);
+        duration = " (" + diffMin + "\u00a0min)";
+      }
+
+      var statusBadge = s.completed_at
+        ? '<span class="session-badge done">Valmis</span>'
+        : '<span class="session-badge active">Kesken</span>';
+
+      item.innerHTML =
+        '<div class="session-header" data-action="toggle-session">' +
+        '<div class="session-info">' +
+        statusBadge +
+        '<span class="session-program-name">' + escapeHtml(s.program_name) + "</span>" +
+        '<span class="session-date">' + formatDate(s.started_at) + duration + "</span>" +
+        "</div>" +
+        '<span class="session-toggle-icon">\u25bc</span>' +
+        "</div>" +
+        '<div class="session-sets" hidden></div>';
+
+      sessionsListEl.appendChild(item);
+    });
+  }
+
+  sessionsListEl.addEventListener("click", async function (e) {
+    var header = e.target.closest("[data-action='toggle-session']");
+    if (!header) return;
+    var item = header.closest(".session-item");
+    if (!item) return;
+    var setsEl = item.querySelector(".session-sets");
+    var icon = item.querySelector(".session-toggle-icon");
+
+    if (!setsEl.hidden) {
+      setsEl.hidden = true;
+      if (icon) icon.textContent = "\u25bc";
+      return;
+    }
+
+    setsEl.hidden = false;
+    if (icon) icon.textContent = "\u25b2";
+    if (setsEl.dataset.loaded) return;
+    setsEl.dataset.loaded = "1";
+
+    var sessionId = parseInt(item.dataset.sessionId, 10);
+    try {
+      var sets = await apiFetch(GYM_API + "/sessions/" + sessionId + "/sets");
+      if (!sets || sets.length === 0) {
+        setsEl.innerHTML = '<p class="session-no-sets">Ei kirjattuja sarjoja.</p>';
+        return;
+      }
+      var byExercise = {};
+      var exerciseOrder = [];
+      sets.forEach(function (s) {
+        var key = s.exercise_name;
+        if (!byExercise[key]) {
+          byExercise[key] = [];
+          exerciseOrder.push(key);
+        }
+        byExercise[key].push(s);
+      });
+      var html = exerciseOrder.map(function (exName) {
+        var exSets = byExercise[exName];
+        var setsStr = exSets.map(function (s) {
+          return s.weight_used + "\u00a0kg\u00d7" + s.reps_done;
+        }).join(", ");
+        return (
+          '<div class="session-exercise-row">' +
+          '<span class="ses-ex-name">' + escapeHtml(exName) + "</span>" +
+          '<span class="ses-ex-sets">' + setsStr + "</span>" +
+          "</div>"
+        );
+      }).join("");
+      setsEl.innerHTML = html;
+    } catch (_) {
+      setsEl.innerHTML = '<p class="session-no-sets">Virhe haettaessa sarjoja.</p>';
+    }
+  });
+
 })();
