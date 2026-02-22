@@ -34,13 +34,6 @@ services:
       API_URL: http://api:8000
     depends_on:
       - api
-    networks:
-      - default
-      - caddy-proxy
-
-networks:
-  caddy-proxy:
-    external: true
 
 volumes:
   pgdata:
