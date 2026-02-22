@@ -15,8 +15,6 @@ services:
 
   api:
     build: ./api
-    ports:
-      - "8000:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://valium:valium@db:5432/valium
       API_PORT: "8000"
@@ -33,7 +31,7 @@ services:
   web:
     build: ./web
     ports:
-      - "3000:3000"
+      - "4000:3000"
     environment:
       API_URL: http://api:8000
     depends_on:
