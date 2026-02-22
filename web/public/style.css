@@ -948,16 +948,31 @@ input[type="datetime-local"]:focus {
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  transition: box-shadow var(--transition);
+  gap: 0.65rem;
+  border-left: 3px solid transparent;
+  transition: box-shadow var(--transition), border-color var(--transition);
 }
 
 .exercise-workout-card:hover {
   box-shadow: var(--shadow-lg);
 }
 
-.exercise-workout-card.all-sets-done {
-  border-left: 3px solid var(--color-done);
+.exercise-workout-card.resting {
+  border-left-color: var(--color-in-progress);
+}
+
+.exercise-workout-card.done {
+  border-left-color: var(--color-done);
+  opacity: 0.72;
+}
+
+@keyframes ewc-flash {
+  0%, 100% { background: var(--color-surface); }
+  30%, 70% { background: #dceffc; }
+}
+
+.exercise-workout-card.ewc-alert {
+  animation: ewc-flash 0.8s ease-in-out 3;
 }
 
 .ewc-header {
@@ -979,33 +994,43 @@ input[type="datetime-local"]:focus {
 }
 
 .ewc-progress {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.ewc-sets-label {
   font-size: 0.9rem;
   color: var(--color-text-muted);
 }
 
-.ewc-timer {
-  font-size: 1.1rem;
-  font-weight: 600;
+.ewc-rest-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.ewc-countdown {
+  font-size: 2.2rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--color-primary);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  line-height: 1;
 }
 
-.ewc-log-btn {
-  align-self: flex-start;
+.ewc-rest-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
 }
 
-.all-sets-done .ewc-log-btn {
-  background: var(--color-done);
-  opacity: 0.7;
-  cursor: default;
+.ewc-done-banner {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2e7a42;
+}
+
+.ewc-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 /* ---------- History tab ---------- */

@@ -160,6 +160,7 @@ class ExerciseCreate(BaseModel):
     weight: float = 0.0
     sets: int = 3
     reps: int = 10
+    rest_seconds: int = 90
 
 
 class ExerciseUpdate(BaseModel):
@@ -169,6 +170,7 @@ class ExerciseUpdate(BaseModel):
     weight: float | None = None
     sets: int | None = None
     reps: int | None = None
+    rest_seconds: int | None = None
     position: int | None = None
 
 
@@ -183,6 +185,7 @@ class ExerciseResponse(BaseModel):
     weight: float
     sets: int
     reps: int
+    rest_seconds: int
     position: int
 
 

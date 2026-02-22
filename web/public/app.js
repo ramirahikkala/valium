@@ -684,6 +684,7 @@
   var gymActiveExercises = [];
   var gymSetsDone = {};
   var gymExerciseTimers = {};
+  var gymExerciseStates = {};   // exId -> "idle" | "resting" | "done"
   var gymCurrentTab = "programs";
   var gymPrograms = [];
 
@@ -731,6 +732,7 @@
   var gymExWeightInput = document.getElementById("gym-ex-weight");
   var gymExSetsInput = document.getElementById("gym-ex-sets");
   var gymExRepsInput = document.getElementById("gym-ex-reps");
+  var gymExRestInput = document.getElementById("gym-ex-rest");
   var gymModalCancelBtn = document.getElementById("gym-modal-cancel");
 
   // ---------- View toggle ----------
@@ -808,13 +810,14 @@
           '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
           '<div class="exercise-info">' +
           '<span class="exercise-name">' + escapeHtml(ex.name) + "</span>" +
-          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa</span>" +
+          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa \u00b7 lepo\u00a0" + ex.rest_seconds + "s</span>" +
           "</div>" +
           '<div class="exercise-btns">' +
           '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
           ' data-ex-name="' + escapeHtml(ex.name) + '" data-ex-weight="' + ex.weight +
-          '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps + '">Muokkaa</button>' +
+          '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
+          '" data-ex-rest="' + ex.rest_seconds + '">Muokkaa</button>' +
           '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">Poista</button>' +
           "</div></div>"
@@ -879,6 +882,7 @@
         weight: parseFloat(btn.dataset.exWeight),
         sets: parseInt(btn.dataset.exSets, 10),
         reps: parseInt(btn.dataset.exReps, 10),
+        rest_seconds: parseInt(btn.dataset.exRest, 10),
       });
 
     } else if (action === "delete-exercise") {
@@ -984,6 +988,7 @@
     gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
+    gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
     gymModalTitle.textContent = mode === "edit" ? "Muokkaa liikettä" : "Lisää liike";
     gymModal.hidden = false;
     gymExNameInput.focus();
@@ -1009,6 +1014,7 @@
       weight: parseFloat(gymExWeightInput.value) || 0,
       sets: parseInt(gymExSetsInput.value, 10) || 3,
       reps: parseInt(gymExRepsInput.value, 10) || 10,
+      rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
     };
     closeGymModal();
     if (exerciseId) {
@@ -1112,117 +1118,191 @@
   function renderActiveWorkout() {
     stopAllGymTimers();
     gymExerciseTimers = {};
+    gymExerciseStates = {};
     workoutIdleEl.hidden = true;
     workoutActiveEl.hidden = false;
     activeProgramNameEl.textContent = gymActiveSession.program_name;
     workoutStartTimeEl.textContent = "Aloitettu: " + formatDate(gymActiveSession.started_at);
     activeExercisesEl.innerHTML = "";
     gymActiveExercises.forEach(function (ex) {
-      activeExercisesEl.appendChild(createExerciseWorkoutCard(ex));
-      startExerciseTimer(ex.id);
+      var done = gymSetsDone[ex.id] || 0;
+      var state = done >= ex.sets ? "done" : "idle";
+      gymExerciseStates[ex.id] = state;
+      activeExercisesEl.appendChild(createExerciseWorkoutCard(ex, done, state));
     });
   }
 
-  function createExerciseWorkoutCard(ex) {
-    var done = gymSetsDone[ex.id] || 0;
+  function createExerciseWorkoutCard(ex, done, state) {
     var card = document.createElement("div");
-    card.className = "exercise-workout-card" + (done >= ex.sets ? " all-sets-done" : "");
+    card.className = "exercise-workout-card" + (state === "done" ? " done" : "");
     card.dataset.exId = ex.id;
+    var restText = ex.rest_seconds > 0
+      ? " \u00b7 lepo\u00a0" + ex.rest_seconds + "\u00a0s"
+      : "";
     card.innerHTML =
       '<div class="ewc-header">' +
       '<span class="ewc-name">' + escapeHtml(ex.name) + "</span>" +
-      '<span class="ewc-target">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + "\u00a0toistoa</span>" +
+      '<span class="ewc-target">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + "\u00a0toistoa" + restText + "</span>" +
       "</div>" +
-      '<div class="ewc-progress">' +
-      '<span class="ewc-sets-label">Sarjat: <strong class="ewc-sets-done">' + done + "</strong> / " + ex.sets + "</span>" +
-      '<span class="ewc-timer" id="timer-' + ex.id + '">00:00</span>' +
+      '<div class="ewc-progress">Sarjat: <strong class="ewc-sets-done">' + done + "</strong>\u00a0/\u00a0" + ex.sets + "</div>" +
+      '<div class="ewc-rest-info" hidden>' +
+      '<span class="ewc-countdown" id="countdown-' + ex.id + '">' + formatGymSeconds(ex.rest_seconds) + "</span>" +
+      '<span class="ewc-rest-label">lepotauko</span>' +
       "</div>" +
-      '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '">' +
-      (done >= ex.sets ? "Valmis!" : "Sarja tehty") +
-      "</button>";
+      '<div class="ewc-done-banner" ' + (state === "done" ? "" : "hidden") + ">\u2713 Kaikki sarjat tehty!</div>" +
+      '<div class="ewc-actions">' +
+      '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '"' + (state !== "idle" ? " hidden" : "") + ">Sarja tehty</button>" +
+      '<button class="btn btn-secondary ewc-skip-btn" data-ex-id="' + ex.id + '" hidden>Ohita tauko</button>' +
+      "</div>";
     return card;
   }
 
-  function startExerciseTimer(exId) {
-    var timerEl = document.getElementById("timer-" + exId);
-    if (!timerEl) return;
+  function transitionToIdle(exId) {
+    gymExerciseStates[exId] = "idle";
+    stopGymTimer(exId);
+    var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+    if (!card) return;
+    card.querySelector(".ewc-log-btn").hidden = false;
+    card.querySelector(".ewc-skip-btn").hidden = true;
+    card.querySelector(".ewc-rest-info").hidden = true;
+    card.classList.remove("resting");
+  }
+
+  function transitionToResting(exId) {
+    gymExerciseStates[exId] = "resting";
+    var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
+    if (!exercise) return;
+    var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+    if (!card) return;
+    card.querySelector(".ewc-log-btn").hidden = true;
+    card.querySelector(".ewc-skip-btn").hidden = false;
+    card.querySelector(".ewc-rest-info").hidden = false;
+    card.classList.add("resting");
+    startRestCountdown(exId, exercise.rest_seconds);
+  }
+
+  function transitionToDone(exId) {
+    gymExerciseStates[exId] = "done";
+    stopGymTimer(exId);
+    var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+    if (!card) return;
+    card.querySelector(".ewc-log-btn").hidden = true;
+    card.querySelector(".ewc-skip-btn").hidden = true;
+    card.querySelector(".ewc-rest-info").hidden = true;
+    card.querySelector(".ewc-done-banner").hidden = false;
+    card.classList.remove("resting");
+    card.classList.add("done");
+  }
+
+  function startRestCountdown(exId, seconds) {
+    stopGymTimer(exId);
+    var secondsLeft = seconds;
+    var countdownEl = document.getElementById("countdown-" + exId);
+    if (countdownEl) countdownEl.textContent = formatGymSeconds(secondsLeft);
     gymExerciseTimers[exId] = {
-      seconds: 0,
-      timerEl: timerEl,
       intervalId: setInterval(function () {
-        if (!gymExerciseTimers[exId]) return;
-        gymExerciseTimers[exId].seconds++;
-        timerEl.textContent = formatGymSeconds(gymExerciseTimers[exId].seconds);
+        secondsLeft--;
+        if (countdownEl) countdownEl.textContent = formatGymSeconds(Math.max(0, secondsLeft));
+        if (secondsLeft <= 0) {
+          stopGymTimer(exId);
+          playRestAlarm();
+          flashCard(exId);
+          transitionToIdle(exId);
+        }
       }, 1000),
     };
   }
 
-  function resetExerciseTimer(exId) {
-    if (gymExerciseTimers[exId]) {
+  function stopGymTimer(exId) {
+    if (gymExerciseTimers[exId] && gymExerciseTimers[exId].intervalId) {
       clearInterval(gymExerciseTimers[exId].intervalId);
+      delete gymExerciseTimers[exId];
     }
-    var timerEl = document.getElementById("timer-" + exId);
-    if (timerEl) timerEl.textContent = "00:00";
-    gymExerciseTimers[exId] = {
-      seconds: 0,
-      timerEl: timerEl,
-      intervalId: setInterval(function () {
-        if (!gymExerciseTimers[exId]) return;
-        gymExerciseTimers[exId].seconds++;
-        timerEl.textContent = formatGymSeconds(gymExerciseTimers[exId].seconds);
-      }, 1000),
-    };
   }
 
   function stopAllGymTimers() {
     if (!gymExerciseTimers) return;
     Object.keys(gymExerciseTimers).forEach(function (exId) {
-      if (gymExerciseTimers[exId] && gymExerciseTimers[exId].intervalId) {
-        clearInterval(gymExerciseTimers[exId].intervalId);
-      }
+      stopGymTimer(exId);
     });
     gymExerciseTimers = {};
   }
 
+  function flashCard(exId) {
+    var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+    if (!card) return;
+    card.classList.add("ewc-alert");
+    setTimeout(function () { card.classList.remove("ewc-alert"); }, 3000);
+  }
+
+  function playRestAlarm() {
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.35, 0.7].forEach(function (delay) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.4, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.35);
+      });
+    } catch (_) {}
+  }
+
   function formatGymSeconds(s) {
+    s = Math.max(0, s);
     var m = Math.floor(s / 60);
     var sec = s % 60;
     return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec;
   }
 
   activeExercisesEl.addEventListener("click", async function (e) {
-    var btn = e.target.closest(".ewc-log-btn");
-    if (!btn || !gymActiveSession) return;
-    var exId = parseInt(btn.dataset.exId, 10);
-    var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
-    if (!exercise) return;
-    var done = gymSetsDone[exId] || 0;
-    if (done >= exercise.sets) return;
-    var setNumber = done + 1;
-    try {
-      await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/sets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          exercise_id: exId,
-          exercise_name: exercise.name,
-          set_number: setNumber,
-          weight_used: exercise.weight,
-          reps_done: exercise.reps,
-        }),
-      });
-      gymSetsDone[exId] = setNumber;
-      resetExerciseTimer(exId);
-      var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
-      if (card) {
-        var doneEl = card.querySelector(".ewc-sets-done");
-        if (doneEl) doneEl.textContent = setNumber;
-        if (setNumber >= exercise.sets) {
-          card.classList.add("all-sets-done");
-          btn.textContent = "Valmis!";
+    // "Sarja tehty"
+    var logBtn = e.target.closest(".ewc-log-btn");
+    if (logBtn && gymActiveSession) {
+      var exId = parseInt(logBtn.dataset.exId, 10);
+      var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
+      if (!exercise || gymExerciseStates[exId] !== "idle") return;
+      var done = gymSetsDone[exId] || 0;
+      var setNumber = done + 1;
+      try {
+        await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/sets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            exercise_id: exId,
+            exercise_name: exercise.name,
+            set_number: setNumber,
+            weight_used: exercise.weight,
+            reps_done: exercise.reps,
+          }),
+        });
+        gymSetsDone[exId] = setNumber;
+        var card = activeExercisesEl.querySelector('[data-ex-id="' + exId + '"]');
+        if (card) {
+          var doneEl = card.querySelector(".ewc-sets-done");
+          if (doneEl) doneEl.textContent = setNumber;
         }
-      }
-    } catch (_) {}
+        if (setNumber >= exercise.sets) {
+          transitionToDone(exId);
+        } else if (exercise.rest_seconds > 0) {
+          transitionToResting(exId);
+        }
+        // rest_seconds = 0 → stay idle, no countdown
+      } catch (_) {}
+      return;
+    }
+
+    // "Ohita tauko"
+    var skipBtn = e.target.closest(".ewc-skip-btn");
+    if (skipBtn) {
+      var exId = parseInt(skipBtn.dataset.exId, 10);
+      transitionToIdle(exId);
+    }
   });
 
   completeWorkoutBtn.addEventListener("click", async function () {
@@ -1236,6 +1316,7 @@
       gymActiveSession = null;
       gymActiveExercises = [];
       gymSetsDone = {};
+      gymExerciseStates = {};
       localStorage.removeItem("gymActiveSessionId");
       workoutActiveEl.hidden = true;
       workoutIdleEl.hidden = false;

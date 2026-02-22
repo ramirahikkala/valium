@@ -213,6 +213,7 @@ class ProgramExercise(Base):
     )
     sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
     reps: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
+    rest_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=90, server_default="90")
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
