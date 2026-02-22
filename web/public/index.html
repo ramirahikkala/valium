@@ -36,12 +36,14 @@
       </div>
     </header>
 
-    <main>
-      <!-- View toggle -->
+    <nav class="top-nav">
       <div class="view-toggle">
-        <button class="view-tab active" id="view-tab-tasks" data-view="tasks">Tehtävät</button>
-        <button class="view-tab" id="view-tab-gym" data-view="gym">Sali</button>
+        <button class="view-tab active" id="view-tab-tasks" data-view="tasks">📋 Tehtävät</button>
+        <button class="view-tab" id="view-tab-gym" data-view="gym">💪 Sali</button>
       </div>
+    </nav>
+
+    <main>
 
       <!-- Tasks view -->
       <div id="tasks-view">
@@ -62,29 +64,32 @@
         </section>
 
         <section class="add-task" aria-label="Add a new task">
-          <form id="add-task-form">
-            <div class="form-group">
-              <label for="task-title">Title</label>
-              <input
-                type="text"
-                id="task-title"
-                name="title"
-                placeholder="What needs to be done?"
-                required
-                autocomplete="off"
-              >
-            </div>
-            <div class="form-group">
-              <label for="task-description">Description (optional)</label>
-              <textarea
-                id="task-description"
-                name="description"
-                placeholder="Add some details..."
-                rows="2"
-              ></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Add Task</button>
-          </form>
+          <button type="button" class="add-task-toggle" id="add-task-toggle">＋ Lisää tehtävä</button>
+          <div class="add-task-body" id="add-task-body" hidden>
+            <form id="add-task-form">
+              <div class="form-group">
+                <label for="task-title">Title</label>
+                <input
+                  type="text"
+                  id="task-title"
+                  name="title"
+                  placeholder="What needs to be done?"
+                  required
+                  autocomplete="off"
+                >
+              </div>
+              <div class="form-group">
+                <label for="task-description">Description (optional)</label>
+                <textarea
+                  id="task-description"
+                  name="description"
+                  placeholder="Add some details..."
+                  rows="2"
+                ></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary">Add Task</button>
+            </form>
+          </div>
         </section>
 
         <section class="task-controls" aria-label="Filter tasks">
@@ -106,13 +111,14 @@
       <!-- Gym view -->
       <div id="gym-view" hidden>
         <div class="gym-tabs">
+          <button class="gym-tab" data-gym-tab="workout">Treeni</button>
           <button class="gym-tab active" data-gym-tab="programs">Ohjelmat</button>
-          <button class="gym-tab" data-gym-tab="workout">Aloita treeni</button>
           <button class="gym-tab" data-gym-tab="history">Historia</button>
         </div>
 
         <!-- Programs sub-view -->
         <div id="gym-programs" class="gym-section">
+          <h2 class="gym-section-heading">Ohjelmat ⚙️</h2>
           <div class="gym-section-actions">
             <button class="btn btn-primary btn-sm" id="add-program-btn">+ Uusi ohjelma</button>
             <label class="archived-toggle">
@@ -147,6 +153,9 @@
         <!-- Workout sub-view -->
         <div id="gym-workout" class="gym-section" hidden>
           <div id="workout-idle">
+            <div class="workout-idle-card">
+              <h2 class="workout-idle-title">💪 Aloita treeni</h2>
+            </div>
             <div class="form-group">
               <label for="workout-program-select">Valitse ohjelma</label>
               <select id="workout-program-select"></select>
@@ -167,6 +176,7 @@
 
         <!-- History sub-view -->
         <div id="gym-history" class="gym-section" hidden>
+          <h2 class="gym-section-heading">Historia 📊</h2>
           <div id="sessions-list"></div>
         </div>
       </div>

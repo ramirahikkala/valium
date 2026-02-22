@@ -482,6 +482,18 @@
 
   // ---------- Event handlers ----------
 
+  // ---------- Collapsible add-task form ----------
+
+  var addTaskToggleBtn = document.getElementById("add-task-toggle");
+  var addTaskBody = document.getElementById("add-task-body");
+
+  addTaskToggleBtn.addEventListener("click", function () {
+    addTaskBody.hidden = !addTaskBody.hidden;
+    if (!addTaskBody.hidden) {
+      document.getElementById("task-title").focus();
+    }
+  });
+
   addForm.addEventListener("submit", function (e) {
     e.preventDefault();
     var title = document.getElementById("task-title").value.trim();
@@ -493,7 +505,7 @@
     }
     addTask(title, desc).then(function () {
       addForm.reset();
-      document.getElementById("task-title").focus();
+      addTaskBody.hidden = true;
     });
   });
 
