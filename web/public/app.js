@@ -307,11 +307,11 @@
   function statusLabel(status) {
     switch (status) {
       case "in_progress":
-        return "In Progress";
+        return "Kesken";
       case "done":
-        return "Done";
+        return "Valmis";
       default:
-        return "Pending";
+        return "Odottaa";
     }
   }
 
@@ -421,8 +421,8 @@
       emptyStateEl.hidden = false;
       emptyStateEl.textContent =
         currentFilter === "all"
-          ? "No tasks yet. Add one above!"
-          : "No tasks matching the current filter.";
+          ? "Ei tehtäviä. Lisää yksi yllä!"
+          : "Ei tehtäviä valitulla suodattimella.";
       return;
     }
     emptyStateEl.hidden = true;
@@ -703,12 +703,36 @@
   var gymCurrentTab = "programs";
   var gymPrograms = [];
 
+  // Sidebar DOM elements
+  var sidebarEl = document.getElementById("sidebar");
+  var sidebarOverlay = document.getElementById("sidebar-overlay");
+  var sidebarToggleBtn = document.getElementById("sidebar-toggle");
+  var sidebarGymChildren = document.getElementById("sidebar-gym-children");
+
+  // Hamburger toggle
+  sidebarToggleBtn.addEventListener("click", function () {
+    sidebarEl.classList.toggle("open");
+    sidebarOverlay.classList.toggle("visible");
+  });
+
+  sidebarOverlay.addEventListener("click", function () {
+    sidebarEl.classList.remove("open");
+    sidebarOverlay.classList.remove("visible");
+  });
+
+  function closeSidebarOnMobile() {
+    if (window.innerWidth <= 768) {
+      sidebarEl.classList.remove("open");
+      sidebarOverlay.classList.remove("visible");
+    }
+  }
+
   // Gym DOM elements — view toggle
   var viewTabTasks = document.getElementById("view-tab-tasks");
   var viewTabGym = document.getElementById("view-tab-gym");
   var tasksView = document.getElementById("tasks-view");
   var gymView = document.getElementById("gym-view");
-  var gymTabButtons = document.querySelectorAll(".gym-tab");
+  var gymTabButtons = document.querySelectorAll(".sidebar-gym-btn");
 
   // Gym DOM elements — sections
   var gymProgramsSection = document.getElementById("gym-programs");
@@ -762,7 +786,7 @@
 
   // ---------- View toggle ----------
 
-  viewTabTasks.addEventListener("click", function () { switchToView("tasks"); });
+  viewTabTasks.addEventListener("click", function () { switchToView("tasks"); closeSidebarOnMobile(); });
   viewTabGym.addEventListener("click", function () { switchToView("gym"); });
 
   function switchToView(view) {
@@ -771,19 +795,25 @@
       gymView.hidden = false;
       viewTabTasks.classList.remove("active");
       viewTabGym.classList.add("active");
+      sidebarGymChildren.hidden = false;
       switchGymTab(gymCurrentTab);
     } else {
       tasksView.hidden = false;
       gymView.hidden = true;
       viewTabTasks.classList.add("active");
       viewTabGym.classList.remove("active");
+      sidebarGymChildren.hidden = true;
+      closeSidebarOnMobile();
     }
   }
 
   // ---------- Gym tab switching ----------
 
   gymTabButtons.forEach(function (btn) {
-    btn.addEventListener("click", function () { switchGymTab(btn.dataset.gymTab); });
+    btn.addEventListener("click", function () {
+      switchGymTab(btn.dataset.gymTab);
+      closeSidebarOnMobile();
+    });
   });
 
   function switchGymTab(tab) {

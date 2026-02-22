@@ -23,8 +23,8 @@
     <header>
       <div class="header-content">
         <div class="header-left">
+          <button class="hamburger" id="sidebar-toggle" aria-label="Avaa valikko">&#9776;</button>
           <h1>Valium</h1>
-          <p class="subtitle">Your little helper for getting things done</p>
         </div>
         <div class="header-right">
           <div class="user-info">
@@ -36,204 +36,224 @@
       </div>
     </header>
 
-    <nav class="top-nav">
-      <div class="view-toggle">
-        <button class="view-tab active" id="view-tab-tasks" data-view="tasks">📋 Tehtävät</button>
-        <button class="view-tab" id="view-tab-gym" data-view="gym">💪 Sali</button>
-      </div>
-    </nav>
+    <div class="app-layout">
+      <!-- Mobile overlay -->
+      <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
-    <main>
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
 
-      <!-- Tasks view -->
-      <div id="tasks-view">
-        <section class="list-selector" aria-label="Select a list">
-          <div class="list-tabs" id="list-tabs" role="tablist"></div>
-          <div class="list-actions">
-            <form id="add-list-form" class="add-list-form">
-              <input
-                type="text"
-                id="new-list-name"
-                placeholder="New list name..."
-                required
-                autocomplete="off"
-              >
-              <button type="submit" class="btn btn-primary btn-sm">Add List</button>
-            </form>
-          </div>
-        </section>
-
-        <section class="add-task" aria-label="Add a new task">
-          <button type="button" class="add-task-toggle" id="add-task-toggle">＋ Lisää tehtävä</button>
-          <div class="add-task-body" id="add-task-body" hidden>
-            <form id="add-task-form">
-              <div class="form-group">
-                <label for="task-title">Title</label>
+          <!-- Tehtävät -->
+          <div class="sidebar-section">
+            <button class="sidebar-section-btn active" id="view-tab-tasks" data-view="tasks">
+              <span class="sidebar-icon">📋</span>
+              <span class="sidebar-label">Tehtävät</span>
+            </button>
+            <div class="sidebar-children" id="sidebar-tasks-children">
+              <div id="list-tabs" class="sidebar-list-tabs" role="tablist"></div>
+              <form id="add-list-form" class="sidebar-add-list-form">
                 <input
                   type="text"
-                  id="task-title"
-                  name="title"
-                  placeholder="What needs to be done?"
+                  id="new-list-name"
+                  placeholder="Uusi lista..."
                   required
                   autocomplete="off"
                 >
+                <button type="submit" class="btn btn-primary btn-sm">+ Lista</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Sali -->
+          <div class="sidebar-section">
+            <button class="sidebar-section-btn" id="view-tab-gym" data-view="gym">
+              <span class="sidebar-icon">💪</span>
+              <span class="sidebar-label">Sali</span>
+            </button>
+            <div class="sidebar-children" id="sidebar-gym-children" hidden>
+              <button class="sidebar-gym-btn" data-gym-tab="workout">🏋️ Treeni</button>
+              <button class="sidebar-gym-btn active" data-gym-tab="programs">⚙️ Ohjelmat</button>
+              <button class="sidebar-gym-btn" data-gym-tab="history">📊 Historia</button>
+            </div>
+          </div>
+
+        </nav>
+      </aside>
+
+      <!-- Main content -->
+      <main>
+
+        <!-- Tasks view -->
+        <div id="tasks-view">
+          <section class="add-task" aria-label="Add a new task">
+            <button type="button" class="add-task-toggle" id="add-task-toggle">＋ Lisää tehtävä</button>
+            <div class="add-task-body" id="add-task-body" hidden>
+              <form id="add-task-form">
+                <div class="form-group">
+                  <label for="task-title">Otsikko</label>
+                  <input
+                    type="text"
+                    id="task-title"
+                    name="title"
+                    placeholder="Mitä pitää tehdä?"
+                    required
+                    autocomplete="off"
+                  >
+                </div>
+                <div class="form-group">
+                  <label for="task-description">Kuvaus (valinnainen)</label>
+                  <textarea
+                    id="task-description"
+                    name="description"
+                    placeholder="Lisää tietoja..."
+                    rows="2"
+                  ></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Lisää tehtävä</button>
+              </form>
+            </div>
+          </section>
+
+          <section class="task-controls" aria-label="Filter tasks">
+            <div class="filter-buttons" role="group" aria-label="Filter by status">
+              <button class="btn btn-filter active" data-filter="all">Kaikki</button>
+              <button class="btn btn-filter" data-filter="pending">Odottaa</button>
+              <button class="btn btn-filter" data-filter="in_progress">Kesken</button>
+              <button class="btn btn-filter" data-filter="done">Valmis</button>
+            </div>
+          </section>
+
+          <section class="task-list-section" aria-label="Task list">
+            <div id="error-message" class="error-message" role="alert" hidden></div>
+            <ul id="task-list" class="task-list" aria-live="polite"></ul>
+            <p id="empty-state" class="empty-state" hidden>Ei tehtäviä. Lisää yksi yllä!</p>
+          </section>
+        </div>
+
+        <!-- Gym view -->
+        <div id="gym-view" hidden>
+
+          <!-- Programs sub-view -->
+          <div id="gym-programs" class="gym-section">
+            <h2 class="gym-section-heading">Ohjelmat ⚙️</h2>
+            <div class="gym-section-actions">
+              <button class="btn btn-primary btn-sm" id="add-program-btn">+ Uusi ohjelma</button>
+              <label class="archived-toggle">
+                <input type="checkbox" id="show-archived"> Näytä arkistoidut
+              </label>
+            </div>
+
+            <!-- Exercise library -->
+            <div class="exercise-library">
+              <div class="library-header">
+                <h3>Liikkeet</h3>
+                <button class="btn btn-icon btn-sm" id="add-library-exercise-btn">+ Lisää</button>
+              </div>
+              <form id="add-library-exercise-form" class="inline-form" hidden>
+                <input type="text" id="new-library-exercise-name" placeholder="Liikkeen nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm">Lisää</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn">Peruuta</button>
+              </form>
+              <div id="library-exercises-list"></div>
+            </div>
+
+            <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
+              <form id="add-program-form" class="inline-form">
+                <input type="text" id="new-program-name" placeholder="Ohjelman nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm">Luo</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program">Peruuta</button>
+              </form>
+            </div>
+            <div id="programs-list"></div>
+          </div>
+
+          <!-- Workout sub-view -->
+          <div id="gym-workout" class="gym-section" hidden>
+            <div id="workout-idle">
+              <div class="workout-idle-card">
+                <h2 class="workout-idle-title">💪 Aloita treeni</h2>
               </div>
               <div class="form-group">
-                <label for="task-description">Description (optional)</label>
-                <textarea
-                  id="task-description"
-                  name="description"
-                  placeholder="Add some details..."
-                  rows="2"
-                ></textarea>
+                <label for="workout-program-select">Valitse ohjelma</label>
+                <select id="workout-program-select"></select>
               </div>
-              <button type="submit" class="btn btn-primary">Add Task</button>
-            </form>
-          </div>
-        </section>
-
-        <section class="task-controls" aria-label="Filter tasks">
-          <div class="filter-buttons" role="group" aria-label="Filter by status">
-            <button class="btn btn-filter active" data-filter="all">All</button>
-            <button class="btn btn-filter" data-filter="pending">Pending</button>
-            <button class="btn btn-filter" data-filter="in_progress">In Progress</button>
-            <button class="btn btn-filter" data-filter="done">Done</button>
-          </div>
-        </section>
-
-        <section class="task-list-section" aria-label="Task list">
-          <div id="error-message" class="error-message" role="alert" hidden></div>
-          <ul id="task-list" class="task-list" aria-live="polite"></ul>
-          <p id="empty-state" class="empty-state" hidden>No tasks yet. Add one above!</p>
-        </section>
-      </div>
-
-      <!-- Gym view -->
-      <div id="gym-view" hidden>
-        <div class="gym-tabs">
-          <button class="gym-tab" data-gym-tab="workout">Treeni</button>
-          <button class="gym-tab active" data-gym-tab="programs">Ohjelmat</button>
-          <button class="gym-tab" data-gym-tab="history">Historia</button>
-        </div>
-
-        <!-- Programs sub-view -->
-        <div id="gym-programs" class="gym-section">
-          <h2 class="gym-section-heading">Ohjelmat ⚙️</h2>
-          <div class="gym-section-actions">
-            <button class="btn btn-primary btn-sm" id="add-program-btn">+ Uusi ohjelma</button>
-            <label class="archived-toggle">
-              <input type="checkbox" id="show-archived"> Näytä arkistoidut
-            </label>
-          </div>
-
-          <!-- Exercise library -->
-          <div class="exercise-library">
-            <div class="library-header">
-              <h3>Liikkeet</h3>
-              <button class="btn btn-icon btn-sm" id="add-library-exercise-btn">+ Lisää</button>
+              <button class="btn btn-primary" id="start-workout-btn">Aloita treeni</button>
             </div>
-            <form id="add-library-exercise-form" class="inline-form" hidden>
-              <input type="text" id="new-library-exercise-name" placeholder="Liikkeen nimi" required autocomplete="off">
-              <button type="submit" class="btn btn-primary btn-sm">Lisää</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn">Peruuta</button>
-            </form>
-            <div id="library-exercises-list"></div>
-          </div>
-
-          <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
-            <form id="add-program-form" class="inline-form">
-              <input type="text" id="new-program-name" placeholder="Ohjelman nimi" required autocomplete="off">
-              <button type="submit" class="btn btn-primary btn-sm">Luo</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program">Peruuta</button>
-            </form>
-          </div>
-          <div id="programs-list"></div>
-        </div>
-
-        <!-- Workout sub-view -->
-        <div id="gym-workout" class="gym-section" hidden>
-          <div id="workout-idle">
-            <div class="workout-idle-card">
-              <h2 class="workout-idle-title">💪 Aloita treeni</h2>
-            </div>
-            <div class="form-group">
-              <label for="workout-program-select">Valitse ohjelma</label>
-              <select id="workout-program-select"></select>
-            </div>
-            <button class="btn btn-primary" id="start-workout-btn">Aloita treeni</button>
-          </div>
-          <div id="workout-active" hidden>
-            <div class="workout-header">
-              <div class="workout-title-block">
-                <h3 id="active-program-name"></h3>
-                <span id="workout-start-time" class="workout-start-time"></span>
+            <div id="workout-active" hidden>
+              <div class="workout-header">
+                <div class="workout-title-block">
+                  <h3 id="active-program-name"></h3>
+                  <span id="workout-start-time" class="workout-start-time"></span>
+                </div>
+                <button class="btn btn-primary" id="complete-workout-btn">Treeni valmis!</button>
               </div>
-              <button class="btn btn-primary" id="complete-workout-btn">Treeni valmis!</button>
+              <div id="active-exercises"></div>
             </div>
-            <div id="active-exercises"></div>
           </div>
-        </div>
 
-        <!-- History sub-view -->
-        <div id="gym-history" class="gym-section" hidden>
-          <h2 class="gym-section-heading">Historia 📊</h2>
-          <div id="sessions-list"></div>
+          <!-- History sub-view -->
+          <div id="gym-history" class="gym-section" hidden>
+            <h2 class="gym-section-heading">Historia 📊</h2>
+            <div id="sessions-list"></div>
+          </div>
+
         </div>
-      </div>
-    </main>
+      </main>
+    </div>
   </div>
 
   <!-- Edit task modal -->
   <div id="edit-modal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-labelledby="edit-modal-title" aria-modal="true">
-      <h2 id="edit-modal-title">Edit Task</h2>
+      <h2 id="edit-modal-title">Muokkaa tehtävää</h2>
       <form id="edit-task-form">
         <input type="hidden" id="edit-task-id">
         <div class="form-group">
-          <label for="edit-title">Title</label>
+          <label for="edit-title">Otsikko</label>
           <input type="text" id="edit-title" required>
         </div>
         <div class="form-group">
-          <label for="edit-description">Description</label>
+          <label for="edit-description">Kuvaus</label>
           <textarea id="edit-description" rows="3"></textarea>
         </div>
         <div class="form-group">
-          <label for="edit-status">Status</label>
+          <label for="edit-status">Tila</label>
           <select id="edit-status">
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="done">Done</option>
+            <option value="pending">Odottaa</option>
+            <option value="in_progress">Kesken</option>
+            <option value="done">Valmis</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="edit-list">Move to list</label>
+          <label for="edit-list">Siirrä listaan</label>
           <select id="edit-list"></select>
         </div>
         <fieldset class="alarm-fieldset">
-          <legend>Alarm / Reminder</legend>
+          <legend>Muistutus</legend>
           <div class="form-group">
-            <label for="edit-alarm-at">Remind at</label>
+            <label for="edit-alarm-at">Muistuta</label>
             <input type="datetime-local" id="edit-alarm-at">
           </div>
           <div class="form-group">
-            <label for="edit-alarm-recurrence">Recurrence</label>
+            <label for="edit-alarm-recurrence">Toistuvuus</label>
             <select id="edit-alarm-recurrence">
-              <option value="none">None (one-shot)</option>
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
+              <option value="none">Kerran</option>
+              <option value="daily">Päivittäin</option>
+              <option value="weekly">Viikoittain</option>
+              <option value="monthly">Kuukausittain</option>
             </select>
           </div>
           <div class="form-group form-group-inline">
             <label>
               <input type="checkbox" id="edit-alarm-enabled" checked>
-              Enabled
+              Käytössä
             </label>
           </div>
         </fieldset>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="edit-cancel">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-secondary" id="edit-cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary">Tallenna</button>
         </div>
       </form>
     </div>
