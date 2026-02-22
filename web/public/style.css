@@ -687,6 +687,434 @@ input[type="datetime-local"]:focus {
   margin-top: 0.5rem;
 }
 
+/* ---------- View toggle (Tehtävät / Sali) ---------- */
+
+.view-toggle {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.view-tab {
+  padding: 0.55rem 1.4rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+  font-weight: 600;
+  border: 2px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.view-tab:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.view-tab.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* ---------- Gym tabs ---------- */
+
+.gym-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.gym-tab {
+  padding: 0.45rem 1rem;
+  font-size: 0.88rem;
+  font-family: inherit;
+  font-weight: 500;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+
+.gym-tab:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.gym-tab.active {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+/* ---------- Gym section ---------- */
+
+.gym-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* ---------- Programs ---------- */
+
+.gym-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.archived-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.add-program-form-wrap {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+  box-shadow: var(--shadow);
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.inline-form input[type="text"] {
+  flex: 1;
+  min-width: 160px;
+}
+
+.program-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: box-shadow var(--transition);
+}
+
+.program-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.program-card.archived {
+  opacity: 0.7;
+}
+
+.program-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.program-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.program-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.program-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+.program-badge.active {
+  background: #dcf5e3;
+  color: #2e7a42;
+}
+
+.program-badge.archived {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.program-header-btns {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.exercises-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.1rem 0;
+}
+
+.exercise-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.exercise-row:last-child {
+  border-bottom: none;
+}
+
+.exercise-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.exercise-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.exercise-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.exercise-btns {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.exercise-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0;
+}
+
+.add-exercise-btn {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+}
+
+/* ---------- Workout tab ---------- */
+
+.workout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+
+.workout-title-block h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.workout-start-time {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+.exercise-workout-card {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: box-shadow var(--transition);
+}
+
+.exercise-workout-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.exercise-workout-card.all-sets-done {
+  border-left: 3px solid var(--color-done);
+}
+
+.ewc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.ewc-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.ewc-target {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+}
+
+.ewc-progress {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ewc-sets-label {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+}
+
+.ewc-timer {
+  font-size: 1.1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-primary);
+  letter-spacing: 0.05em;
+}
+
+.ewc-log-btn {
+  align-self: flex-start;
+}
+
+.all-sets-done .ewc-log-btn {
+  background: var(--color-done);
+  opacity: 0.7;
+  cursor: default;
+}
+
+/* ---------- History tab ---------- */
+
+.session-item {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow var(--transition);
+}
+
+.session-item:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.session-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  cursor: pointer;
+  user-select: none;
+  gap: 0.5rem;
+}
+
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.session-badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.session-badge.done {
+  background: #dcf5e3;
+  color: #2e7a42;
+}
+
+.session-badge.active {
+  background: #dceffc;
+  color: #2e6e94;
+}
+
+.session-program-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.session-date {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+}
+
+.session-toggle-icon {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+}
+
+.session-sets {
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.session-exercise-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.session-exercise-row:last-child {
+  border-bottom: none;
+}
+
+.ses-ex-name {
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.ses-ex-sets {
+  color: var(--color-text-muted);
+  text-align: right;
+}
+
+.session-no-sets {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 0.25rem 0;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 480px) {

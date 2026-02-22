@@ -37,66 +37,128 @@
     </header>
 
     <main>
-      <section class="list-selector" aria-label="Select a list">
-        <div class="list-tabs" id="list-tabs" role="tablist"></div>
-        <div class="list-actions">
-          <form id="add-list-form" class="add-list-form">
-            <input
-              type="text"
-              id="new-list-name"
-              placeholder="New list name..."
-              required
-              autocomplete="off"
-            >
-            <button type="submit" class="btn btn-primary btn-sm">Add List</button>
+      <!-- View toggle -->
+      <div class="view-toggle">
+        <button class="view-tab active" id="view-tab-tasks" data-view="tasks">Tehtävät</button>
+        <button class="view-tab" id="view-tab-gym" data-view="gym">Sali</button>
+      </div>
+
+      <!-- Tasks view -->
+      <div id="tasks-view">
+        <section class="list-selector" aria-label="Select a list">
+          <div class="list-tabs" id="list-tabs" role="tablist"></div>
+          <div class="list-actions">
+            <form id="add-list-form" class="add-list-form">
+              <input
+                type="text"
+                id="new-list-name"
+                placeholder="New list name..."
+                required
+                autocomplete="off"
+              >
+              <button type="submit" class="btn btn-primary btn-sm">Add List</button>
+            </form>
+          </div>
+        </section>
+
+        <section class="add-task" aria-label="Add a new task">
+          <form id="add-task-form">
+            <div class="form-group">
+              <label for="task-title">Title</label>
+              <input
+                type="text"
+                id="task-title"
+                name="title"
+                placeholder="What needs to be done?"
+                required
+                autocomplete="off"
+              >
+            </div>
+            <div class="form-group">
+              <label for="task-description">Description (optional)</label>
+              <textarea
+                id="task-description"
+                name="description"
+                placeholder="Add some details..."
+                rows="2"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Task</button>
           </form>
-        </div>
-      </section>
+        </section>
 
-      <section class="add-task" aria-label="Add a new task">
-        <form id="add-task-form">
-          <div class="form-group">
-            <label for="task-title">Title</label>
-            <input
-              type="text"
-              id="task-title"
-              name="title"
-              placeholder="What needs to be done?"
-              required
-              autocomplete="off"
-            >
+        <section class="task-controls" aria-label="Filter tasks">
+          <div class="filter-buttons" role="group" aria-label="Filter by status">
+            <button class="btn btn-filter active" data-filter="all">All</button>
+            <button class="btn btn-filter" data-filter="pending">Pending</button>
+            <button class="btn btn-filter" data-filter="in_progress">In Progress</button>
+            <button class="btn btn-filter" data-filter="done">Done</button>
           </div>
-          <div class="form-group">
-            <label for="task-description">Description (optional)</label>
-            <textarea
-              id="task-description"
-              name="description"
-              placeholder="Add some details..."
-              rows="2"
-            ></textarea>
-          </div>
-          <button type="submit" class="btn btn-primary">Add Task</button>
-        </form>
-      </section>
+        </section>
 
-      <section class="task-controls" aria-label="Filter tasks">
-        <div class="filter-buttons" role="group" aria-label="Filter by status">
-          <button class="btn btn-filter active" data-filter="all">All</button>
-          <button class="btn btn-filter" data-filter="pending">Pending</button>
-          <button class="btn btn-filter" data-filter="in_progress">In Progress</button>
-          <button class="btn btn-filter" data-filter="done">Done</button>
+        <section class="task-list-section" aria-label="Task list">
+          <div id="error-message" class="error-message" role="alert" hidden></div>
+          <ul id="task-list" class="task-list" aria-live="polite"></ul>
+          <p id="empty-state" class="empty-state" hidden>No tasks yet. Add one above!</p>
+        </section>
+      </div>
+
+      <!-- Gym view -->
+      <div id="gym-view" hidden>
+        <div class="gym-tabs">
+          <button class="gym-tab active" data-gym-tab="programs">Ohjelmat</button>
+          <button class="gym-tab" data-gym-tab="workout">Aloita treeni</button>
+          <button class="gym-tab" data-gym-tab="history">Historia</button>
         </div>
-      </section>
 
-      <section class="task-list-section" aria-label="Task list">
-        <div id="error-message" class="error-message" role="alert" hidden></div>
-        <ul id="task-list" class="task-list" aria-live="polite"></ul>
-        <p id="empty-state" class="empty-state" hidden>No tasks yet. Add one above!</p>
-      </section>
+        <!-- Programs sub-view -->
+        <div id="gym-programs" class="gym-section">
+          <div class="gym-section-actions">
+            <button class="btn btn-primary btn-sm" id="add-program-btn">+ Uusi ohjelma</button>
+            <label class="archived-toggle">
+              <input type="checkbox" id="show-archived"> Näytä arkistoidut
+            </label>
+          </div>
+          <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
+            <form id="add-program-form" class="inline-form">
+              <input type="text" id="new-program-name" placeholder="Ohjelman nimi" required autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm">Luo</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program">Peruuta</button>
+            </form>
+          </div>
+          <div id="programs-list"></div>
+        </div>
+
+        <!-- Workout sub-view -->
+        <div id="gym-workout" class="gym-section" hidden>
+          <div id="workout-idle">
+            <div class="form-group">
+              <label for="workout-program-select">Valitse ohjelma</label>
+              <select id="workout-program-select"></select>
+            </div>
+            <button class="btn btn-primary" id="start-workout-btn">Aloita treeni</button>
+          </div>
+          <div id="workout-active" hidden>
+            <div class="workout-header">
+              <div class="workout-title-block">
+                <h3 id="active-program-name"></h3>
+                <span id="workout-start-time" class="workout-start-time"></span>
+              </div>
+              <button class="btn btn-primary" id="complete-workout-btn">Treeni valmis!</button>
+            </div>
+            <div id="active-exercises"></div>
+          </div>
+        </div>
+
+        <!-- History sub-view -->
+        <div id="gym-history" class="gym-section" hidden>
+          <div id="sessions-list"></div>
+        </div>
+      </div>
     </main>
   </div>
 
-  <!-- Edit modal -->
+  <!-- Edit task modal -->
   <div id="edit-modal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-labelledby="edit-modal-title" aria-modal="true">
       <h2 id="edit-modal-title">Edit Task</h2>
@@ -147,6 +209,37 @@
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="edit-cancel">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Gym exercise modal -->
+  <div id="gym-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-labelledby="gym-modal-title" aria-modal="true">
+      <h2 id="gym-modal-title">Liike</h2>
+      <form id="gym-modal-form">
+        <input type="hidden" id="gym-modal-program-id">
+        <input type="hidden" id="gym-modal-exercise-id">
+        <div class="form-group">
+          <label for="gym-ex-name">Nimi</label>
+          <input type="text" id="gym-ex-name" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="gym-ex-weight">Paino (kg)</label>
+          <input type="number" id="gym-ex-weight" step="0.5" min="0" value="0">
+        </div>
+        <div class="form-group">
+          <label for="gym-ex-sets">Sarjat</label>
+          <input type="number" id="gym-ex-sets" min="1" value="3">
+        </div>
+        <div class="form-group">
+          <label for="gym-ex-reps">Toistot</label>
+          <input type="number" id="gym-ex-reps" min="1" value="10">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="gym-modal-cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary">Tallenna</button>
         </div>
       </form>
     </div>
