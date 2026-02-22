@@ -137,6 +137,30 @@ class TaskResponse(BaseModel):
     updated_at: datetime
 
 
+# ---------- Gym Exercise Library ----------
+
+
+class GymExerciseCreate(BaseModel):
+    """Schema for creating an exercise in the user's exercise library."""
+
+    name: str
+
+
+class GymExerciseUpdate(BaseModel):
+    """Schema for renaming a library exercise."""
+
+    name: str | None = None
+
+
+class GymExerciseResponse(BaseModel):
+    """Schema returned for a single exercise library entry."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
 # ---------- Gym Programs ----------
 
 
@@ -153,10 +177,18 @@ class ProgramUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class LastPerformance(BaseModel):
+    """Last logged set data for a given exercise."""
+
+    weight_used: float
+    reps_done: int
+    completed_at: datetime
+
+
 class ExerciseCreate(BaseModel):
     """Schema for adding an exercise to a program."""
 
-    name: str
+    exercise_id: int
     weight: float = 0.0
     sets: int = 3
     reps: int = 10
@@ -166,7 +198,6 @@ class ExerciseCreate(BaseModel):
 class ExerciseUpdate(BaseModel):
     """Schema for updating a program exercise. All fields optional."""
 
-    name: str | None = None
     weight: float | None = None
     sets: int | None = None
     reps: int | None = None
@@ -177,16 +208,16 @@ class ExerciseUpdate(BaseModel):
 class ExerciseResponse(BaseModel):
     """Schema returned for a single program exercise."""
 
-    model_config = ConfigDict(from_attributes=True)
-
     id: int
     program_id: int
-    name: str
+    exercise_id: int
+    exercise_name: str
     weight: float
     sets: int
     reps: int
     rest_seconds: int
     position: int
+    last_performance: LastPerformance | None = None
 
 
 class ProgramResponse(BaseModel):

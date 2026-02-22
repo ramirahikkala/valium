@@ -61,6 +61,7 @@ class User(Base):
     )
 
     lists: Mapped[list["List"]] = relationship("List", back_populates="user")
+    exercises: Mapped[list["Exercise"]] = relationship("Exercise", back_populates="user")
     workout_programs: Mapped[list["WorkoutProgram"]] = relationship(
         "WorkoutProgram", back_populates="user"
     )
@@ -169,6 +170,26 @@ class Alarm(Base):
 # ---------- Gym models ----------
 
 
+class Exercise(Base):
+    """Represents a named exercise in the user's personal exercise library."""
+
+    __tablename__ = "exercises"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    user: Mapped[User] = relationship("User", back_populates="exercises")
+    program_exercises: Mapped[list["ProgramExercise"]] = relationship(
+        "ProgramExercise", back_populates="exercise"
+    )
+    session_sets: Mapped[list["SessionSet"]] = relationship(
+        "SessionSet", back_populates="exercise"
+    )
+
+
 class WorkoutProgram(Base):
     """Represents a named workout program belonging to a user."""
 
@@ -207,7 +228,9 @@ class ProgramExercise(Base):
     program_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("workout_programs.id", ondelete="CASCADE"), nullable=False
     )
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    exercise_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False
+    )
     weight: Mapped[float] = mapped_column(
         Float, nullable=False, default=0.0, server_default="0"
     )
@@ -217,6 +240,7 @@ class ProgramExercise(Base):
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
     program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
+    exercise: Mapped[Exercise] = relationship("Exercise", back_populates="program_exercises")
 
 
 class WorkoutSession(Base):
@@ -258,7 +282,7 @@ class SessionSet(Base):
         Integer, ForeignKey("workout_sessions.id", ondelete="CASCADE"), nullable=False
     )
     exercise_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("program_exercises.id", ondelete="SET NULL"), nullable=True
+        Integer, ForeignKey("exercises.id", ondelete="SET NULL"), nullable=True
     )
     exercise_name: Mapped[str] = mapped_column(String(255), nullable=False)
     set_number: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -271,4 +295,4 @@ class SessionSet(Base):
     )
 
     session: Mapped[WorkoutSession] = relationship("WorkoutSession", back_populates="sets")
-    exercise: Mapped[ProgramExercise | None] = relationship("ProgramExercise")
+    exercise: Mapped[Exercise | None] = relationship("Exercise", back_populates="session_sets")
