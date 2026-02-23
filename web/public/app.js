@@ -5,6 +5,7 @@
 
   var STRINGS = {
     fi: {
+      // Navigaatio
       tasks: "Tehtävät",
       gym: "Sali",
       workout_tab: "🏋️ Treeni",
@@ -12,19 +13,133 @@
       history_tab: "📊 Historia",
       settings: "Asetukset",
       language: "Kieli",
+      hamburger_aria: "Avaa valikko",
+
+      // Kirjautuminen
+      subtitle: "Pikkuapurisi asioiden hoitamiseen",
+      sign_out: "Kirjaudu ulos",
+      error_generic: "Jotain meni pieleen",
+      error_login_failed: "Kirjautuminen epäonnistui: ",
+      error_client_id: "Google-kirjautumista ei ole konfiguroitu palvelimelle",
+      error_auth_config: "Kirjautumisasetuksia ei voitu ladata",
+      error_select_list: "Valitse ensin lista",
+
+      // Listat
+      new_list_placeholder: "Uusi lista...",
+      add_list_btn: "+ Lista",
+      delete_list_confirm: "Poistetaanko lista \"{name}\" ja kaikki sen tehtävät?",
+
+      // Suodattimet
       filter_all: "Kaikki",
       filter_pending: "Odottaa",
       filter_in_progress: "Kesken",
       filter_done: "Valmis",
-      add_task: "＋ Lisää tehtävä",
+
+      // Tehtävän tila
       status_pending: "Odottaa",
       status_in_progress: "Kesken",
       status_done: "Valmis",
+
+      // Tehtävälomake
+      add_task: "＋ Lisää tehtävä",
+      add_task_submit: "Lisää tehtävä",
+      label_title: "Otsikko",
+      task_title_placeholder: "Mitä pitää tehdä?",
+      label_description_optional: "Kuvaus (valinnainen)",
+      task_desc_placeholder: "Lisää tietoja...",
+
+      // Tehtävälista
       empty_all: "Ei tehtäviä. Lisää yksi yllä!",
       empty_filtered: "Ei tehtäviä valitulla suodattimella.",
+      drag_reorder_aria: "Järjestä uudelleen raahaamalla",
+      set_status_to: "Aseta tilaksi ",
+      task_edit_btn: "Muokkaa",
+      task_delete_btn: "Poista",
+      delete_task_confirm: "Poistetaanko tehtävä?",
+
+      // Muokkausmodaali
+      edit_task_heading: "Muokkaa tehtävää",
+      label_description: "Kuvaus",
+      label_status: "Tila",
+      label_move_to_list: "Siirrä listaan",
+      alarm_legend: "Muistutus",
+      label_remind_at: "Muistuta",
+      label_recurrence: "Toistuvuus",
+      recurrence_once: "Kerran",
+      recurrence_daily: "Päivittäin",
+      recurrence_weekly: "Viikoittain",
+      recurrence_monthly: "Kuukausittain",
+      label_enabled: "Käytössä",
+      cancel: "Peruuta",
+      save: "Tallenna",
+
+      // Sali — ohjelmat
+      programs_heading: "Ohjelmat ⚙️",
+      add_program_btn: "+ Uusi ohjelma",
+      show_archived_label: "Näytä arkistoidut",
+      exercises_heading: "Liikkeet",
+      add_exercise_lib_btn: "+ Lisää",
+      exercise_name_placeholder: "Liikkeen nimi",
+      add_btn: "Lisää",
+      program_name_placeholder: "Ohjelman nimi",
+      create_btn: "Luo",
+      no_exercises_library: "Ei liikkeitä. Lisää liike yllä.",
+      rename_btn: "Nimeä",
+      delete_btn: "Poista",
+      rename_prompt: "Uusi nimi:",
+      delete_exercise_confirm: "Poistetaanko liike? Se poistetaan myös kaikista ohjelmista.",
+      no_programs_empty: "Ei ohjelmia. Luo uusi ohjelma ylhäältä.",
+      badge_active: "Aktiivinen",
+      badge_archived: "Arkistoitu",
+      edit_exercise_btn: "Muokkaa",
+      archive_btn: "Arkistoi",
+      restore_btn: "Palauta",
+      no_exercises_program: "Ei liikkeitä. Lisää alla.",
+      add_exercise_btn: "+ Lisää liike",
+      delete_program_confirm: "Poistetaanko ohjelma \"{name}\" ja kaikki sen liikkeet?",
+      delete_exercise_from_program_confirm: "Poistetaanko liike \"{name}\"?",
+      fallback_program: "ohjelma",
+      fallback_exercise: "liike",
+      last_perf_abbrev: "Ed: ",
+      sets_label: "sarjaa",
+      rest_short: "lepo\u00a0",
+
+      // Sali — liike­modaali
+      gym_modal_add_heading: "Lisää liike",
+      gym_modal_edit_heading: "Muokkaa liikettä",
+      label_exercise: "Liike",
+      select_exercise_option: "Valitse liike...",
+      label_weight_kg: "Paino (kg)",
+      label_sets: "Sarjat",
+      label_reps: "Toistot",
+      label_rest_seconds: "Lepotauko (sekuntia)",
+
+      // Sali — treeni
+      workout_idle_heading: "💪 Aloita treeni",
+      label_select_program: "Valitse ohjelma",
+      start_workout_btn: "Aloita treeni",
+      complete_workout_btn_text: "Treeni valmis!",
+      no_active_programs_option: "Ei aktiivisia ohjelmia",
+      last_perf_prefix: "Edellinen: ",
+      reps_suffix: "\u00a0toistoa",
+      sets_progress: "Sarjat: ",
+      rest_countdown_label: "lepotauko",
+      all_sets_done_text: "\u2713 Kaikki sarjat tehty!",
+      log_set_btn: "Sarja tehty",
+      skip_rest_btn: "Ohita tauko",
+      complete_workout_confirm: "Merkitäänkö treeni valmiiksi?",
       workout_started: "Aloitettu: ",
+
+      // Sali — historia
+      history_heading: "Historia 📊",
+      no_sessions_text: "Ei treenejä vielä.",
+      session_badge_done: "Valmis",
+      session_badge_active: "Kesken",
+      no_sets_text: "Ei kirjattuja sarjoja.",
+      sets_load_error: "Virhe haettaessa sarjoja.",
     },
     en: {
+      // Navigation
       tasks: "Tasks",
       gym: "Gym",
       workout_tab: "🏋️ Workout",
@@ -32,29 +147,162 @@
       history_tab: "📊 History",
       settings: "Settings",
       language: "Language",
+      hamburger_aria: "Open menu",
+
+      // Auth
+      subtitle: "Your little helper for getting things done",
+      sign_out: "Sign out",
+      error_generic: "Something went wrong",
+      error_login_failed: "Sign-in failed: ",
+      error_client_id: "Google Sign-In not configured on server",
+      error_auth_config: "Could not load auth configuration",
+      error_select_list: "Please select a list first",
+
+      // Lists
+      new_list_placeholder: "New list...",
+      add_list_btn: "+ List",
+      delete_list_confirm: "Delete list \"{name}\" and all its tasks?",
+
+      // Filters
       filter_all: "All",
       filter_pending: "Pending",
       filter_in_progress: "In progress",
       filter_done: "Done",
-      add_task: "＋ Add task",
+
+      // Task status
       status_pending: "Pending",
       status_in_progress: "In progress",
       status_done: "Done",
+
+      // Add task form
+      add_task: "＋ Add task",
+      add_task_submit: "Add task",
+      label_title: "Title",
+      task_title_placeholder: "What needs to be done?",
+      label_description_optional: "Description (optional)",
+      task_desc_placeholder: "Add details...",
+
+      // Task list
       empty_all: "No tasks. Add one above!",
       empty_filtered: "No tasks with the selected filter.",
+      drag_reorder_aria: "Drag to reorder",
+      set_status_to: "Set status to ",
+      task_edit_btn: "Edit",
+      task_delete_btn: "Delete",
+      delete_task_confirm: "Delete this task?",
+
+      // Edit modal
+      edit_task_heading: "Edit task",
+      label_description: "Description",
+      label_status: "Status",
+      label_move_to_list: "Move to list",
+      alarm_legend: "Reminder",
+      label_remind_at: "Remind at",
+      label_recurrence: "Recurrence",
+      recurrence_once: "Once",
+      recurrence_daily: "Daily",
+      recurrence_weekly: "Weekly",
+      recurrence_monthly: "Monthly",
+      label_enabled: "Enabled",
+      cancel: "Cancel",
+      save: "Save",
+
+      // Gym — programs
+      programs_heading: "Programs ⚙️",
+      add_program_btn: "+ New program",
+      show_archived_label: "Show archived",
+      exercises_heading: "Exercises",
+      add_exercise_lib_btn: "+ Add",
+      exercise_name_placeholder: "Exercise name",
+      add_btn: "Add",
+      program_name_placeholder: "Program name",
+      create_btn: "Create",
+      no_exercises_library: "No exercises. Add one above.",
+      rename_btn: "Rename",
+      delete_btn: "Delete",
+      rename_prompt: "New name:",
+      delete_exercise_confirm: "Delete exercise? It will also be removed from all programs.",
+      no_programs_empty: "No programs. Create a new one above.",
+      badge_active: "Active",
+      badge_archived: "Archived",
+      edit_exercise_btn: "Edit",
+      archive_btn: "Archive",
+      restore_btn: "Restore",
+      no_exercises_program: "No exercises. Add below.",
+      add_exercise_btn: "+ Add exercise",
+      delete_program_confirm: "Delete program \"{name}\" and all its exercises?",
+      delete_exercise_from_program_confirm: "Delete exercise \"{name}\"?",
+      fallback_program: "program",
+      fallback_exercise: "exercise",
+      last_perf_abbrev: "Prev: ",
+      sets_label: "sets",
+      rest_short: "rest\u00a0",
+
+      // Gym — exercise modal
+      gym_modal_add_heading: "Add exercise",
+      gym_modal_edit_heading: "Edit exercise",
+      label_exercise: "Exercise",
+      select_exercise_option: "Select exercise...",
+      label_weight_kg: "Weight (kg)",
+      label_sets: "Sets",
+      label_reps: "Reps",
+      label_rest_seconds: "Rest (seconds)",
+
+      // Gym — workout
+      workout_idle_heading: "💪 Start workout",
+      label_select_program: "Select program",
+      start_workout_btn: "Start workout",
+      complete_workout_btn_text: "Workout done!",
+      no_active_programs_option: "No active programs",
+      last_perf_prefix: "Previous: ",
+      reps_suffix: "\u00a0reps",
+      sets_progress: "Sets: ",
+      rest_countdown_label: "rest",
+      all_sets_done_text: "\u2713 All sets done!",
+      log_set_btn: "Set done",
+      skip_rest_btn: "Skip rest",
+      complete_workout_confirm: "Mark workout as complete?",
       workout_started: "Started: ",
+
+      // Gym — history
+      history_heading: "History 📊",
+      no_sessions_text: "No workouts yet.",
+      session_badge_done: "Done",
+      session_badge_active: "Active",
+      no_sets_text: "No logged sets.",
+      sets_load_error: "Error loading sets.",
     },
   };
 
+  // Date locale mapping
+  var LOCALES = { fi: "fi-FI", en: "en-GB" };
+
   var currentLang = localStorage.getItem("lang") || "fi";
 
+  /** Translate a key. */
   function t(key) {
     return (STRINGS[currentLang] || STRINGS.fi)[key] || key;
   }
 
+  /** Translate with variable interpolation: tf("delete_list_confirm", { name: "Foo" }) */
+  function tf(key, vars) {
+    var str = t(key);
+    Object.keys(vars).forEach(function (k) {
+      str = str.replace("{" + k + "}", vars[k]);
+    });
+    return str;
+  }
+
+  /** Apply translations to all data-i18n* elements in the DOM. */
   function applyTranslations() {
     document.querySelectorAll("[data-i18n]").forEach(function (el) {
       el.textContent = t(el.dataset.i18n);
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      el.placeholder = t(el.dataset.i18nPlaceholder);
+    });
+    document.querySelectorAll("[data-i18n-aria-label]").forEach(function (el) {
+      el.setAttribute("aria-label", t(el.dataset.i18nAriaLabel));
     });
     var langSel = document.getElementById("language-select");
     if (langSel) langSel.value = currentLang;
@@ -160,7 +408,7 @@
       if (res.status === 204) return null;
       return await res.json();
     } catch (err) {
-      showError(err.message || "Something went wrong");
+      showError(err.message || t("error_generic"));
       throw err;
     }
   }
@@ -204,7 +452,7 @@
       loginError.hidden = true;
       await initApp();
     } catch (err) {
-      loginError.textContent = "Sign-in failed: " + (err.message || "Unknown error");
+      loginError.textContent = t("error_login_failed") + (err.message || "Unknown error");
       loginError.hidden = false;
     }
   }
@@ -235,7 +483,7 @@
       .then(function (res) { return res.json(); })
       .then(function (config) {
         if (!config.client_id) {
-          loginError.textContent = "Google Client ID not configured on server";
+          loginError.textContent = t("error_client_id");
           loginError.hidden = false;
           return;
         }
@@ -253,7 +501,7 @@
         });
       })
       .catch(function () {
-        loginError.textContent = "Could not load auth configuration";
+        loginError.textContent = t("error_auth_config");
         loginError.hidden = false;
       });
   }
@@ -298,10 +546,10 @@
         var delBtn = document.createElement("span");
         delBtn.className = "list-tab-delete";
         delBtn.textContent = "\u00d7";
-        delBtn.title = "Delete list";
+        delBtn.title = t("delete_btn");
         delBtn.addEventListener("click", function (e) {
           e.stopPropagation();
-          if (confirm('Delete list "' + lst.name + '" and all its tasks?')) {
+          if (confirm(tf("delete_list_confirm", { name: lst.name }))) {
             deleteList(lst.id);
           }
         });
@@ -387,7 +635,7 @@
   function formatDate(dateStr) {
     if (!dateStr) return "";
     var d = new Date(dateStr);
-    return d.toLocaleDateString("fi-FI", {
+    return d.toLocaleDateString(LOCALES[currentLang] || "fi-FI", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -423,8 +671,8 @@
           cls +
           '" data-status="' +
           s +
-          '" aria-label="Set status to ' +
-          statusLabel(s) +
+          '" aria-label="' +
+          t("set_status_to") + statusLabel(s) +
           '">' +
           statusLabel(s) +
           "</button>"
@@ -446,7 +694,7 @@
       : "";
 
     li.innerHTML =
-      '<span class="drag-handle" aria-label="Drag to reorder">&#x2630;</span>' +
+      '<span class="drag-handle" aria-label="' + t("drag_reorder_aria") + '">&#x2630;</span>' +
       '<div class="task-content">' +
       '<div class="task-header">' +
       '<span class="task-title">' +
@@ -468,8 +716,8 @@
       '<div class="status-buttons">' +
       statusButtonsHtml +
       "</div>" +
-      '<button type="button" class="btn btn-icon" data-action="edit" aria-label="Edit task">Edit</button>' +
-      '<button type="button" class="btn btn-danger" data-action="delete" aria-label="Delete task">Delete</button>' +
+      '<button type="button" class="btn btn-icon" data-action="edit">' + t("task_edit_btn") + '</button>' +
+      '<button type="button" class="btn btn-danger" data-action="delete">' + t("task_delete_btn") + '</button>' +
       "</div>" +
       "</div>" +
       "</div>";
@@ -593,7 +841,7 @@
     var desc = document.getElementById("task-description").value.trim();
     if (!title) return;
     if (!currentListId) {
-      showError("Please select a list first");
+      showError(t("error_select_list"));
       return;
     }
     addTask(title, desc).then(function () {
@@ -626,7 +874,7 @@
     }
 
     if (btn.dataset.action === "delete") {
-      if (confirm("Delete this task?")) {
+      if (confirm(t("delete_task_confirm"))) {
         deleteTask(id);
       }
       return;
@@ -780,6 +1028,8 @@
 
   // ---------- Bootstrap ----------
 
+  // Apply language from localStorage immediately so the login screen is also translated
+  applyTranslations();
   initGoogleSignIn();
   checkAuthAndInit();
 
@@ -940,7 +1190,7 @@
   function renderExerciseLibrary() {
     libraryExercisesListEl.innerHTML = "";
     if (gymExerciseLibrary.length === 0) {
-      libraryExercisesListEl.innerHTML = '<p class="library-empty">Ei liikkeitä. Lisää liike yllä.</p>';
+      libraryExercisesListEl.innerHTML = '<p class="library-empty">' + t("no_exercises_library") + '</p>';
       return;
     }
     gymExerciseLibrary.forEach(function (ex) {
@@ -950,8 +1200,8 @@
         '<span class="library-exercise-name">' + escapeHtml(ex.name) + "</span>" +
         '<div class="library-exercise-btns">' +
         '<button class="btn btn-icon btn-sm" data-action="rename-library-exercise" data-id="' + ex.id +
-        '" data-name="' + escapeHtml(ex.name) + '">Nimeä</button>' +
-        '<button class="btn btn-danger btn-sm" data-action="delete-library-exercise" data-id="' + ex.id + '">Poista</button>' +
+        '" data-name="' + escapeHtml(ex.name) + '">' + t("rename_btn") + '</button>' +
+        '<button class="btn btn-danger btn-sm" data-action="delete-library-exercise" data-id="' + ex.id + '">' + t("delete_btn") + '</button>' +
         "</div>";
       libraryExercisesListEl.appendChild(row);
     });
@@ -962,10 +1212,10 @@
     if (!btn) return;
     var id = parseInt(btn.dataset.id, 10);
     if (btn.dataset.action === "rename-library-exercise") {
-      var newName = prompt("Uusi nimi:", btn.dataset.name);
+      var newName = prompt(t("rename_prompt"), btn.dataset.name);
       if (newName && newName.trim()) renameLibraryExercise(id, newName.trim());
     } else if (btn.dataset.action === "delete-library-exercise") {
-      if (confirm("Poistetaanko liike? Se poistetaan myös kaikista ohjelmista.")) {
+      if (confirm(t("delete_exercise_confirm"))) {
         deleteLibraryExercise(id);
       }
     }
@@ -1031,7 +1281,7 @@
   function renderProgramsList() {
     programsListEl.innerHTML = "";
     if (gymPrograms.length === 0) {
-      programsListEl.innerHTML = '<p class="empty-state">Ei ohjelmia. Luo uusi ohjelma ylhäältä.</p>';
+      programsListEl.innerHTML = '<p class="empty-state">' + t("no_programs_empty") + '</p>';
       return;
     }
     gymPrograms.forEach(function (program) {
@@ -1048,27 +1298,27 @@
     if (program.exercises && program.exercises.length > 0) {
       exercisesHtml = program.exercises.map(function (ex) {
         var lastPerfStr = ex.last_performance
-          ? ' · Ed: ' + ex.last_performance.weight_used + 'kg×' + ex.last_performance.reps_done
+          ? ' · ' + t("last_perf_abbrev") + ex.last_performance.weight_used + 'kg\u00d7' + ex.last_performance.reps_done
           : '';
         return (
           '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
           '<div class="exercise-info">' +
           '<span class="exercise-name">' + escapeHtml(ex.exercise_name) + "</span>" +
-          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0sarjaa \u00b7 lepo\u00a0" + ex.rest_seconds + "s" + lastPerfStr + "</span>" +
+          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0" + t("sets_label") + " \u00b7 " + t("rest_short") + ex.rest_seconds + "s" + lastPerfStr + "</span>" +
           "</div>" +
           '<div class="exercise-btns">' +
           '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
           ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
           '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
-          '" data-ex-rest="' + ex.rest_seconds + '">Muokkaa</button>' +
+          '" data-ex-rest="' + ex.rest_seconds + '">' + t("edit_exercise_btn") + '</button>' +
           '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
-          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">Poista</button>' +
+          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
           "</div></div>"
         );
       }).join("");
     } else {
-      exercisesHtml = '<p class="exercise-empty">Ei liikkeitä. Lisää alla.</p>';
+      exercisesHtml = '<p class="exercise-empty">' + t("no_exercises_program") + '</p>';
     }
 
     card.innerHTML =
@@ -1076,18 +1326,18 @@
       '<div class="program-title-row">' +
       '<h3 class="program-name">' + escapeHtml(program.name) + "</h3>" +
       '<span class="program-badge ' + (program.is_active ? "active" : "archived") + '">' +
-      (program.is_active ? "Aktiivinen" : "Arkistoitu") + "</span>" +
+      (program.is_active ? t("badge_active") : t("badge_archived")) + "</span>" +
       "</div>" +
       '<div class="program-header-btns">' +
       '<button class="btn btn-icon btn-sm" data-action="rename-program" data-id="' + program.id +
-      '" data-name="' + escapeHtml(program.name) + '">Nimeä</button>' +
+      '" data-name="' + escapeHtml(program.name) + '">' + t("rename_btn") + '</button>' +
       (program.is_active
-        ? '<button class="btn btn-secondary btn-sm" data-action="archive-program" data-id="' + program.id + '">Arkistoi</button>'
-        : '<button class="btn btn-secondary btn-sm" data-action="restore-program" data-id="' + program.id + '">Palauta</button>') +
-      '<button class="btn btn-danger btn-sm" data-action="delete-program" data-id="' + program.id + '">Poista</button>' +
+        ? '<button class="btn btn-secondary btn-sm" data-action="archive-program" data-id="' + program.id + '">' + t("archive_btn") + '</button>'
+        : '<button class="btn btn-secondary btn-sm" data-action="restore-program" data-id="' + program.id + '">' + t("restore_btn") + '</button>') +
+      '<button class="btn btn-danger btn-sm" data-action="delete-program" data-id="' + program.id + '">' + t("delete_btn") + '</button>' +
       "</div></div>" +
       '<div class="exercises-list">' + exercisesHtml + "</div>" +
-      '<button class="btn btn-icon btn-sm add-exercise-btn" data-action="add-exercise" data-program-id="' + program.id + '">+ Lisää liike</button>';
+      '<button class="btn btn-icon btn-sm add-exercise-btn" data-action="add-exercise" data-program-id="' + program.id + '">' + t("add_exercise_btn") + '</button>';
 
     return card;
   }
@@ -1099,7 +1349,7 @@
     var id = btn.dataset.id ? parseInt(btn.dataset.id, 10) : null;
 
     if (action === "rename-program") {
-      var name = prompt("Uusi nimi:", btn.dataset.name);
+      var name = prompt(t("rename_prompt"), btn.dataset.name);
       if (name && name.trim()) updateProgram(id, { name: name.trim() });
 
     } else if (action === "archive-program") {
@@ -1110,8 +1360,8 @@
 
     } else if (action === "delete-program") {
       var card = btn.closest(".program-card");
-      var pname = card ? card.querySelector(".program-name").textContent : "ohjelma";
-      if (confirm('Poistetaanko ohjelma "' + pname + '" ja kaikki sen liikkeet?')) {
+      var pname = card ? card.querySelector(".program-name").textContent : t("fallback_program");
+      if (confirm(tf("delete_program_confirm", { name: pname }))) {
         deleteProgram(id);
       }
 
@@ -1133,8 +1383,8 @@
       var programId = parseInt(btn.dataset.programId, 10);
       var exerciseId = parseInt(btn.dataset.exId, 10);
       var row = btn.closest(".exercise-row");
-      var ename = row ? row.querySelector(".exercise-name").textContent : "liike";
-      if (confirm('Poistetaanko liike "' + ename + '"?')) {
+      var ename = row ? row.querySelector(".exercise-name").textContent : t("fallback_exercise");
+      if (confirm(tf("delete_exercise_from_program_confirm", { name: ename }))) {
         deleteExercise(programId, exerciseId);
       }
     }
@@ -1232,7 +1482,7 @@
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
     gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
-    gymModalTitle.textContent = mode === "edit" ? "Muokkaa liikettä" : "Lisää liike";
+    gymModalTitle.textContent = mode === "edit" ? t("gym_modal_edit_heading") : t("gym_modal_add_heading");
 
     if (mode === "edit") {
       // Show static exercise name, hide dropdown
@@ -1243,7 +1493,7 @@
       // Populate dropdown from library
       gymModalSelectGroup.hidden = false;
       gymModalNameDisplay.hidden = true;
-      gymExSelectInput.innerHTML = '<option value="">Valitse liike...</option>';
+      gymExSelectInput.innerHTML = '<option value="">' + t("select_exercise_option") + '</option>';
       gymExerciseLibrary.forEach(function (ex) {
         var opt = document.createElement("option");
         opt.value = ex.id;
@@ -1309,7 +1559,7 @@
       if (!programs) return;
       workoutProgramSelect.innerHTML = "";
       if (programs.length === 0) {
-        workoutProgramSelect.innerHTML = '<option value="">Ei aktiivisia ohjelmia</option>';
+        workoutProgramSelect.innerHTML = '<option value="">' + t("no_active_programs_option") + '</option>';
       } else {
         programs.forEach(function (p) {
           var opt = document.createElement("option");
@@ -1426,7 +1676,7 @@
     var lastPerfHtml = "";
     if (ex.last_performance) {
       lastPerfHtml =
-        '<span class="ewc-last-perf">Edellinen: ' +
+        '<span class="ewc-last-perf">' + t("last_perf_prefix") +
         ex.last_performance.weight_used + "\u00a0kg \u00d7 " +
         ex.last_performance.reps_done + "</span>";
     }
@@ -1439,24 +1689,24 @@
       '<button class="ewc-adj-btn" data-adj-weight="-5" data-ex-id="' + ex.id + '">-5</button>' +
       '<button class="ewc-adj-btn" data-adj-weight="-2.5" data-ex-id="' + ex.id + '">-2.5</button>' +
       '<span class="ewc-weight-display" id="weight-display-' + ex.id + '">' + currentWeight + "\u00a0kg</span>" +
-      '<span class="ewc-target-reps">\u00d7\u00a0' + ex.reps + "\u00a0toistoa</span>" +
+      '<span class="ewc-target-reps">\u00d7\u00a0' + ex.reps + t("reps_suffix") + "</span>" +
       '<button class="ewc-adj-btn" data-adj-weight="+2.5" data-ex-id="' + ex.id + '">+2.5</button>' +
       '<button class="ewc-adj-btn" data-adj-weight="+5" data-ex-id="' + ex.id + '">+5</button>' +
       "</div>" +
       '<div class="ewc-rest-row">' +
       '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="-30" data-ex-id="' + ex.id + '">-30s</button>' +
-      '<span class="ewc-rest-display" id="rest-display-' + ex.id + '">lepo\u00a0' + currentRest + "\u00a0s</span>" +
+      '<span class="ewc-rest-display" id="rest-display-' + ex.id + '">' + t("rest_short") + currentRest + "\u00a0s</span>" +
       '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="+30" data-ex-id="' + ex.id + '">+30s</button>' +
       "</div>" +
-      '<div class="ewc-progress">Sarjat: <strong class="ewc-sets-done">' + done + "</strong>\u00a0/\u00a0" + ex.sets + "</div>" +
+      '<div class="ewc-progress">' + t("sets_progress") + '<strong class="ewc-sets-done">' + done + "</strong>\u00a0/\u00a0" + ex.sets + "</div>" +
       '<div class="ewc-rest-info" hidden>' +
       '<span class="ewc-countdown" id="countdown-' + ex.id + '">' + formatGymSeconds(currentRest) + "</span>" +
-      '<span class="ewc-rest-label">lepotauko</span>' +
+      '<span class="ewc-rest-label">' + t("rest_countdown_label") + "</span>" +
       "</div>" +
-      '<div class="ewc-done-banner" ' + (state === "done" ? "" : "hidden") + ">\u2713 Kaikki sarjat tehty!</div>" +
+      '<div class="ewc-done-banner" ' + (state === "done" ? "" : "hidden") + ">" + t("all_sets_done_text") + "</div>" +
       '<div class="ewc-actions">' +
-      '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '"' + (state !== "idle" ? " hidden" : "") + ">Sarja tehty</button>" +
-      '<button class="btn btn-secondary ewc-skip-btn" data-ex-id="' + ex.id + '" hidden>Ohita tauko</button>' +
+      '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '"' + (state !== "idle" ? " hidden" : "") + ">" + t("log_set_btn") + "</button>" +
+      '<button class="btn btn-secondary ewc-skip-btn" data-ex-id="' + ex.id + '" hidden>' + t("skip_rest_btn") + "</button>" +
       "</div>";
     return card;
   }
@@ -1586,7 +1836,7 @@
       var current = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : 0;
       gymWorkoutRests[exId] = Math.max(0, current + delta);
       var displayEl = document.getElementById("rest-display-" + exId);
-      if (displayEl) displayEl.textContent = "lepo\u00a0" + gymWorkoutRests[exId] + "\u00a0s";
+      if (displayEl) displayEl.textContent = t("rest_short") + gymWorkoutRests[exId] + "\u00a0s";
       return;
     }
 
@@ -1638,7 +1888,7 @@
 
   completeWorkoutBtn.addEventListener("click", async function () {
     if (!gymActiveSession) return;
-    if (!confirm("Merkitäänkö treeni valmiiksi?")) return;
+    if (!confirm(t("complete_workout_confirm"))) return;
     try {
       await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/complete", {
         method: "PUT",
@@ -1667,7 +1917,7 @@
   function renderSessionsList(sessions) {
     sessionsListEl.innerHTML = "";
     if (sessions.length === 0) {
-      sessionsListEl.innerHTML = '<p class="empty-state">Ei treenejä vielä.</p>';
+      sessionsListEl.innerHTML = '<p class="empty-state">' + t("no_sessions_text") + '</p>';
       return;
     }
     sessions.forEach(function (s) {
@@ -1683,8 +1933,8 @@
       }
 
       var statusBadge = s.completed_at
-        ? '<span class="session-badge done">Valmis</span>'
-        : '<span class="session-badge active">Kesken</span>';
+        ? '<span class="session-badge done">' + t("session_badge_done") + '</span>'
+        : '<span class="session-badge active">' + t("session_badge_active") + '</span>';
 
       item.innerHTML =
         '<div class="session-header" data-action="toggle-session">' +
@@ -1724,7 +1974,7 @@
     try {
       var sets = await apiFetch(GYM_API + "/sessions/" + sessionId + "/sets");
       if (!sets || sets.length === 0) {
-        setsEl.innerHTML = '<p class="session-no-sets">Ei kirjattuja sarjoja.</p>';
+        setsEl.innerHTML = '<p class="session-no-sets">' + t("no_sets_text") + '</p>';
         return;
       }
       var byExercise = {};
@@ -1751,7 +2001,7 @@
       }).join("");
       setsEl.innerHTML = html;
     } catch (_) {
-      setsEl.innerHTML = '<p class="session-no-sets">Virhe haettaessa sarjoja.</p>';
+      setsEl.innerHTML = '<p class="session-no-sets">' + t("sets_load_error") + '</p>';
     }
   });
 

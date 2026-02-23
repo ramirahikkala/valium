@@ -12,7 +12,7 @@
   <div id="login-screen" class="login-screen">
     <div class="login-card">
       <h1>Valium</h1>
-      <p class="subtitle">Your little helper for getting things done</p>
+      <p class="subtitle" data-i18n="subtitle">Your little helper for getting things done</p>
       <div id="google-signin-btn" class="google-signin-wrapper"></div>
       <p id="login-error" class="login-error" hidden></p>
     </div>
@@ -23,14 +23,14 @@
     <header>
       <div class="header-content">
         <div class="header-left">
-          <button class="hamburger" id="sidebar-toggle" aria-label="Avaa valikko">&#9776;</button>
+          <button class="hamburger" id="sidebar-toggle" data-i18n-aria-label="hamburger_aria" aria-label="Avaa valikko">&#9776;</button>
           <h1>Valium</h1>
         </div>
         <div class="header-right">
           <div class="user-info">
             <img id="user-avatar" class="user-avatar" src="" alt="" hidden>
             <span id="user-name" class="user-name"></span>
-            <button id="sign-out-btn" class="btn btn-signout">Sign out</button>
+            <button id="sign-out-btn" class="btn btn-signout" data-i18n="sign_out">Sign out</button>
           </div>
         </div>
       </div>
@@ -56,11 +56,12 @@
                 <input
                   type="text"
                   id="new-list-name"
+                  data-i18n-placeholder="new_list_placeholder"
                   placeholder="Uusi lista..."
                   required
                   autocomplete="off"
                 >
-                <button type="submit" class="btn btn-primary btn-sm">+ Lista</button>
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_list_btn">+ Lista</button>
               </form>
             </div>
           </div>
@@ -111,26 +112,28 @@
             <div class="add-task-body" id="add-task-body" hidden>
               <form id="add-task-form">
                 <div class="form-group">
-                  <label for="task-title">Otsikko</label>
+                  <label for="task-title" data-i18n="label_title">Otsikko</label>
                   <input
                     type="text"
                     id="task-title"
                     name="title"
+                    data-i18n-placeholder="task_title_placeholder"
                     placeholder="Mitä pitää tehdä?"
                     required
                     autocomplete="off"
                   >
                 </div>
                 <div class="form-group">
-                  <label for="task-description">Kuvaus (valinnainen)</label>
+                  <label for="task-description" data-i18n="label_description_optional">Kuvaus (valinnainen)</label>
                   <textarea
                     id="task-description"
                     name="description"
+                    data-i18n-placeholder="task_desc_placeholder"
                     placeholder="Lisää tietoja..."
                     rows="2"
                   ></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Lisää tehtävä</button>
+                <button type="submit" class="btn btn-primary" data-i18n="add_task_submit">Lisää tehtävä</button>
               </form>
             </div>
           </section>
@@ -147,7 +150,7 @@
           <section class="task-list-section" aria-label="Task list">
             <div id="error-message" class="error-message" role="alert" hidden></div>
             <ul id="task-list" class="task-list" aria-live="polite"></ul>
-            <p id="empty-state" class="empty-state" hidden>Ei tehtäviä. Lisää yksi yllä!</p>
+            <p id="empty-state" class="empty-state" data-i18n="empty_all" hidden>Ei tehtäviä. Lisää yksi yllä!</p>
           </section>
         </div>
 
@@ -156,33 +159,33 @@
 
           <!-- Programs sub-view -->
           <div id="gym-programs" class="gym-section">
-            <h2 class="gym-section-heading">Ohjelmat ⚙️</h2>
+            <h2 class="gym-section-heading" data-i18n="programs_heading">Ohjelmat ⚙️</h2>
             <div class="gym-section-actions">
-              <button class="btn btn-primary btn-sm" id="add-program-btn">+ Uusi ohjelma</button>
+              <button class="btn btn-primary btn-sm" id="add-program-btn" data-i18n="add_program_btn">+ Uusi ohjelma</button>
               <label class="archived-toggle">
-                <input type="checkbox" id="show-archived"> Näytä arkistoidut
+                <input type="checkbox" id="show-archived"> <span data-i18n="show_archived_label">Näytä arkistoidut</span>
               </label>
             </div>
 
             <!-- Exercise library -->
             <div class="exercise-library">
               <div class="library-header">
-                <h3>Liikkeet</h3>
-                <button class="btn btn-icon btn-sm" id="add-library-exercise-btn">+ Lisää</button>
+                <h3 data-i18n="exercises_heading">Liikkeet</h3>
+                <button class="btn btn-icon btn-sm" id="add-library-exercise-btn" data-i18n="add_exercise_lib_btn">+ Lisää</button>
               </div>
               <form id="add-library-exercise-form" class="inline-form" hidden>
-                <input type="text" id="new-library-exercise-name" placeholder="Liikkeen nimi" required autocomplete="off">
-                <button type="submit" class="btn btn-primary btn-sm">Lisää</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn">Peruuta</button>
+                <input type="text" id="new-library-exercise-name" data-i18n-placeholder="exercise_name_placeholder" placeholder="Liikkeen nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn" data-i18n="cancel">Peruuta</button>
               </form>
               <div id="library-exercises-list"></div>
             </div>
 
             <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
               <form id="add-program-form" class="inline-form">
-                <input type="text" id="new-program-name" placeholder="Ohjelman nimi" required autocomplete="off">
-                <button type="submit" class="btn btn-primary btn-sm">Luo</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program">Peruuta</button>
+                <input type="text" id="new-program-name" data-i18n-placeholder="program_name_placeholder" placeholder="Ohjelman nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="create_btn">Luo</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program" data-i18n="cancel">Peruuta</button>
               </form>
             </div>
             <div id="programs-list"></div>
@@ -192,13 +195,13 @@
           <div id="gym-workout" class="gym-section" hidden>
             <div id="workout-idle">
               <div class="workout-idle-card">
-                <h2 class="workout-idle-title">💪 Aloita treeni</h2>
+                <h2 class="workout-idle-title" data-i18n="workout_idle_heading">💪 Aloita treeni</h2>
               </div>
               <div class="form-group">
-                <label for="workout-program-select">Valitse ohjelma</label>
+                <label for="workout-program-select" data-i18n="label_select_program">Valitse ohjelma</label>
                 <select id="workout-program-select"></select>
               </div>
-              <button class="btn btn-primary" id="start-workout-btn">Aloita treeni</button>
+              <button class="btn btn-primary" id="start-workout-btn" data-i18n="start_workout_btn">Aloita treeni</button>
             </div>
             <div id="workout-active" hidden>
               <div class="workout-header">
@@ -206,7 +209,7 @@
                   <h3 id="active-program-name"></h3>
                   <span id="workout-start-time" class="workout-start-time"></span>
                 </div>
-                <button class="btn btn-primary" id="complete-workout-btn">Treeni valmis!</button>
+                <button class="btn btn-primary" id="complete-workout-btn" data-i18n="complete_workout_btn_text">Treeni valmis!</button>
               </div>
               <div id="active-exercises"></div>
             </div>
@@ -214,7 +217,7 @@
 
           <!-- History sub-view -->
           <div id="gym-history" class="gym-section" hidden>
-            <h2 class="gym-section-heading">Historia 📊</h2>
+            <h2 class="gym-section-heading" data-i18n="history_heading">Historia 📊</h2>
             <div id="sessions-list"></div>
           </div>
 
@@ -226,54 +229,54 @@
   <!-- Edit task modal -->
   <div id="edit-modal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-labelledby="edit-modal-title" aria-modal="true">
-      <h2 id="edit-modal-title">Muokkaa tehtävää</h2>
+      <h2 id="edit-modal-title" data-i18n="edit_task_heading">Muokkaa tehtävää</h2>
       <form id="edit-task-form">
         <input type="hidden" id="edit-task-id">
         <div class="form-group">
-          <label for="edit-title">Otsikko</label>
+          <label for="edit-title" data-i18n="label_title">Otsikko</label>
           <input type="text" id="edit-title" required>
         </div>
         <div class="form-group">
-          <label for="edit-description">Kuvaus</label>
+          <label for="edit-description" data-i18n="label_description">Kuvaus</label>
           <textarea id="edit-description" rows="3"></textarea>
         </div>
         <div class="form-group">
-          <label for="edit-status">Tila</label>
+          <label for="edit-status" data-i18n="label_status">Tila</label>
           <select id="edit-status">
-            <option value="pending">Odottaa</option>
-            <option value="in_progress">Kesken</option>
-            <option value="done">Valmis</option>
+            <option value="pending" data-i18n="status_pending">Odottaa</option>
+            <option value="in_progress" data-i18n="status_in_progress">Kesken</option>
+            <option value="done" data-i18n="status_done">Valmis</option>
           </select>
         </div>
         <div class="form-group">
-          <label for="edit-list">Siirrä listaan</label>
+          <label for="edit-list" data-i18n="label_move_to_list">Siirrä listaan</label>
           <select id="edit-list"></select>
         </div>
         <fieldset class="alarm-fieldset">
-          <legend>Muistutus</legend>
+          <legend data-i18n="alarm_legend">Muistutus</legend>
           <div class="form-group">
-            <label for="edit-alarm-at">Muistuta</label>
+            <label for="edit-alarm-at" data-i18n="label_remind_at">Muistuta</label>
             <input type="datetime-local" id="edit-alarm-at">
           </div>
           <div class="form-group">
-            <label for="edit-alarm-recurrence">Toistuvuus</label>
+            <label for="edit-alarm-recurrence" data-i18n="label_recurrence">Toistuvuus</label>
             <select id="edit-alarm-recurrence">
-              <option value="none">Kerran</option>
-              <option value="daily">Päivittäin</option>
-              <option value="weekly">Viikoittain</option>
-              <option value="monthly">Kuukausittain</option>
+              <option value="none" data-i18n="recurrence_once">Kerran</option>
+              <option value="daily" data-i18n="recurrence_daily">Päivittäin</option>
+              <option value="weekly" data-i18n="recurrence_weekly">Viikoittain</option>
+              <option value="monthly" data-i18n="recurrence_monthly">Kuukausittain</option>
             </select>
           </div>
           <div class="form-group form-group-inline">
             <label>
               <input type="checkbox" id="edit-alarm-enabled" checked>
-              Käytössä
+              <span data-i18n="label_enabled">Käytössä</span>
             </label>
           </div>
         </fieldset>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="edit-cancel">Peruuta</button>
-          <button type="submit" class="btn btn-primary">Tallenna</button>
+          <button type="button" class="btn btn-secondary" id="edit-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>
         </div>
       </form>
     </div>
@@ -287,34 +290,34 @@
         <input type="hidden" id="gym-modal-program-id">
         <input type="hidden" id="gym-modal-exercise-id">
         <div class="form-group" id="gym-modal-select-group">
-          <label for="gym-ex-select">Liike</label>
+          <label for="gym-ex-select" data-i18n="label_exercise">Liike</label>
           <select id="gym-ex-select" required>
             <option value="">Valitse liike...</option>
           </select>
         </div>
         <div class="form-group" id="gym-modal-name-display" hidden>
-          <label>Liike</label>
+          <label data-i18n="label_exercise">Liike</label>
           <p id="gym-modal-exercise-name" class="modal-static-value"></p>
         </div>
         <div class="form-group">
-          <label for="gym-ex-weight">Paino (kg)</label>
+          <label for="gym-ex-weight" data-i18n="label_weight_kg">Paino (kg)</label>
           <input type="number" id="gym-ex-weight" step="0.5" min="0" value="0">
         </div>
         <div class="form-group">
-          <label for="gym-ex-sets">Sarjat</label>
+          <label for="gym-ex-sets" data-i18n="label_sets">Sarjat</label>
           <input type="number" id="gym-ex-sets" min="1" value="3">
         </div>
         <div class="form-group">
-          <label for="gym-ex-reps">Toistot</label>
+          <label for="gym-ex-reps" data-i18n="label_reps">Toistot</label>
           <input type="number" id="gym-ex-reps" min="1" value="10">
         </div>
         <div class="form-group">
-          <label for="gym-ex-rest">Lepotauko (sekuntia)</label>
+          <label for="gym-ex-rest" data-i18n="label_rest_seconds">Lepotauko (sekuntia)</label>
           <input type="number" id="gym-ex-rest" min="0" value="90">
         </div>
         <div class="modal-actions">
-          <button type="button" class="btn btn-secondary" id="gym-modal-cancel">Peruuta</button>
-          <button type="submit" class="btn btn-primary">Tallenna</button>
+          <button type="button" class="btn btn-secondary" id="gym-modal-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>
         </div>
       </form>
     </div>
