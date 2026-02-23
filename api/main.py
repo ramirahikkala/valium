@@ -17,7 +17,7 @@ from auth import (
 )
 from database import get_session
 from gym_router import router as gym_router
-from models import Alarm, List, Task, TaskStatus, User
+from models import Alarm, List, Task, TaskStatus, User, UserSettings
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
     AlarmCreate,
@@ -33,6 +33,8 @@ from schemas import (
     TaskResponse,
     TaskUpdate,
     UserResponse,
+    UserSettingsResponse,
+    UserSettingsUpdate,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -155,6 +157,45 @@ async def get_me(
         name=current_user.name,
         picture=current_user.picture,
     )
+
+
+# ---------- User settings ----------
+
+
+@app.get("/api/user/settings", response_model=UserSettingsResponse)
+async def get_user_settings(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> UserSettings:
+    """Return the current user's settings, creating defaults if missing."""
+    result = await session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        settings = UserSettings(user_id=current_user.id, language="fi")
+        session.add(settings)
+        await session.commit()
+    return settings
+
+
+@app.put("/api/user/settings", response_model=UserSettingsResponse)
+async def update_user_settings(
+    data: UserSettingsUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> UserSettings:
+    """Update the current user's settings."""
+    result = await session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings = result.scalar_one_or_none()
+    if not settings:
+        settings = UserSettings(user_id=current_user.id)
+        session.add(settings)
+    settings.language = data.language
+    await session.commit()
+    return settings
 
 
 # ---------- Lists ----------

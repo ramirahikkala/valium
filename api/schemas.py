@@ -40,6 +40,23 @@ class AuthConfigResponse(BaseModel):
     client_id: str
 
 
+# ---------- User settings ----------
+
+
+class UserSettingsResponse(BaseModel):
+    """Schema returned for user settings."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    language: str
+
+
+class UserSettingsUpdate(BaseModel):
+    """Schema for updating user settings."""
+
+    language: str
+
+
 # ---------- Lists ----------
 
 

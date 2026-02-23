@@ -1,6 +1,78 @@
 (function () {
   "use strict";
 
+  // ---------- i18n ----------
+
+  var STRINGS = {
+    fi: {
+      tasks: "Tehtävät",
+      gym: "Sali",
+      workout_tab: "🏋️ Treeni",
+      programs_tab: "⚙️ Ohjelmat",
+      history_tab: "📊 Historia",
+      settings: "Asetukset",
+      language: "Kieli",
+      filter_all: "Kaikki",
+      filter_pending: "Odottaa",
+      filter_in_progress: "Kesken",
+      filter_done: "Valmis",
+      add_task: "＋ Lisää tehtävä",
+      status_pending: "Odottaa",
+      status_in_progress: "Kesken",
+      status_done: "Valmis",
+      empty_all: "Ei tehtäviä. Lisää yksi yllä!",
+      empty_filtered: "Ei tehtäviä valitulla suodattimella.",
+      workout_started: "Aloitettu: ",
+    },
+    en: {
+      tasks: "Tasks",
+      gym: "Gym",
+      workout_tab: "🏋️ Workout",
+      programs_tab: "⚙️ Programs",
+      history_tab: "📊 History",
+      settings: "Settings",
+      language: "Language",
+      filter_all: "All",
+      filter_pending: "Pending",
+      filter_in_progress: "In progress",
+      filter_done: "Done",
+      add_task: "＋ Add task",
+      status_pending: "Pending",
+      status_in_progress: "In progress",
+      status_done: "Done",
+      empty_all: "No tasks. Add one above!",
+      empty_filtered: "No tasks with the selected filter.",
+      workout_started: "Started: ",
+    },
+  };
+
+  var currentLang = localStorage.getItem("lang") || "fi";
+
+  function t(key) {
+    return (STRINGS[currentLang] || STRINGS.fi)[key] || key;
+  }
+
+  function applyTranslations() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.dataset.i18n);
+    });
+    var langSel = document.getElementById("language-select");
+    if (langSel) langSel.value = currentLang;
+  }
+
+  async function loadUserSettings() {
+    try {
+      var settings = await apiFetch("/api/user/settings");
+      if (settings && settings.language) {
+        currentLang = settings.language;
+        localStorage.setItem("lang", settings.language);
+      }
+    } catch (_) {}
+    applyTranslations();
+  }
+
+  // ---------- API ----------
+
   var API_BASE = "/api/tasks";
   var API_LISTS = "/api/lists";
   var API_AUTH = "/api/auth";
@@ -188,6 +260,27 @@
 
   signOutBtn.addEventListener("click", signOut);
 
+  // ---------- Settings ----------
+
+  var settingsBtn = document.getElementById("settings-btn");
+  var sidebarSettingsChildren = document.getElementById("sidebar-settings-children");
+  var langSelect = document.getElementById("language-select");
+
+  settingsBtn.addEventListener("click", function () {
+    sidebarSettingsChildren.hidden = !sidebarSettingsChildren.hidden;
+  });
+
+  langSelect.addEventListener("change", async function () {
+    var lang = this.value;
+    await apiFetch("/api/user/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ language: lang }),
+    });
+    localStorage.setItem("lang", lang);
+    location.reload();
+  });
+
   // ---------- Lists ----------
 
   function renderListTabs() {
@@ -307,11 +400,11 @@
   function statusLabel(status) {
     switch (status) {
       case "in_progress":
-        return "Kesken";
+        return t("status_in_progress");
       case "done":
-        return "Valmis";
+        return t("status_done");
       default:
-        return "Odottaa";
+        return t("status_pending");
     }
   }
 
@@ -421,8 +514,8 @@
       emptyStateEl.hidden = false;
       emptyStateEl.textContent =
         currentFilter === "all"
-          ? "Ei tehtäviä. Lisää yksi yllä!"
-          : "Ei tehtäviä valitulla suodattimella.";
+          ? t("empty_all")
+          : t("empty_filtered");
       return;
     }
     emptyStateEl.hidden = true;
@@ -666,6 +759,9 @@
   // ---------- App init ----------
 
   async function initApp() {
+    // Load language preference first so UI renders in correct language
+    await loadUserSettings();
+
     // Set user info in header
     if (currentUser) {
       userName.textContent = currentUser.name;
@@ -1309,7 +1405,7 @@
     workoutIdleEl.hidden = true;
     workoutActiveEl.hidden = false;
     activeProgramNameEl.textContent = gymActiveSession.program_name;
-    workoutStartTimeEl.textContent = "Aloitettu: " + formatDate(gymActiveSession.started_at);
+    workoutStartTimeEl.textContent = t("workout_started") + formatDate(gymActiveSession.started_at);
     activeExercisesEl.innerHTML = "";
     gymActiveExercises.forEach(function (ex) {
       gymWorkoutWeights[ex.id] = ex.weight;

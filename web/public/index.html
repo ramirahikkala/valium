@@ -48,7 +48,7 @@
           <div class="sidebar-section">
             <button class="sidebar-section-btn active" id="view-tab-tasks" data-view="tasks">
               <span class="sidebar-icon">📋</span>
-              <span class="sidebar-label">Tehtävät</span>
+              <span class="sidebar-label" data-i18n="tasks">Tehtävät</span>
             </button>
             <div class="sidebar-children" id="sidebar-tasks-children">
               <div id="list-tabs" class="sidebar-list-tabs" role="tablist"></div>
@@ -69,16 +69,36 @@
           <div class="sidebar-section">
             <button class="sidebar-section-btn" id="view-tab-gym" data-view="gym">
               <span class="sidebar-icon">💪</span>
-              <span class="sidebar-label">Sali</span>
+              <span class="sidebar-label" data-i18n="gym">Sali</span>
             </button>
             <div class="sidebar-children" id="sidebar-gym-children" hidden>
-              <button class="sidebar-gym-btn" data-gym-tab="workout">🏋️ Treeni</button>
-              <button class="sidebar-gym-btn active" data-gym-tab="programs">⚙️ Ohjelmat</button>
-              <button class="sidebar-gym-btn" data-gym-tab="history">📊 Historia</button>
+              <button class="sidebar-gym-btn" data-gym-tab="workout" data-i18n="workout_tab">🏋️ Treeni</button>
+              <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">⚙️ Ohjelmat</button>
+              <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">📊 Historia</button>
             </div>
           </div>
 
         </nav>
+
+        <!-- Settings footer -->
+        <div class="sidebar-footer">
+          <div class="sidebar-section">
+            <button class="sidebar-section-btn" id="settings-btn">
+              <span class="sidebar-icon">⚙️</span>
+              <span class="sidebar-label" data-i18n="settings">Asetukset</span>
+            </button>
+            <div class="sidebar-children" id="sidebar-settings-children" hidden>
+              <div class="sidebar-setting-row">
+                <label class="sidebar-setting-label" data-i18n="language">Kieli</label>
+                <select id="language-select" class="sidebar-lang-select">
+                  <option value="fi">🇫🇮 Suomi</option>
+                  <option value="en">🇬🇧 English</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </aside>
 
       <!-- Main content -->
@@ -87,7 +107,7 @@
         <!-- Tasks view -->
         <div id="tasks-view">
           <section class="add-task" aria-label="Add a new task">
-            <button type="button" class="add-task-toggle" id="add-task-toggle">＋ Lisää tehtävä</button>
+            <button type="button" class="add-task-toggle" id="add-task-toggle" data-i18n="add_task">＋ Lisää tehtävä</button>
             <div class="add-task-body" id="add-task-body" hidden>
               <form id="add-task-form">
                 <div class="form-group">
@@ -117,10 +137,10 @@
 
           <section class="task-controls" aria-label="Filter tasks">
             <div class="filter-buttons" role="group" aria-label="Filter by status">
-              <button class="btn btn-filter active" data-filter="all">Kaikki</button>
-              <button class="btn btn-filter" data-filter="pending">Odottaa</button>
-              <button class="btn btn-filter" data-filter="in_progress">Kesken</button>
-              <button class="btn btn-filter" data-filter="done">Valmis</button>
+              <button class="btn btn-filter active" data-filter="all" data-i18n="filter_all">Kaikki</button>
+              <button class="btn btn-filter" data-filter="pending" data-i18n="filter_pending">Odottaa</button>
+              <button class="btn btn-filter" data-filter="in_progress" data-i18n="filter_in_progress">Kesken</button>
+              <button class="btn btn-filter" data-filter="done" data-i18n="filter_done">Valmis</button>
             </div>
           </section>
 
