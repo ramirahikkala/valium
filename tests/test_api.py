@@ -1,11 +1,13 @@
 """Integration tests for the Valium API (requires running docker-compose stack)."""
 
+import os
+
 import httpx
 import jwt
 import pytest
 
 BASE_URL = "http://localhost:8000"
-JWT_SECRET = "dev-secret-change-in-production"
+JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 
 
 def _create_test_user(client: httpx.Client, suffix: str = "") -> tuple[dict, str]:
@@ -148,6 +150,66 @@ def test_list(auth_client: httpx.Client) -> dict:
     data = resp.json()
     yield data
     auth_client.delete(f"/lists/{data['id']}")
+
+
+# ---------- User settings ----------
+
+
+def test_get_settings_creates_defaults(auth_client: httpx.Client) -> None:
+    """GET /user/settings returns language='fi' by default and creates the row."""
+    resp = auth_client.get("/user/settings")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["language"] == "fi"
+
+
+def test_get_settings_idempotent(auth_client: httpx.Client) -> None:
+    """Calling GET /user/settings twice does not create duplicate rows."""
+    r1 = auth_client.get("/user/settings")
+    r2 = auth_client.get("/user/settings")
+    assert r1.status_code == 200
+    assert r2.status_code == 200
+    assert r1.json() == r2.json()
+
+
+def test_put_settings_updates_language(auth_client: httpx.Client) -> None:
+    """PUT /user/settings persists the new language and returns it."""
+    resp = auth_client.put("/user/settings", json={"language": "en"})
+    assert resp.status_code == 200
+    assert resp.json()["language"] == "en"
+
+
+def test_put_settings_persists_across_get(auth_client: httpx.Client) -> None:
+    """A subsequent GET reflects the language saved with PUT."""
+    auth_client.put("/user/settings", json={"language": "en"})
+    resp = auth_client.get("/user/settings")
+    assert resp.status_code == 200
+    assert resp.json()["language"] == "en"
+
+
+def test_put_settings_can_switch_back(auth_client: httpx.Client) -> None:
+    """Language can be changed multiple times."""
+    auth_client.put("/user/settings", json={"language": "en"})
+    auth_client.put("/user/settings", json={"language": "fi"})
+    resp = auth_client.get("/user/settings")
+    assert resp.json()["language"] == "fi"
+
+
+def test_settings_require_auth(client: httpx.Client) -> None:
+    """Unauthenticated requests to settings endpoints are rejected (403 from HTTPBearer)."""
+    assert client.get("/user/settings").status_code == 403
+    assert client.put("/user/settings", json={"language": "en"}).status_code == 403
+
+
+def test_settings_are_scoped_per_user(
+    auth_client: httpx.Client, auth_client_b: httpx.Client
+) -> None:
+    """Each user has independent settings."""
+    auth_client.put("/user/settings", json={"language": "en"})
+    auth_client_b.put("/user/settings", json={"language": "fi"})
+
+    assert auth_client.get("/user/settings").json()["language"] == "en"
+    assert auth_client_b.get("/user/settings").json()["language"] == "fi"
 
 
 # ---------- Health ----------
