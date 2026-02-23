@@ -315,6 +315,25 @@
           <label for="gym-ex-rest" data-i18n="label_rest_seconds">Lepotauko (sekuntia)</label>
           <input type="number" id="gym-ex-rest" min="0" value="90">
         </div>
+        <div class="form-group">
+          <label class="autoinc-toggle-label">
+            <input type="checkbox" id="gym-autoinc-enabled">
+            <span data-i18n="autoinc_label">Nouseva ohjelma</span>
+          </label>
+        </div>
+        <div id="gym-autoinc-settings" hidden>
+          <div class="form-group">
+            <label for="gym-autoinc-increment" data-i18n="autoinc_increment_label">Nousu / treeni (kg)</label>
+            <select id="gym-autoinc-increment">
+              <option value="2.5">2.5 kg</option>
+              <option value="5">5 kg</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="gym-autoinc-reset" data-i18n="autoinc_reset_label">Pohjan nousu resetissä (kg)</label>
+            <input type="number" id="gym-autoinc-reset" step="2.5" min="0" value="5">
+          </div>
+        </div>
         <div class="modal-actions">
           <button type="button" class="btn btn-secondary" id="gym-modal-cancel" data-i18n="cancel">Peruuta</button>
           <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>

@@ -210,6 +210,9 @@ class ExerciseCreate(BaseModel):
     sets: int = 3
     reps: int = 10
     rest_seconds: int = 90
+    auto_increment: bool = False
+    increment_kg: float = 2.5
+    reset_increment_kg: float = 5.0
 
 
 class ExerciseUpdate(BaseModel):
@@ -220,6 +223,9 @@ class ExerciseUpdate(BaseModel):
     reps: int | None = None
     rest_seconds: int | None = None
     position: int | None = None
+    auto_increment: bool | None = None
+    increment_kg: float | None = None
+    reset_increment_kg: float | None = None
 
 
 class ExerciseResponse(BaseModel):
@@ -234,7 +240,17 @@ class ExerciseResponse(BaseModel):
     reps: int
     rest_seconds: int
     position: int
+    auto_increment: bool
+    increment_kg: float
+    base_weight: float
+    reset_increment_kg: float
     last_performance: LastPerformance | None = None
+
+
+class SessionCompleteRequest(BaseModel):
+    """Schema for completing a workout session with optional fail list."""
+
+    failed_exercise_ids: list[int] = []
 
 
 class ProgramResponse(BaseModel):

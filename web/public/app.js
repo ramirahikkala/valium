@@ -114,6 +114,14 @@
       label_reps: "Toistot",
       label_rest_seconds: "Lepotauko (sekuntia)",
 
+      // Sali — liike­modaali — nouseva ohjelma
+      autoinc_label: "Nouseva ohjelma",
+      autoinc_increment_label: "Nousu / treeni (kg)",
+      autoinc_reset_label: "Pohjan nousu resetissä (kg)",
+      autoinc_badge: "↑",
+      fail_btn: "Fail",
+      failed_label: "Failed ✗",
+
       // Sali — treeni
       workout_idle_heading: "💪 Aloita treeni",
       label_select_program: "Valitse ohjelma",
@@ -247,6 +255,14 @@
       label_sets: "Sets",
       label_reps: "Reps",
       label_rest_seconds: "Rest (seconds)",
+
+      // Gym — exercise modal — progressive overload
+      autoinc_label: "Progressive overload",
+      autoinc_increment_label: "Increment per workout (kg)",
+      autoinc_reset_label: "Base increment on reset (kg)",
+      autoinc_badge: "↑",
+      fail_btn: "Fail",
+      failed_label: "Failed ✗",
 
       // Gym — workout
       workout_idle_heading: "💪 Start workout",
@@ -1129,6 +1145,17 @@
   var gymExRepsInput = document.getElementById("gym-ex-reps");
   var gymExRestInput = document.getElementById("gym-ex-rest");
   var gymModalCancelBtn = document.getElementById("gym-modal-cancel");
+  var gymAutoincEnabled = document.getElementById("gym-autoinc-enabled");
+  var gymAutoincSettings = document.getElementById("gym-autoinc-settings");
+  var gymAutoincIncrement = document.getElementById("gym-autoinc-increment");
+  var gymAutoincReset = document.getElementById("gym-autoinc-reset");
+
+  gymAutoincEnabled.addEventListener("change", function () {
+    gymAutoincSettings.hidden = !gymAutoincEnabled.checked;
+  });
+
+  // Tracks program_exercise IDs that the user marked as failed during the workout
+  var gymFailedExercises = new Set();
 
   // ---------- View toggle ----------
 
@@ -1482,6 +1509,10 @@
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
     gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
+    gymAutoincEnabled.checked = !!data.auto_increment;
+    gymAutoincSettings.hidden = !data.auto_increment;
+    gymAutoincIncrement.value = String(data.increment_kg !== undefined ? data.increment_kg : 2.5);
+    gymAutoincReset.value = data.reset_increment_kg !== undefined ? data.reset_increment_kg : 5;
     gymModalTitle.textContent = mode === "edit" ? t("gym_modal_edit_heading") : t("gym_modal_add_heading");
 
     if (mode === "edit") {
@@ -1525,27 +1556,32 @@
     e.preventDefault();
     var programId = parseInt(gymModalProgramId.value, 10);
     var exerciseId = gymModalExerciseId.value ? parseInt(gymModalExerciseId.value, 10) : null;
+    var autoincData = {
+      auto_increment: gymAutoincEnabled.checked,
+      increment_kg: parseFloat(gymAutoincIncrement.value) || 2.5,
+      reset_increment_kg: parseFloat(gymAutoincReset.value) || 5,
+    };
     if (exerciseId) {
-      // Edit: only update weight/sets/reps/rest
-      var data = {
+      // Edit: only update weight/sets/reps/rest + auto-increment fields
+      var data = Object.assign({
         weight: parseFloat(gymExWeightInput.value) || 0,
         sets: parseInt(gymExSetsInput.value, 10) || 3,
         reps: parseInt(gymExRepsInput.value, 10) || 10,
         rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
-      };
+      }, autoincData);
       closeGymModal();
       updateExercise(programId, exerciseId, data);
     } else {
       // Add: send exercise_id from library
       var selectedExId = parseInt(gymExSelectInput.value, 10);
       if (!selectedExId) return;
-      var data = {
+      var data = Object.assign({
         exercise_id: selectedExId,
         weight: parseFloat(gymExWeightInput.value) || 0,
         sets: parseInt(gymExSetsInput.value, 10) || 3,
         reps: parseInt(gymExRepsInput.value, 10) || 10,
         rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
-      };
+      }, autoincData);
       closeGymModal();
       createExercise(programId, data);
     }
@@ -1652,6 +1688,7 @@
     gymExerciseStates = {};
     gymWorkoutWeights = {};
     gymWorkoutRests = {};
+    gymFailedExercises.clear();
     workoutIdleEl.hidden = true;
     workoutActiveEl.hidden = false;
     activeProgramNameEl.textContent = gymActiveSession.program_name;
@@ -1680,9 +1717,17 @@
         ex.last_performance.weight_used + "\u00a0kg \u00d7 " +
         ex.last_performance.reps_done + "</span>";
     }
+    var autoincBadge = ex.auto_increment
+      ? ' <span class="autoinc-badge" title="' + t("autoinc_label") + '">' + t("autoinc_badge") + "</span>"
+      : "";
+    var isFailed = gymFailedExercises.has(ex.id);
+    var failBtnHtml = ex.auto_increment
+      ? '<button class="btn ewc-fail-btn' + (isFailed ? " ewc-failed" : "") + '" data-ex-id="' + ex.id + '">' +
+        (isFailed ? t("failed_label") : t("fail_btn")) + "</button>"
+      : "";
     card.innerHTML =
       '<div class="ewc-header">' +
-      '<span class="ewc-name">' + escapeHtml(ex.exercise_name) + "</span>" +
+      '<span class="ewc-name">' + escapeHtml(ex.exercise_name) + autoincBadge + "</span>" +
       lastPerfHtml +
       "</div>" +
       '<div class="ewc-weight-row">' +
@@ -1707,6 +1752,7 @@
       '<div class="ewc-actions">' +
       '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '"' + (state !== "idle" ? " hidden" : "") + ">" + t("log_set_btn") + "</button>" +
       '<button class="btn btn-secondary ewc-skip-btn" data-ex-id="' + ex.id + '" hidden>' + t("skip_rest_btn") + "</button>" +
+      failBtnHtml +
       "</div>";
     return card;
   }
@@ -1884,6 +1930,21 @@
       var exId = parseInt(skipBtn.dataset.exId, 10);
       transitionToIdle(exId);
     }
+
+    // "Fail" button — toggle failed state for auto-increment exercises
+    var failBtn = e.target.closest(".ewc-fail-btn");
+    if (failBtn) {
+      var exId = parseInt(failBtn.dataset.exId, 10);
+      if (gymFailedExercises.has(exId)) {
+        gymFailedExercises.delete(exId);
+        failBtn.textContent = t("fail_btn");
+        failBtn.classList.remove("ewc-failed");
+      } else {
+        gymFailedExercises.add(exId);
+        failBtn.textContent = t("failed_label");
+        failBtn.classList.add("ewc-failed");
+      }
+    }
   });
 
   completeWorkoutBtn.addEventListener("click", async function () {
@@ -1892,7 +1953,10 @@
     try {
       await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/complete", {
         method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ failed_exercise_ids: Array.from(gymFailedExercises) }),
       });
+      gymFailedExercises.clear();
       stopAllGymTimers();
       gymActiveSession = null;
       gymActiveExercises = [];

@@ -21,6 +21,7 @@ from schemas import (
     ProgramCreate,
     ProgramResponse,
     ProgramUpdate,
+    SessionCompleteRequest,
     SessionCreate,
     SessionResponse,
     SessionSetCreate,
@@ -98,6 +99,10 @@ def _make_exercise_response(pe: ProgramExercise, last_perf: LastPerformance | No
         reps=pe.reps,
         rest_seconds=pe.rest_seconds,
         position=pe.position,
+        auto_increment=pe.auto_increment,
+        increment_kg=pe.increment_kg,
+        base_weight=pe.base_weight,
+        reset_increment_kg=pe.reset_increment_kg,
         last_performance=last_perf,
     )
 
@@ -343,6 +348,10 @@ async def create_program_exercise(
         reps=body.reps,
         rest_seconds=body.rest_seconds,
         position=position,
+        auto_increment=body.auto_increment,
+        increment_kg=body.increment_kg,
+        reset_increment_kg=body.reset_increment_kg,
+        base_weight=body.weight if body.auto_increment else 0.0,
     )
     session.add(pe)
     await session.commit()
@@ -379,9 +388,13 @@ async def update_program_exercise(
     pe = result.scalar_one_or_none()
     if pe is None:
         raise HTTPException(status_code=404, detail="Exercise not found")
+    old_auto_increment = pe.auto_increment
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(pe, field, value)
+    # When auto_increment is enabled for the first time, seed base_weight from current weight
+    if not old_auto_increment and pe.auto_increment and pe.base_weight == 0:
+        pe.base_weight = pe.weight
     await session.commit()
     await session.refresh(pe)
     # reload exercise relationship
@@ -436,11 +449,27 @@ async def create_session(
 @router.put("/sessions/{session_id}/complete", response_model=SessionResponse)
 async def complete_session(
     session_id: int,
+    body: SessionCompleteRequest = SessionCompleteRequest(),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> SessionResponse:
-    """Mark a workout session as completed."""
+    """Mark a workout session as completed and apply auto-increment logic."""
     ws = await _get_session(session, session_id, current_user.id)
+
+    # Apply auto-increment weight progression for exercises in the program
+    if ws.program_id:
+        result = await session.execute(
+            select(ProgramExercise).where(ProgramExercise.program_id == ws.program_id)
+        )
+        program_exercises = result.scalars().all()
+        for ex in program_exercises:
+            if ex.auto_increment:
+                if ex.id in body.failed_exercise_ids:
+                    ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
+                    ex.weight = ex.base_weight
+                else:
+                    ex.weight = round(ex.weight + ex.increment_kg, 2)
+
     ws.completed_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(ws)

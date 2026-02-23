@@ -255,6 +255,18 @@ class ProgramExercise(Base):
     reps: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
     rest_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=90, server_default="90")
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    auto_increment: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    increment_kg: Mapped[float] = mapped_column(
+        Float, nullable=False, default=2.5, server_default="2.5"
+    )
+    base_weight: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
+    reset_increment_kg: Mapped[float] = mapped_column(
+        Float, nullable=False, default=5.0, server_default="5"
+    )
 
     program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise", back_populates="program_exercises")

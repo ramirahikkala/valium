@@ -1401,6 +1401,52 @@ input[type="datetime-local"]:focus {
   margin: 0;
 }
 
+/* Auto-increment toggle in gym modal */
+.autoinc-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+/* Auto-increment badge on exercise workout card */
+.autoinc-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border-radius: 4px;
+  padding: 0.05rem 0.3rem;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  letter-spacing: 0;
+}
+
+/* Fail button on auto-increment exercise cards */
+.ewc-fail-btn {
+  background: transparent;
+  color: var(--color-danger);
+  border: 1.5px solid var(--color-danger);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  min-height: 38px;
+  border-radius: var(--radius);
+}
+
+.ewc-fail-btn:hover {
+  background: var(--color-error-bg);
+}
+
+.ewc-fail-btn.ewc-failed {
+  background: var(--color-danger);
+  color: #fff;
+  border-color: var(--color-danger);
+}
+
 /* ---------- History tab ---------- */
 
 .session-item {
