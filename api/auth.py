@@ -18,6 +18,8 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_DAYS = 7
+ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
+ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "1"))
 
 bearer_scheme = HTTPBearer()
 
@@ -71,7 +73,16 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     """FastAPI dependency that extracts the current user from the Authorization header."""
-    payload = decode_jwt(credentials.credentials)
+    token = credentials.credentials
+    if ADMIN_API_KEY and token == ADMIN_API_KEY:
+        user = await session.get(User, ADMIN_USER_ID)
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Admin user not found",
+            )
+        return user
+    payload = decode_jwt(token)
     user_id = int(payload["sub"])
     user = await session.get(User, user_id)
     if user is None:
