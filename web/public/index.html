@@ -282,6 +282,30 @@
     </div>
   </div>
 
+  <!-- Workout completion modal -->
+  <div id="complete-workout-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <!-- Step 1: outcome choice -->
+      <div id="cwm-step1">
+        <h2 data-i18n="complete_workout_heading">Treeni valmis</h2>
+        <p data-i18n="complete_workout_how">Miten treeni meni?</p>
+        <div class="modal-actions">
+          <button class="btn btn-primary" id="cwm-normal">Normaali lopetus</button>
+          <button class="btn btn-secondary" id="cwm-failed">Epäonnistunut</button>
+        </div>
+      </div>
+      <!-- Step 2: shown only if program has auto_increment exercises -->
+      <div id="cwm-step2" hidden>
+        <h2 data-i18n="complete_workout_weight_q">Painon hallinta</h2>
+        <p data-i18n="complete_workout_weight_desc">Mitä tehdään painolle ensi kerralla?</p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="cwm-stay">Jää samaan painoon</button>
+          <button class="btn btn-secondary" id="cwm-reset">Aloita uusi kierros</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Gym exercise modal -->
   <div id="gym-modal" class="modal-overlay" hidden>
     <div class="modal" role="dialog" aria-labelledby="gym-modal-title" aria-modal="true">

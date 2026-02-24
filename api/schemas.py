@@ -251,6 +251,7 @@ class SessionCompleteRequest(BaseModel):
     """Schema for completing a workout session with optional fail list."""
 
     failed_exercise_ids: list[int] = []
+    session_outcome: str = "success"  # "success" | "failed_stay" | "failed_reset"
 
 
 class ProgramResponse(BaseModel):

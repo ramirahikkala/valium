@@ -464,11 +464,17 @@ async def complete_session(
         program_exercises = result.scalars().all()
         for ex in program_exercises:
             if ex.auto_increment:
-                if ex.id in body.failed_exercise_ids:
+                if body.session_outcome == "failed_reset":
                     ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                     ex.weight = ex.base_weight
-                else:
-                    ex.weight = round(ex.weight + ex.increment_kg, 2)
+                elif body.session_outcome == "failed_stay":
+                    pass  # weights unchanged
+                else:  # "success"
+                    if ex.id in body.failed_exercise_ids:
+                        ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
+                        ex.weight = ex.base_weight
+                    else:
+                        ex.weight = round(ex.weight + ex.increment_kg, 2)
 
     ws.completed_at = datetime.now(timezone.utc)
     await session.commit()

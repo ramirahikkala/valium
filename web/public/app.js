@@ -136,6 +136,14 @@
       log_set_btn: "Sarja tehty",
       skip_rest_btn: "Ohita tauko",
       complete_workout_confirm: "Merkitäänkö treeni valmiiksi?",
+      complete_workout_heading: "Treeni valmis",
+      complete_workout_how: "Miten treeni meni?",
+      complete_workout_normal: "Normaali lopetus",
+      complete_workout_failed: "Epäonnistunut",
+      complete_workout_weight_q: "Painon hallinta",
+      complete_workout_weight_desc: "Mitä tehdään painolle ensi kerralla?",
+      complete_stay_weight: "Jää samaan painoon",
+      complete_reset_cycle: "Aloita uusi kierros",
       workout_started: "Aloitettu: ",
 
       // Sali — historia
@@ -278,6 +286,14 @@
       log_set_btn: "Set done",
       skip_rest_btn: "Skip rest",
       complete_workout_confirm: "Mark workout as complete?",
+      complete_workout_heading: "Workout done",
+      complete_workout_how: "How did the workout go?",
+      complete_workout_normal: "Normal completion",
+      complete_workout_failed: "Struggled",
+      complete_workout_weight_q: "Weight management",
+      complete_workout_weight_desc: "What to do with weight next time?",
+      complete_stay_weight: "Keep same weight",
+      complete_reset_cycle: "Start new cycle",
       workout_started: "Started: ",
 
       // Gym — history
@@ -1919,14 +1935,43 @@
     }
   });
 
-  completeWorkoutBtn.addEventListener("click", async function () {
+  completeWorkoutBtn.addEventListener("click", function () {
     if (!gymActiveSession) return;
-    if (!confirm(t("complete_workout_confirm"))) return;
+    var hasProgressive = gymActiveExercises.some(function (ex) { return ex.auto_increment; });
+    document.getElementById("cwm-normal").textContent = t("complete_workout_normal");
+    document.getElementById("cwm-failed").textContent = t("complete_workout_failed");
+    document.getElementById("cwm-stay").textContent = t("complete_stay_weight");
+    document.getElementById("cwm-reset").textContent = t("complete_reset_cycle");
+    document.getElementById("cwm-step1").hidden = false;
+    document.getElementById("cwm-failed").hidden = !hasProgressive;
+    document.getElementById("cwm-step2").hidden = true;
+    document.getElementById("complete-workout-modal").hidden = false;
+  });
+
+  document.getElementById("cwm-normal").addEventListener("click", function () {
+    doCompleteWorkout("success");
+  });
+  document.getElementById("cwm-failed").addEventListener("click", function () {
+    document.getElementById("cwm-step1").hidden = true;
+    document.getElementById("cwm-step2").hidden = false;
+  });
+  document.getElementById("cwm-stay").addEventListener("click", function () {
+    doCompleteWorkout("failed_stay");
+  });
+  document.getElementById("cwm-reset").addEventListener("click", function () {
+    doCompleteWorkout("failed_reset");
+  });
+
+  async function doCompleteWorkout(outcome) {
+    document.getElementById("complete-workout-modal").hidden = true;
     try {
       await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/complete", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ failed_exercise_ids: Array.from(gymFailedExercises) }),
+        body: JSON.stringify({
+          failed_exercise_ids: Array.from(gymFailedExercises),
+          session_outcome: outcome,
+        }),
       });
       gymFailedExercises.clear();
       stopAllGymTimers();
@@ -1938,7 +1983,7 @@
       workoutActiveEl.hidden = true;
       workoutIdleEl.hidden = false;
     } catch (_) {}
-  });
+  }
 
   // ---------- History ----------
 
