@@ -1083,6 +1083,7 @@
   var gymWorkoutRests = {};      // program_exercise_id → current rest override
   var gymCurrentTab = "programs";
   var gymPrograms = [];
+  var selectedProgramId = null;
 
   // Sidebar DOM elements
   var sidebarEl = document.getElementById("sidebar");
@@ -1122,6 +1123,9 @@
 
   // Gym DOM elements — programs
   var programsListEl = document.getElementById("programs-list");
+  var programDetailEl = document.getElementById("program-detail");
+  var gymSectionActionsEl = document.querySelector("#gym-programs .gym-section-actions");
+  var exerciseLibraryEl = document.querySelector("#gym-programs .exercise-library");
   var addProgramBtn = document.getElementById("add-program-btn");
   var addProgramFormWrap = document.getElementById("add-program-form-wrap");
   var addProgramForm = document.getElementById("add-program-form");
@@ -1320,8 +1324,37 @@
       var programs = await apiFetch(url);
       if (!programs) return;
       gymPrograms = programs;
-      renderProgramsList();
+      if (selectedProgramId) {
+        var prog = gymPrograms.find(function (p) { return p.id === selectedProgramId; });
+        if (prog) {
+          showProgramDetail(prog);
+        } else {
+          showProgramList();
+          renderProgramsList();
+        }
+      } else {
+        renderProgramsList();
+      }
     } catch (_) {}
+  }
+
+  function showProgramList() {
+    selectedProgramId = null;
+    programDetailEl.hidden = true;
+    programsListEl.hidden = false;
+    gymSectionActionsEl.hidden = false;
+    exerciseLibraryEl.hidden = false;
+    addProgramFormWrap.hidden = true;
+  }
+
+  function showProgramDetail(program) {
+    selectedProgramId = program.id;
+    gymSectionActionsEl.hidden = true;
+    exerciseLibraryEl.hidden = true;
+    addProgramFormWrap.hidden = true;
+    programsListEl.hidden = true;
+    renderProgramDetail(program);
+    programDetailEl.hidden = false;
   }
 
   function renderProgramsList() {
@@ -1331,52 +1364,62 @@
       return;
     }
     gymPrograms.forEach(function (program) {
-      programsListEl.appendChild(createProgramCard(program));
+      var row = document.createElement("div");
+      row.className = "program-row";
+      row.dataset.id = program.id;
+      row.innerHTML =
+        '<div class="program-row-info">' +
+        '<span class="program-name">' + escapeHtml(program.name) + '</span>' +
+        '<span class="program-badge ' + (program.is_active ? "active" : "archived") + '">' +
+        (program.is_active ? t("badge_active") : t("badge_archived")) + '</span>' +
+        '</div>' +
+        '<span class="program-row-chevron">›</span>';
+      programsListEl.appendChild(row);
     });
   }
 
-  function createProgramCard(program) {
-    var card = document.createElement("div");
-    card.className = "program-card" + (program.is_active ? "" : " archived");
-    card.dataset.id = program.id;
-
-    var exercisesHtml;
-    if (program.exercises && program.exercises.length > 0) {
-      exercisesHtml = program.exercises.map(function (ex) {
-        var lastPerfStr = ex.last_performance
-          ? ' · ' + t("last_perf_abbrev") + ex.last_performance.weight_used + 'kg\u00d7' + ex.last_performance.reps_done
-          : '';
-        return (
-          '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
-          '<div class="exercise-info">' +
-          '<span class="exercise-name">' + escapeHtml(ex.exercise_name) + "</span>" +
-          '<span class="exercise-meta">' + ex.weight + "\u00a0kg \u00d7 " + ex.reps + " \u00d7 " + ex.sets + "\u00a0" + t("sets_label") + " \u00b7 " + t("rest_short") + ex.rest_seconds + "s" + lastPerfStr + "</span>" +
-          "</div>" +
-          '<div class="exercise-btns">' +
-          '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
-          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
-          ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
-          '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
-          '" data-ex-rest="' + ex.rest_seconds +
-          '" data-ex-auto-increment="' + ex.auto_increment +
-          '" data-ex-increment-kg="' + ex.increment_kg +
-          '" data-ex-reset-increment-kg="' + ex.reset_increment_kg + '">' + t("edit_exercise_btn") + '</button>' +
-          '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
-          ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
-          "</div></div>"
-        );
-      }).join("");
-    } else {
-      exercisesHtml = '<p class="exercise-empty">' + t("no_exercises_program") + '</p>';
+  function buildExercisesHtml(program) {
+    if (!program.exercises || program.exercises.length === 0) {
+      return '<p class="exercise-empty">' + t("no_exercises_program") + '</p>';
     }
+    return program.exercises.map(function (ex) {
+      var lastPerfStr = ex.last_performance
+        ? ' · ' + t("last_perf_abbrev") + ex.last_performance.weight_used + 'kg\u00d7' + ex.last_performance.reps_done
+        : '';
+      return (
+        '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
+        '<div class="exercise-info">' +
+        '<span class="exercise-name">' + escapeHtml(ex.exercise_name) + '</span>' +
+        '<span class="exercise-meta">' + ex.weight + '\u00a0kg \u00d7 ' + ex.reps + ' \u00d7 ' + ex.sets + '\u00a0' + t("sets_label") + ' \u00b7 ' + t("rest_short") + ex.rest_seconds + 's' + lastPerfStr + '</span>' +
+        '</div>' +
+        '<div class="exercise-btns">' +
+        '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
+        ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
+        ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
+        '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
+        '" data-ex-rest="' + ex.rest_seconds +
+        '" data-ex-auto-increment="' + ex.auto_increment +
+        '" data-ex-increment-kg="' + ex.increment_kg +
+        '" data-ex-reset-increment-kg="' + ex.reset_increment_kg + '">' + t("edit_exercise_btn") + '</button>' +
+        '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
+        ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
+        '</div></div>'
+      );
+    }).join("");
+  }
 
-    card.innerHTML =
+  function renderProgramDetail(program) {
+    programDetailEl.innerHTML =
+      '<div class="program-detail-back">' +
+      '<button class="btn btn-secondary btn-sm" id="program-back-btn">&#8592; ' + t("back") + '</button>' +
+      '</div>' +
+      '<div class="program-card' + (program.is_active ? '' : ' archived') + '">' +
       '<div class="program-card-header">' +
       '<div class="program-title-row">' +
-      '<h3 class="program-name">' + escapeHtml(program.name) + "</h3>" +
-      '<span class="program-badge ' + (program.is_active ? "active" : "archived") + '">' +
-      (program.is_active ? t("badge_active") : t("badge_archived")) + "</span>" +
-      "</div>" +
+      '<h3 class="program-name">' + escapeHtml(program.name) + '</h3>' +
+      '<span class="program-badge ' + (program.is_active ? 'active' : 'archived') + '">' +
+      (program.is_active ? t("badge_active") : t("badge_archived")) + '</span>' +
+      '</div>' +
       '<div class="program-header-btns">' +
       '<button class="btn btn-icon btn-sm" data-action="rename-program" data-id="' + program.id +
       '" data-name="' + escapeHtml(program.name) + '">' + t("rename_btn") + '</button>' +
@@ -1384,14 +1427,26 @@
         ? '<button class="btn btn-secondary btn-sm" data-action="archive-program" data-id="' + program.id + '">' + t("archive_btn") + '</button>'
         : '<button class="btn btn-secondary btn-sm" data-action="restore-program" data-id="' + program.id + '">' + t("restore_btn") + '</button>') +
       '<button class="btn btn-danger btn-sm" data-action="delete-program" data-id="' + program.id + '">' + t("delete_btn") + '</button>' +
-      "</div></div>" +
-      '<div class="exercises-list">' + exercisesHtml + "</div>" +
-      '<button class="btn btn-icon btn-sm add-exercise-btn" data-action="add-exercise" data-program-id="' + program.id + '">' + t("add_exercise_btn") + '</button>';
-
-    return card;
+      '</div></div>' +
+      '<div class="exercises-list">' + buildExercisesHtml(program) + '</div>' +
+      '<button class="btn btn-icon btn-sm add-exercise-btn" data-action="add-exercise" data-program-id="' + program.id + '">' + t("add_exercise_btn") + '</button>' +
+      '</div>';
   }
 
   programsListEl.addEventListener("click", function (e) {
+    var row = e.target.closest(".program-row");
+    if (!row) return;
+    var id = parseInt(row.dataset.id, 10);
+    var prog = gymPrograms.find(function (p) { return p.id === id; });
+    if (prog) showProgramDetail(prog);
+  });
+
+  programDetailEl.addEventListener("click", function (e) {
+    if (e.target.id === "program-back-btn" || e.target.closest("#program-back-btn")) {
+      showProgramList();
+      renderProgramsList();
+      return;
+    }
     var btn = e.target.closest("button[data-action]");
     if (!btn) return;
     var action = btn.dataset.action;
@@ -1408,9 +1463,9 @@
       updateProgram(id, { is_active: true });
 
     } else if (action === "delete-program") {
-      var card = btn.closest(".program-card");
-      var pname = card ? card.querySelector(".program-name").textContent : t("fallback_program");
+      var pname = programDetailEl.querySelector(".program-name").textContent;
       if (confirm(tf("delete_program_confirm", { name: pname }))) {
+        selectedProgramId = null;
         deleteProgram(id);
       }
 
@@ -1434,8 +1489,8 @@
     } else if (action === "delete-exercise") {
       var programId = parseInt(btn.dataset.programId, 10);
       var exerciseId = parseInt(btn.dataset.exId, 10);
-      var row = btn.closest(".exercise-row");
-      var ename = row ? row.querySelector(".exercise-name").textContent : t("fallback_exercise");
+      var exRow = btn.closest(".exercise-row");
+      var ename = exRow ? exRow.querySelector(".exercise-name").textContent : t("fallback_exercise");
       if (confirm(tf("delete_exercise_from_program_confirm", { name: ename }))) {
         deleteExercise(programId, exerciseId);
       }
