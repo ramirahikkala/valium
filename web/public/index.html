@@ -47,7 +47,6 @@
           <!-- Tehtävät -->
           <div class="sidebar-section">
             <button class="sidebar-section-btn active" id="view-tab-tasks" data-view="tasks">
-              <span class="sidebar-icon">📋</span>
               <span class="sidebar-label" data-i18n="tasks">Tehtävät</span>
             </button>
             <div class="sidebar-children" id="sidebar-tasks-children">
@@ -69,13 +68,12 @@
           <!-- Sali -->
           <div class="sidebar-section">
             <button class="sidebar-section-btn" id="view-tab-gym" data-view="gym">
-              <span class="sidebar-icon">💪</span>
               <span class="sidebar-label" data-i18n="gym">Sali</span>
             </button>
             <div class="sidebar-children" id="sidebar-gym-children" hidden>
-              <button class="sidebar-gym-btn" data-gym-tab="workout" data-i18n="workout_tab">🏋️ Treeni</button>
-              <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">⚙️ Ohjelmat</button>
-              <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">📊 Historia</button>
+              <button class="sidebar-gym-btn" data-gym-tab="workout" data-i18n="workout_tab">Treeni</button>
+              <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">Ohjelmat</button>
+              <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">Historia</button>
             </div>
           </div>
 
@@ -85,7 +83,6 @@
         <div class="sidebar-footer">
           <div class="sidebar-section">
             <button class="sidebar-section-btn" id="settings-btn">
-              <span class="sidebar-icon">⚙️</span>
               <span class="sidebar-label" data-i18n="settings">Asetukset</span>
             </button>
             <div class="sidebar-children" id="sidebar-settings-children" hidden>
@@ -159,7 +156,7 @@
 
           <!-- Programs sub-view -->
           <div id="gym-programs" class="gym-section">
-            <h2 class="gym-section-heading" data-i18n="programs_heading">Ohjelmat ⚙️</h2>
+            <h2 class="gym-section-heading" data-i18n="programs_heading">Ohjelmat</h2>
             <div class="gym-section-actions">
               <button class="btn btn-primary btn-sm" id="add-program-btn" data-i18n="add_program_btn">+ Uusi ohjelma</button>
               <label class="archived-toggle">
@@ -196,7 +193,7 @@
           <div id="gym-workout" class="gym-section" hidden>
             <div id="workout-idle">
               <div class="workout-idle-card">
-                <h2 class="workout-idle-title" data-i18n="workout_idle_heading">💪 Aloita treeni</h2>
+                <h2 class="workout-idle-title" data-i18n="workout_idle_heading">Aloita treeni</h2>
               </div>
               <div class="form-group">
                 <label for="workout-program-select" data-i18n="label_select_program">Valitse ohjelma</label>
@@ -218,7 +215,7 @@
 
           <!-- History sub-view -->
           <div id="gym-history" class="gym-section" hidden>
-            <h2 class="gym-section-heading" data-i18n="history_heading">Historia 📊</h2>
+            <h2 class="gym-section-heading" data-i18n="history_heading">Historia</h2>
             <div id="sessions-list"></div>
           </div>
 

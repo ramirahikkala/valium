@@ -8,9 +8,9 @@
       // Navigaatio
       tasks: "Tehtävät",
       gym: "Sali",
-      workout_tab: "🏋️ Treeni",
-      programs_tab: "⚙️ Ohjelmat",
-      history_tab: "📊 Historia",
+      workout_tab: "Treeni",
+      programs_tab: "Ohjelmat",
+      history_tab: "Historia",
       settings: "Asetukset",
       language: "Kieli",
       hamburger_aria: "Avaa valikko",
@@ -75,7 +75,7 @@
       save: "Tallenna",
 
       // Sali — ohjelmat
-      programs_heading: "Ohjelmat ⚙️",
+      programs_heading: "Ohjelmat",
       add_program_btn: "+ Uusi ohjelma",
       show_archived_label: "Näytä arkistoidut",
       exercises_heading: "Liikkeet",
@@ -124,7 +124,7 @@
       failed_label: "Failed ✗",
 
       // Sali — treeni
-      workout_idle_heading: "💪 Aloita treeni",
+      workout_idle_heading: "Aloita treeni",
       label_select_program: "Valitse ohjelma",
       start_workout_btn: "Aloita treeni",
       complete_workout_btn_text: "Treeni valmis!",
@@ -148,7 +148,7 @@
       workout_started: "Aloitettu: ",
 
       // Sali — historia
-      history_heading: "Historia 📊",
+      history_heading: "Historia",
       no_sessions_text: "Ei treenejä vielä.",
       session_badge_done: "Valmis",
       session_badge_active: "Kesken",
@@ -159,9 +159,9 @@
       // Navigation
       tasks: "Tasks",
       gym: "Gym",
-      workout_tab: "🏋️ Workout",
-      programs_tab: "⚙️ Programs",
-      history_tab: "📊 History",
+      workout_tab: "Workout",
+      programs_tab: "Programs",
+      history_tab: "History",
       settings: "Settings",
       language: "Language",
       hamburger_aria: "Open menu",
@@ -226,7 +226,7 @@
       save: "Save",
 
       // Gym — programs
-      programs_heading: "Programs ⚙️",
+      programs_heading: "Programs",
       add_program_btn: "+ New program",
       show_archived_label: "Show archived",
       exercises_heading: "Exercises",
@@ -275,7 +275,7 @@
       failed_label: "Failed ✗",
 
       // Gym — workout
-      workout_idle_heading: "💪 Start workout",
+      workout_idle_heading: "Start workout",
       label_select_program: "Select program",
       start_workout_btn: "Start workout",
       complete_workout_btn_text: "Workout done!",
@@ -299,7 +299,7 @@
       workout_started: "Started: ",
 
       // Gym — history
-      history_heading: "History 📊",
+      history_heading: "History",
       no_sessions_text: "No workouts yet.",
       session_badge_done: "Done",
       session_badge_active: "Active",

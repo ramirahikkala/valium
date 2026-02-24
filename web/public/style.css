@@ -12,25 +12,25 @@
 }
 
 :root {
-  --color-bg: #f0f0f8;
+  --color-bg: #f4f3f0;
   --color-surface: #ffffff;
-  --color-primary: #6c7bb5;
-  --color-primary-hover: #5a69a3;
-  --color-primary-light: #e8ebf5;
-  --color-text: #2d2d3f;
-  --color-text-muted: #6b6b80;
-  --color-border: #d8d8e8;
-  --color-danger: #c0626e;
-  --color-danger-hover: #a84f5a;
-  --color-pending: #c4a95a;
-  --color-in-progress: #5a9ec4;
-  --color-done: #5aab72;
-  --color-error-bg: #fce8ea;
-  --color-error-text: #a84f5a;
+  --color-primary: #1c1c1e;
+  --color-primary-hover: #3a3a3c;
+  --color-primary-light: #eeede9;
+  --color-text: #1c1c1e;
+  --color-text-muted: #6e6e73;
+  --color-border: #dbd9d4;
+  --color-danger: #b91c1c;
+  --color-danger-hover: #991b1b;
+  --color-pending: #92400e;
+  --color-in-progress: #1d4ed8;
+  --color-done: #15803d;
+  --color-error-bg: #fef2f2;
+  --color-error-text: #b91c1c;
   --radius: 8px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
-  --transition: 150ms ease;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.10);
+  --transition: 120ms ease;
 }
 
 body {
@@ -48,7 +48,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #6c7bb5 0%, #8b7db5 50%, #a08bc0 100%);
+  background: #1c1c1e;
 }
 
 .login-screen[hidden] {
@@ -121,7 +121,7 @@ body {
 
 header {
   padding: 0.65rem 1rem;
-  background: linear-gradient(135deg, #6c7bb5, #8b7db5);
+  background: #1c1c1e;
   color: #fff;
   position: sticky;
   top: 0;
@@ -787,18 +787,18 @@ textarea:focus {
 }
 
 .status-badge.pending {
-  background: #fdf3dc;
-  color: #8a7130;
+  background: #fef3c7;
+  color: #92400e;
 }
 
 .status-badge.in_progress {
-  background: #dceffc;
-  color: #2e6e94;
+  background: #dbeafe;
+  color: #1d4ed8;
 }
 
 .status-badge.done {
-  background: #dcf5e3;
-  color: #2e7a42;
+  background: #dcfce7;
+  color: #15803d;
 }
 
 /* Status toggle buttons */
@@ -1132,8 +1132,8 @@ input[type="datetime-local"]:focus {
 }
 
 .program-badge.archived {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
+  background: #f3f4f6;
+  color: #6b7280;
 }
 
 .program-header-btns {
