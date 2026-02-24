@@ -162,7 +162,7 @@ async def get_me(
 # ---------- User settings ----------
 
 
-@app.get("/api/user/settings", response_model=UserSettingsResponse)
+@app.get("/user/settings", response_model=UserSettingsResponse)
 async def get_user_settings(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -179,7 +179,7 @@ async def get_user_settings(
     return settings
 
 
-@app.put("/api/user/settings", response_model=UserSettingsResponse)
+@app.put("/user/settings", response_model=UserSettingsResponse)
 async def update_user_settings(
     data: UserSettingsUpdate,
     current_user: User = Depends(get_current_user),
