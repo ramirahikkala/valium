@@ -10,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 # Load .env from project root (one level up from mcp/)
 load_dotenv(dotenv_path=Path(__file__).parent.parent / ".env")
 
-API_URL = os.getenv("VALIUM_API_URL", "https://valium.ketunmetsa.fi")
+API_URL = os.getenv("VALIUM_API_URL", "https://valium.ketunmetsa.fi/api")
 API_KEY = os.environ["VALIUM_ADMIN_API_KEY"]
 
 mcp = FastMCP("Valium")
