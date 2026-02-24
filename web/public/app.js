@@ -1338,7 +1338,10 @@
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
           ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
           '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
-          '" data-ex-rest="' + ex.rest_seconds + '">' + t("edit_exercise_btn") + '</button>' +
+          '" data-ex-rest="' + ex.rest_seconds +
+          '" data-ex-auto-increment="' + ex.auto_increment +
+          '" data-ex-increment-kg="' + ex.increment_kg +
+          '" data-ex-reset-increment-kg="' + ex.reset_increment_kg + '">' + t("edit_exercise_btn") + '</button>' +
           '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
           ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
           "</div></div>"
@@ -1404,6 +1407,9 @@
         sets: parseInt(btn.dataset.exSets, 10),
         reps: parseInt(btn.dataset.exReps, 10),
         rest_seconds: parseInt(btn.dataset.exRest, 10),
+        auto_increment: btn.dataset.exAutoIncrement === "true",
+        increment_kg: parseFloat(btn.dataset.exIncrementKg),
+        reset_increment_kg: parseFloat(btn.dataset.exResetIncrementKg),
       });
 
     } else if (action === "delete-exercise") {
@@ -1715,7 +1721,8 @@
       lastPerfHtml =
         '<span class="ewc-last-perf">' + t("last_perf_prefix") +
         ex.last_performance.weight_used + "\u00a0kg \u00d7 " +
-        ex.last_performance.reps_done + "</span>";
+        ex.last_performance.reps_done +
+        " \u00b7 " + formatDate(ex.last_performance.completed_at) + "</span>";
     }
     var autoincBadge = ex.auto_increment
       ? ' <span class="autoinc-badge" title="' + t("autoinc_label") + '">' + t("autoinc_badge") + "</span>"
@@ -1730,19 +1737,8 @@
       '<span class="ewc-name">' + escapeHtml(ex.exercise_name) + autoincBadge + "</span>" +
       lastPerfHtml +
       "</div>" +
-      '<div class="ewc-weight-row">' +
-      '<button class="ewc-adj-btn" data-adj-weight="-5" data-ex-id="' + ex.id + '">-5</button>' +
-      '<button class="ewc-adj-btn" data-adj-weight="-2.5" data-ex-id="' + ex.id + '">-2.5</button>' +
-      '<span class="ewc-weight-display" id="weight-display-' + ex.id + '">' + currentWeight + "\u00a0kg</span>" +
-      '<span class="ewc-target-reps">\u00d7\u00a0' + ex.reps + t("reps_suffix") + "</span>" +
-      '<button class="ewc-adj-btn" data-adj-weight="+2.5" data-ex-id="' + ex.id + '">+2.5</button>' +
-      '<button class="ewc-adj-btn" data-adj-weight="+5" data-ex-id="' + ex.id + '">+5</button>' +
-      "</div>" +
-      '<div class="ewc-rest-row">' +
-      '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="-30" data-ex-id="' + ex.id + '">-30s</button>' +
-      '<span class="ewc-rest-display" id="rest-display-' + ex.id + '">' + t("rest_short") + currentRest + "\u00a0s</span>" +
-      '<button class="ewc-adj-btn ewc-adj-small" data-adj-rest="+30" data-ex-id="' + ex.id + '">+30s</button>' +
-      "</div>" +
+      '<div class="ewc-weight-static">' + currentWeight + "\u00a0kg \u00d7\u00a0" + ex.reps + t("reps_suffix") + "</div>" +
+      '<div class="ewc-rest-static">' + t("rest_short") + currentRest + "\u00a0s</div>" +
       '<div class="ewc-progress">' + t("sets_progress") + '<strong class="ewc-sets-done">' + done + "</strong>\u00a0/\u00a0" + ex.sets + "</div>" +
       '<div class="ewc-rest-info" hidden>' +
       '<span class="ewc-countdown" id="countdown-' + ex.id + '">' + formatGymSeconds(currentRest) + "</span>" +
@@ -1862,38 +1858,14 @@
   }
 
   activeExercisesEl.addEventListener("click", async function (e) {
-    // Weight adjuster buttons
-    var adjWeightBtn = e.target.closest(".ewc-adj-btn[data-adj-weight]");
-    if (adjWeightBtn) {
-      var exId = parseInt(adjWeightBtn.dataset.exId, 10);
-      var delta = parseFloat(adjWeightBtn.dataset.adjWeight);
-      var current = gymWorkoutWeights[exId] !== undefined ? gymWorkoutWeights[exId] : 0;
-      gymWorkoutWeights[exId] = Math.max(0, Math.round((current + delta) * 10) / 10);
-      var displayEl = document.getElementById("weight-display-" + exId);
-      if (displayEl) displayEl.textContent = gymWorkoutWeights[exId] + "\u00a0kg";
-      return;
-    }
-
-    // Rest adjuster buttons
-    var adjRestBtn = e.target.closest(".ewc-adj-btn[data-adj-rest]");
-    if (adjRestBtn) {
-      var exId = parseInt(adjRestBtn.dataset.exId, 10);
-      var delta = parseInt(adjRestBtn.dataset.adjRest, 10);
-      var current = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : 0;
-      gymWorkoutRests[exId] = Math.max(0, current + delta);
-      var displayEl = document.getElementById("rest-display-" + exId);
-      if (displayEl) displayEl.textContent = t("rest_short") + gymWorkoutRests[exId] + "\u00a0s";
-      return;
-    }
-
     // "Sarja tehty"
     var logBtn = e.target.closest(".ewc-log-btn");
     if (logBtn && gymActiveSession) {
       var exId = parseInt(logBtn.dataset.exId, 10);
       var exercise = gymActiveExercises.find(function (ex) { return ex.id === exId; });
       if (!exercise || gymExerciseStates[exId] !== "idle") return;
-      var weightUsed = gymWorkoutWeights[exId] !== undefined ? gymWorkoutWeights[exId] : exercise.weight;
-      var restSecs = gymWorkoutRests[exId] !== undefined ? gymWorkoutRests[exId] : exercise.rest_seconds;
+      var weightUsed = exercise.weight;
+      var restSecs = exercise.rest_seconds;
       var done = gymSetsDone[exId] || 0;
       var setNumber = done + 1;
       try {
