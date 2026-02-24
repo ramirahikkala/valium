@@ -1,22 +1,8 @@
 services:
-  db:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: valium
-      POSTGRES_PASSWORD: valium
-      POSTGRES_DB: valium
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U valium"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-
   api:
     build: ./api
     environment:
-      DATABASE_URL: postgresql+asyncpg://valium:valium@db:5432/valium
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://valium:valium@db:5432/valium}
       API_PORT: "8000"
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
@@ -24,9 +10,6 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
-    depends_on:
-      db:
-        condition: service_healthy
 
   web:
     build: ./web
@@ -34,6 +17,3 @@ services:
       API_URL: http://api:8000
     depends_on:
       - api
-
-volumes:
-  pgdata:

@@ -1,6 +1,11 @@
 # Production overrides — used on the server via:
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 services:
+  api:
+    networks:
+      - default
+      - db-network
+
   web:
     networks:
       - default
@@ -9,3 +14,6 @@ services:
 networks:
   caddy-proxy:
     external: true
+  db-network:
+    external: true
+    name: db-network
