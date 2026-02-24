@@ -71,6 +71,7 @@
       recurrence_monthly: "Kuukausittain",
       label_enabled: "Käytössä",
       cancel: "Peruuta",
+      back: "Takaisin",
       save: "Tallenna",
 
       // Sali — ohjelmat
@@ -221,6 +222,7 @@
       recurrence_monthly: "Monthly",
       label_enabled: "Enabled",
       cancel: "Cancel",
+      back: "Back",
       save: "Save",
 
       // Gym — programs
@@ -977,6 +979,7 @@
     if (e.key === "Escape") {
       if (!editModal.hidden) closeEditModal();
       if (!gymModal.hidden) closeGymModal();
+      if (!document.getElementById("complete-workout-modal").hidden) closeCompleteWorkoutModal();
     }
   });
 
@@ -1948,6 +1951,10 @@
     document.getElementById("complete-workout-modal").hidden = false;
   });
 
+  function closeCompleteWorkoutModal() {
+    document.getElementById("complete-workout-modal").hidden = true;
+  }
+
   document.getElementById("cwm-normal").addEventListener("click", function () {
     doCompleteWorkout("success");
   });
@@ -1955,11 +1962,16 @@
     document.getElementById("cwm-step1").hidden = true;
     document.getElementById("cwm-step2").hidden = false;
   });
+  document.getElementById("cwm-cancel").addEventListener("click", closeCompleteWorkoutModal);
   document.getElementById("cwm-stay").addEventListener("click", function () {
     doCompleteWorkout("failed_stay");
   });
   document.getElementById("cwm-reset").addEventListener("click", function () {
     doCompleteWorkout("failed_reset");
+  });
+  document.getElementById("cwm-back").addEventListener("click", function () {
+    document.getElementById("cwm-step2").hidden = true;
+    document.getElementById("cwm-step1").hidden = false;
   });
 
   async function doCompleteWorkout(outcome) {
