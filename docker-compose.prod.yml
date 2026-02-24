@@ -5,6 +5,7 @@ services:
     networks:
       - default
       - db-network
+      - caddy-proxy
 
   web:
     networks:
