@@ -1271,7 +1271,9 @@
     }
   });
 
-  addLibraryExerciseBtn.addEventListener("click", function () {
+  addLibraryExerciseBtn.addEventListener("click", function (e) {
+    e.preventDefault();
+    exerciseLibraryEl.open = true;
     addLibraryExerciseForm.hidden = false;
     newLibraryExerciseNameInput.focus();
   });

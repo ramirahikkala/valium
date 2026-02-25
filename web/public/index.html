@@ -164,20 +164,6 @@
               </label>
             </div>
 
-            <!-- Exercise library -->
-            <div class="exercise-library">
-              <div class="library-header">
-                <h3 data-i18n="exercises_heading">Liikkeet</h3>
-                <button class="btn btn-icon btn-sm" id="add-library-exercise-btn" data-i18n="add_exercise_lib_btn">+ Lisää</button>
-              </div>
-              <form id="add-library-exercise-form" class="inline-form" hidden>
-                <input type="text" id="new-library-exercise-name" data-i18n-placeholder="exercise_name_placeholder" placeholder="Liikkeen nimi" required autocomplete="off">
-                <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn" data-i18n="cancel">Peruuta</button>
-              </form>
-              <div id="library-exercises-list"></div>
-            </div>
-
             <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
               <form id="add-program-form" class="inline-form">
                 <input type="text" id="new-program-name" data-i18n-placeholder="program_name_placeholder" placeholder="Ohjelman nimi" required autocomplete="off">
@@ -187,6 +173,20 @@
             </div>
             <div id="programs-list"></div>
             <div id="program-detail" hidden></div>
+
+            <!-- Exercise library -->
+            <details class="exercise-library">
+              <summary class="library-summary">
+                <span data-i18n="exercises_heading">Liikkeet</span>
+                <button class="btn btn-icon btn-sm" id="add-library-exercise-btn" data-i18n="add_exercise_lib_btn">+ Lisää</button>
+              </summary>
+              <form id="add-library-exercise-form" class="inline-form" hidden>
+                <input type="text" id="new-library-exercise-name" data-i18n-placeholder="exercise_name_placeholder" placeholder="Liikkeen nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-library-exercise-btn" data-i18n="cancel">Peruuta</button>
+              </form>
+              <div id="library-exercises-list"></div>
+            </details>
           </div>
 
           <!-- Workout sub-view -->
