@@ -119,6 +119,10 @@
       autoinc_label: "Nouseva ohjelma",
       autoinc_increment_label: "Nousu / treeni (kg)",
       autoinc_reset_label: "Pohjan nousu resetissä (kg)",
+      deload_mode_label: "Deload-tyyppi",
+      deload_mode_reset: "Pohjapaino + nousu",
+      deload_mode_percent: "\u221210\u00a0% (StrongLifts)",
+      failure_threshold_label: "Epäonnistumisia ennen deloadia",
       autoinc_badge: "↑",
       fail_btn: "Fail",
       failed_label: "Failed ✗",
@@ -270,6 +274,10 @@
       autoinc_label: "Progressive overload",
       autoinc_increment_label: "Increment per workout (kg)",
       autoinc_reset_label: "Base increment on reset (kg)",
+      deload_mode_label: "Deload type",
+      deload_mode_reset: "Base weight + increment",
+      deload_mode_percent: "\u221210\u00a0% (StrongLifts)",
+      failure_threshold_label: "Failures before deload",
       autoinc_badge: "↑",
       fail_btn: "Fail",
       failed_label: "Failed ✗",
@@ -1172,9 +1180,16 @@
   var gymAutoincSettings = document.getElementById("gym-autoinc-settings");
   var gymAutoincIncrement = document.getElementById("gym-autoinc-increment");
   var gymAutoincReset = document.getElementById("gym-autoinc-reset");
+  var gymDeloadMode = document.getElementById("gym-deload-mode");
+  var gymResetGroup = document.getElementById("gym-reset-group");
+  var gymFailureThreshold = document.getElementById("gym-failure-threshold");
 
   gymAutoincEnabled.addEventListener("change", function () {
     gymAutoincSettings.hidden = !gymAutoincEnabled.checked;
+  });
+
+  gymDeloadMode.addEventListener("change", function () {
+    gymResetGroup.hidden = gymDeloadMode.value === "percent";
   });
 
   // Tracks program_exercise IDs that the user marked as failed during the workout
@@ -1388,11 +1403,14 @@
       var lastPerfStr = ex.last_performance
         ? ' · ' + t("last_perf_abbrev") + ex.last_performance.weight_used + 'kg\u00d7' + ex.last_performance.reps_done
         : '';
+      var failStr = (ex.auto_increment && ex.consecutive_failures > 0)
+        ? ' · <span class="failure-badge">' + ex.consecutive_failures + '/' + ex.failure_threshold + ' ep.</span>'
+        : '';
       return (
         '<div class="exercise-row" data-ex-id="' + ex.id + '">' +
         '<div class="exercise-info">' +
         '<span class="exercise-name">' + escapeHtml(ex.exercise_name) + '</span>' +
-        '<span class="exercise-meta">' + ex.weight + '\u00a0kg \u00d7 ' + ex.reps + ' \u00d7 ' + ex.sets + '\u00a0' + t("sets_label") + ' \u00b7 ' + t("rest_short") + ex.rest_seconds + 's' + lastPerfStr + '</span>' +
+        '<span class="exercise-meta">' + ex.weight + '\u00a0kg \u00d7 ' + ex.reps + ' \u00d7 ' + ex.sets + '\u00a0' + t("sets_label") + ' \u00b7 ' + t("rest_short") + ex.rest_seconds + 's' + lastPerfStr + failStr + '</span>' +
         '</div>' +
         '<div class="exercise-btns">' +
         '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
@@ -1402,7 +1420,9 @@
         '" data-ex-rest="' + ex.rest_seconds +
         '" data-ex-auto-increment="' + ex.auto_increment +
         '" data-ex-increment-kg="' + ex.increment_kg +
-        '" data-ex-reset-increment-kg="' + ex.reset_increment_kg + '">' + t("edit_exercise_btn") + '</button>' +
+        '" data-ex-reset-increment-kg="' + ex.reset_increment_kg +
+        '" data-ex-deload-mode="' + (ex.deload_mode || 'reset') +
+        '" data-ex-failure-threshold="' + (ex.failure_threshold || 3) + '">' + t("edit_exercise_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
         ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
         '</div></div>'
@@ -1486,6 +1506,8 @@
         auto_increment: btn.dataset.exAutoIncrement === "true",
         increment_kg: parseFloat(btn.dataset.exIncrementKg),
         reset_increment_kg: parseFloat(btn.dataset.exResetIncrementKg),
+        deload_mode: btn.dataset.exDeloadMode || "reset",
+        failure_threshold: parseInt(btn.dataset.exFailureThreshold, 10) || 3,
       });
 
     } else if (action === "delete-exercise") {
@@ -1595,6 +1617,9 @@
     gymAutoincSettings.hidden = !data.auto_increment;
     gymAutoincIncrement.value = String(data.increment_kg !== undefined ? data.increment_kg : 2.5);
     gymAutoincReset.value = data.reset_increment_kg !== undefined ? data.reset_increment_kg : 5;
+    gymDeloadMode.value = data.deload_mode || "reset";
+    gymResetGroup.hidden = (data.deload_mode === "percent");
+    gymFailureThreshold.value = data.failure_threshold !== undefined ? data.failure_threshold : 3;
     gymModalTitle.textContent = mode === "edit" ? t("gym_modal_edit_heading") : t("gym_modal_add_heading");
 
     if (mode === "edit") {
@@ -1642,6 +1667,8 @@
       auto_increment: gymAutoincEnabled.checked,
       increment_kg: parseFloat(gymAutoincIncrement.value) || 2.5,
       reset_increment_kg: parseFloat(gymAutoincReset.value) || 5,
+      deload_mode: gymDeloadMode.value || "reset",
+      failure_threshold: parseInt(gymFailureThreshold.value, 10) || 3,
     };
     if (exerciseId) {
       // Edit: only update weight/sets/reps/rest + auto-increment fields
@@ -2016,20 +2043,9 @@
     doCompleteWorkout("success");
   });
   document.getElementById("cwm-failed").addEventListener("click", function () {
-    document.getElementById("cwm-step1").hidden = true;
-    document.getElementById("cwm-step2").hidden = false;
+    doCompleteWorkout("success");
   });
   document.getElementById("cwm-cancel").addEventListener("click", closeCompleteWorkoutModal);
-  document.getElementById("cwm-stay").addEventListener("click", function () {
-    doCompleteWorkout("failed_stay");
-  });
-  document.getElementById("cwm-reset").addEventListener("click", function () {
-    doCompleteWorkout("failed_reset");
-  });
-  document.getElementById("cwm-back").addEventListener("click", function () {
-    document.getElementById("cwm-step2").hidden = true;
-    document.getElementById("cwm-step1").hidden = false;
-  });
 
   async function doCompleteWorkout(outcome) {
     document.getElementById("complete-workout-modal").hidden = true;

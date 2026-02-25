@@ -267,6 +267,15 @@ class ProgramExercise(Base):
     reset_increment_kg: Mapped[float] = mapped_column(
         Float, nullable=False, default=5.0, server_default="5"
     )
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    deload_mode: Mapped[str] = mapped_column(
+        String, nullable=False, default="reset", server_default="reset"
+    )
+    failure_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
 
     program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise", back_populates="program_exercises")

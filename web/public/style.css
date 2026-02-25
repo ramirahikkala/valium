@@ -1442,6 +1442,11 @@ input[type="datetime-local"]:focus {
   padding: 0.25rem 0;
 }
 
+.failure-badge {
+  color: var(--color-danger, #dc2626);
+  font-weight: 600;
+}
+
 .modal-static-value {
   font-weight: 600;
   padding: 0.35rem 0;

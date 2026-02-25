@@ -226,6 +226,8 @@ class ExerciseUpdate(BaseModel):
     auto_increment: bool | None = None
     increment_kg: float | None = None
     reset_increment_kg: float | None = None
+    deload_mode: str | None = None
+    failure_threshold: int | None = None
 
 
 class ExerciseResponse(BaseModel):
@@ -244,6 +246,9 @@ class ExerciseResponse(BaseModel):
     increment_kg: float
     base_weight: float
     reset_increment_kg: float
+    consecutive_failures: int
+    deload_mode: str
+    failure_threshold: int
     last_performance: LastPerformance | None = None
 
 

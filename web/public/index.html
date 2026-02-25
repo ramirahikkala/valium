@@ -355,8 +355,19 @@
             </select>
           </div>
           <div class="form-group">
+            <label for="gym-deload-mode" data-i18n="deload_mode_label">Deload-tyyppi</label>
+            <select id="gym-deload-mode">
+              <option value="reset" data-i18n="deload_mode_reset">Pohjapaino + nousu</option>
+              <option value="percent" data-i18n="deload_mode_percent">−10% (StrongLifts)</option>
+            </select>
+          </div>
+          <div class="form-group" id="gym-reset-group">
             <label for="gym-autoinc-reset" data-i18n="autoinc_reset_label">Pohjan nousu resetissä (kg)</label>
             <input type="number" id="gym-autoinc-reset" step="any" min="0" value="5">
+          </div>
+          <div class="form-group">
+            <label for="gym-failure-threshold" data-i18n="failure_threshold_label">Epäonnistumisia ennen deloadia</label>
+            <input type="number" id="gym-failure-threshold" min="1" max="10" value="3">
           </div>
         </div>
         <div class="modal-actions">
