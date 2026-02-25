@@ -164,16 +164,6 @@
               </label>
             </div>
 
-            <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
-              <form id="add-program-form" class="inline-form">
-                <input type="text" id="new-program-name" data-i18n-placeholder="program_name_placeholder" placeholder="Ohjelman nimi" required autocomplete="off">
-                <button type="submit" class="btn btn-primary btn-sm" data-i18n="create_btn">Luo</button>
-                <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program" data-i18n="cancel">Peruuta</button>
-              </form>
-            </div>
-            <div id="programs-list"></div>
-            <div id="program-detail" hidden></div>
-
             <!-- Exercise library -->
             <details class="exercise-library">
               <summary class="library-summary">
@@ -187,6 +177,17 @@
               </form>
               <div id="library-exercises-list"></div>
             </details>
+
+            <div id="add-program-form-wrap" class="add-program-form-wrap" hidden>
+              <form id="add-program-form" class="inline-form">
+                <input type="text" id="new-program-name" data-i18n-placeholder="program_name_placeholder" placeholder="Ohjelman nimi" required autocomplete="off">
+                <button type="submit" class="btn btn-primary btn-sm" data-i18n="create_btn">Luo</button>
+                <button type="button" class="btn btn-secondary btn-sm" id="cancel-add-program" data-i18n="cancel">Peruuta</button>
+              </form>
+            </div>
+            <div id="programs-list"></div>
+            <div id="program-detail" hidden></div>
+
           </div>
 
           <!-- Workout sub-view -->
