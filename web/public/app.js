@@ -136,6 +136,8 @@
       label_select_program: "Valitse ohjelma",
       start_workout_btn: "Aloita treeni",
       complete_workout_btn_text: "Treeni valmis!",
+      cancel_workout_btn: "Keskeytä treeni",
+      cancel_workout_confirm: "Keskeytä treeni? Sarjoja ei tallenneta eikä painoja päivitetä.",
       no_active_programs_option: "Ei aktiivisia ohjelmia",
       last_perf_prefix: "Edellinen: ",
       reps_suffix: "\u00a0toistoa",
@@ -307,6 +309,8 @@
       label_select_program: "Select program",
       start_workout_btn: "Start workout",
       complete_workout_btn_text: "Workout done!",
+      cancel_workout_btn: "Cancel workout",
+      cancel_workout_confirm: "Cancel workout? Sets won't be saved and weights won't be updated.",
       no_active_programs_option: "No active programs",
       last_perf_prefix: "Previous: ",
       reps_suffix: "\u00a0reps",
@@ -1216,6 +1220,7 @@
   var lastSessionInfoEl = document.getElementById("last-session-info");
   var startWorkoutBtn = document.getElementById("start-workout-btn");
   var completeWorkoutBtn = document.getElementById("complete-workout-btn");
+  var cancelWorkoutBtn = document.getElementById("cancel-workout-btn");
   var activeProgramNameEl = document.getElementById("active-program-name");
   var workoutStartTimeEl = document.getElementById("workout-start-time");
   var activeExercisesEl = document.getElementById("active-exercises");
@@ -2131,14 +2136,43 @@
     var failBtn = e.target.closest(".ewc-fail-btn");
     if (failBtn) {
       var exId = parseInt(failBtn.dataset.exId, 10);
+      var nowFailed;
       if (gymFailedExercises.has(exId)) {
         gymFailedExercises.delete(exId);
         failBtn.textContent = t("fail_btn");
         failBtn.classList.remove("ewc-failed");
+        nowFailed = false;
       } else {
         gymFailedExercises.add(exId);
         failBtn.textContent = t("failed_label");
         failBtn.classList.add("ewc-failed");
+        nowFailed = true;
+      }
+      // Update the streak display in real-time to show projected count
+      var ex = gymActiveExercises.find(function (e) { return e.id === exId; });
+      if (ex && ex.auto_increment) {
+        var card = activeExercisesEl.querySelector('.exercise-workout-card[data-ex-id="' + exId + '"]');
+        if (card) {
+          var actionsEl = card.querySelector(".ewc-actions");
+          var streakEl = actionsEl ? actionsEl.querySelector(".ewc-fail-streak") : null;
+          var projected = (ex.consecutive_failures || 0) + (nowFailed ? 1 : 0);
+          var threshold = ex.failure_threshold || 3;
+          if (projected > 0) {
+            var streakText = "\u2717\u00a0" + projected + "\u00a0/\u00a0" + threshold;
+            if (streakEl) {
+              streakEl.textContent = streakText;
+              streakEl.title = projected + " / " + threshold;
+            } else if (actionsEl) {
+              var newStreak = document.createElement("span");
+              newStreak.className = "ewc-fail-streak";
+              newStreak.title = projected + " / " + threshold;
+              newStreak.textContent = streakText;
+              actionsEl.appendChild(newStreak);
+            }
+          } else if (streakEl) {
+            streakEl.remove();
+          }
+        }
       }
     }
   });
@@ -2217,6 +2251,24 @@
       await loadWorkoutTab();
     } catch (_) {}
   }
+
+  cancelWorkoutBtn.addEventListener("click", async function () {
+    if (!gymActiveSession) return;
+    if (!confirm(t("cancel_workout_confirm"))) return;
+    try {
+      await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id, { method: "DELETE" });
+      gymFailedExercises.clear();
+      stopAllGymTimers();
+      gymActiveSession = null;
+      gymActiveExercises = [];
+      gymSetsDone = {};
+      gymExerciseStates = {};
+      localStorage.removeItem("gymActiveSessionId");
+      workoutActiveEl.hidden = true;
+      workoutIdleEl.hidden = false;
+      await loadWorkoutTab();
+    } catch (_) {}
+  });
 
   // ---------- History ----------
 

@@ -1295,6 +1295,22 @@ input[type="datetime-local"]:focus {
   flex-wrap: wrap;
 }
 
+.btn-cancel-workout {
+  background: transparent;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 0.4em 0.9em;
+  font-size: 0.82em;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+}
+
+.btn-cancel-workout:hover {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+
 .workout-title-block h3 {
   font-size: 1.1rem;
   font-weight: 700;
