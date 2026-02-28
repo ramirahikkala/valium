@@ -1,5 +1,6 @@
 """Gym workout API router."""
 
+import math
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -482,8 +483,8 @@ async def complete_session(
                     ex.consecutive_failures += 1
                     if ex.consecutive_failures >= ex.failure_threshold:
                         if ex.deload_mode == "percent":
-                            # StrongLifts: 10% deload, round to nearest 2.5 kg
-                            ex.weight = round(ex.weight * 0.9 / 2.5) * 2.5
+                            # StrongLifts: 10% deload, floor to nearest 2.5 kg
+                            ex.weight = math.floor(ex.weight * 0.9 / 2.5) * 2.5
                         else:
                             ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                             ex.weight = ex.base_weight

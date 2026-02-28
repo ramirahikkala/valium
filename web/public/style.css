@@ -965,6 +965,55 @@ input[type="datetime-local"]:focus {
   margin-top: 0.5rem;
 }
 
+/* Workout completion summary */
+.cwm-summary-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+}
+
+.cwm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--color-border, rgba(0,0,0,0.08));
+}
+
+.cwm-row:last-child {
+  border-bottom: none;
+}
+
+.cwm-name {
+  font-size: 0.9rem;
+  color: var(--color-text-muted, #666);
+}
+
+.cwm-weights {
+  font-size: 0.9rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.cwm-next {
+  font-size: 0.85rem;
+}
+
+.cwm-next em {
+  font-style: normal;
+  font-size: 0.75rem;
+  opacity: 0.65;
+}
+
+.cwm-up { color: var(--color-primary); }
+.cwm-down { color: #e05a2b; }
+.cwm-same { color: var(--color-text-muted, #888); }
+
 /* (view-toggle moved to sidebar) */
 
 /* (gym-tabs moved to sidebar) */

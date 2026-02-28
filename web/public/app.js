@@ -144,15 +144,12 @@
       all_sets_done_text: "\u2713 Kaikki sarjat tehty!",
       log_set_btn: "Sarja tehty",
       skip_rest_btn: "Ohita tauko",
-      complete_workout_confirm: "Merkitäänkö treeni valmiiksi?",
-      complete_workout_heading: "Treeni valmis",
-      complete_workout_how: "Miten treeni meni?",
-      complete_workout_normal: "Normaali lopetus",
-      complete_workout_failed: "Epäonnistunut",
-      complete_workout_weight_q: "Painon hallinta",
-      complete_workout_weight_desc: "Mitä tehdään painolle ensi kerralla?",
-      complete_stay_weight: "Jää samaan painoon",
-      complete_reset_cycle: "Aloita uusi kierros",
+      complete_workout_heading: "Treeni valmis!",
+      cwm_confirm_btn: "Valmis!",
+      cwm_next_label: "Ensi kerta",
+      cwm_deload_label: "deload",
+      cwm_same_label: "sama paino",
+      cwm_no_change_label: "ei automaattia",
       workout_started: "Aloitettu: ",
 
       // Sali — historia
@@ -303,15 +300,12 @@
       all_sets_done_text: "\u2713 All sets done!",
       log_set_btn: "Set done",
       skip_rest_btn: "Skip rest",
-      complete_workout_confirm: "Mark workout as complete?",
-      complete_workout_heading: "Workout done",
-      complete_workout_how: "How did the workout go?",
-      complete_workout_normal: "Normal completion",
-      complete_workout_failed: "Struggled",
-      complete_workout_weight_q: "Weight management",
-      complete_workout_weight_desc: "What to do with weight next time?",
-      complete_stay_weight: "Keep same weight",
-      complete_reset_cycle: "Start new cycle",
+      complete_workout_heading: "Workout done!",
+      cwm_confirm_btn: "Done!",
+      cwm_next_label: "Next",
+      cwm_deload_label: "deload",
+      cwm_same_label: "same weight",
+      cwm_no_change_label: "no auto",
       workout_started: "Started: ",
 
       // Gym — history
@@ -1633,11 +1627,13 @@
 
     if (mode === "edit") {
       // Show static exercise name, hide dropdown
+      gymExSelectInput.required = false;
       gymModalSelectGroup.hidden = true;
       gymModalNameDisplay.hidden = false;
       gymModalExerciseNameEl.textContent = data.exerciseName || "";
     } else {
       // Populate dropdown from library
+      gymExSelectInput.required = true;
       gymModalSelectGroup.hidden = false;
       gymModalNameDisplay.hidden = true;
       gymExSelectInput.innerHTML = '<option value="">' + t("select_exercise_option") + '</option>';
@@ -2062,16 +2058,48 @@
     }
   });
 
+  function calcNextWeight(ex) {
+    if (!ex.auto_increment) return null;
+    var failed = gymFailedExercises.has(ex.id);
+    if (!failed) {
+      return Math.round((ex.weight + ex.increment_kg) * 100) / 100;
+    }
+    var newFailures = (ex.consecutive_failures || 0) + 1;
+    if (newFailures >= (ex.failure_threshold || 3)) {
+      if (ex.deload_mode === "percent") {
+        return Math.floor(ex.weight * 0.9 / 2.5) * 2.5;
+      } else {
+        return Math.round(((ex.base_weight || 0) + (ex.reset_increment_kg || 5)) * 100) / 100;
+      }
+    }
+    return ex.weight; // failure count building up, weight stays same this time
+  }
+
   completeWorkoutBtn.addEventListener("click", function () {
     if (!gymActiveSession) return;
-    var hasProgressive = gymActiveExercises.some(function (ex) { return ex.auto_increment; });
-    document.getElementById("cwm-normal").textContent = t("complete_workout_normal");
-    document.getElementById("cwm-failed").textContent = t("complete_workout_failed");
-    document.getElementById("cwm-stay").textContent = t("complete_stay_weight");
-    document.getElementById("cwm-reset").textContent = t("complete_reset_cycle");
-    document.getElementById("cwm-step1").hidden = false;
-    document.getElementById("cwm-failed").hidden = !hasProgressive;
-    document.getElementById("cwm-step2").hidden = true;
+    var summaryEl = document.getElementById("cwm-summary-list");
+    summaryEl.innerHTML = "";
+    gymActiveExercises.forEach(function (ex) {
+      var currentW = gymWorkoutWeights[ex.id] !== undefined ? gymWorkoutWeights[ex.id] : ex.weight;
+      var nextW = calcNextWeight(ex);
+      var row = document.createElement("div");
+      row.className = "cwm-row";
+      var nextHtml = "";
+      if (nextW !== null) {
+        var diff = Math.round((nextW - currentW) * 100) / 100;
+        if (diff > 0) {
+          nextHtml = '<span class="cwm-next cwm-up">→ ' + nextW + ' kg ↑</span>';
+        } else if (diff < 0) {
+          nextHtml = '<span class="cwm-next cwm-down">→ ' + nextW + ' kg ↓ <em>' + t("cwm_deload_label") + '</em></span>';
+        } else {
+          nextHtml = '<span class="cwm-next cwm-same">→ ' + nextW + ' kg <em>' + t("cwm_same_label") + '</em></span>';
+        }
+      }
+      row.innerHTML =
+        '<span class="cwm-name">' + escapeHtml(ex.exercise_name) + '</span>' +
+        '<span class="cwm-weights"><strong>' + currentW + ' kg</strong>' + nextHtml + '</span>';
+      summaryEl.appendChild(row);
+    });
     document.getElementById("complete-workout-modal").hidden = false;
   });
 
@@ -2079,15 +2107,10 @@
     document.getElementById("complete-workout-modal").hidden = true;
   }
 
-  document.getElementById("cwm-normal").addEventListener("click", function () {
-    doCompleteWorkout("success");
-  });
-  document.getElementById("cwm-failed").addEventListener("click", function () {
-    doCompleteWorkout("success");
-  });
+  document.getElementById("cwm-confirm").addEventListener("click", doCompleteWorkout);
   document.getElementById("cwm-cancel").addEventListener("click", closeCompleteWorkoutModal);
 
-  async function doCompleteWorkout(outcome) {
+  async function doCompleteWorkout() {
     document.getElementById("complete-workout-modal").hidden = true;
     try {
       await apiFetch(GYM_API + "/sessions/" + gymActiveSession.id + "/complete", {
@@ -2095,7 +2118,6 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           failed_exercise_ids: Array.from(gymFailedExercises),
-          session_outcome: outcome,
         }),
       });
       gymFailedExercises.clear();
@@ -2107,6 +2129,7 @@
       localStorage.removeItem("gymActiveSessionId");
       workoutActiveEl.hidden = true;
       workoutIdleEl.hidden = false;
+      await loadWorkoutTab();
     } catch (_) {}
   }
 
