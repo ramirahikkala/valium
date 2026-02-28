@@ -227,6 +227,9 @@ class Exercise(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    consecutive_failures: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
     user: Mapped[User] = relationship("User", back_populates="exercises")
     program_exercises: Mapped[list["ProgramExercise"]] = relationship(
@@ -296,9 +299,6 @@ class ProgramExercise(Base):
     )
     reset_increment_kg: Mapped[float] = mapped_column(
         Float, nullable=False, default=5.0, server_default="5"
-    )
-    consecutive_failures: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
     )
     deload_mode: Mapped[str] = mapped_column(
         String, nullable=False, default="reset", server_default="reset"

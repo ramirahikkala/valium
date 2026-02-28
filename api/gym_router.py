@@ -104,7 +104,7 @@ def _make_exercise_response(pe: ProgramExercise, last_perf: LastPerformance | No
         increment_kg=pe.increment_kg,
         base_weight=pe.base_weight,
         reset_increment_kg=pe.reset_increment_kg,
-        consecutive_failures=pe.consecutive_failures,
+        consecutive_failures=pe.exercise.consecutive_failures,
         deload_mode=pe.deload_mode,
         failure_threshold=pe.failure_threshold,
         last_performance=last_perf,
@@ -463,7 +463,9 @@ async def complete_session(
     # Apply auto-increment weight progression for exercises in the program
     if ws.program_id:
         result = await session.execute(
-            select(ProgramExercise).where(ProgramExercise.program_id == ws.program_id)
+            select(ProgramExercise)
+            .options(selectinload(ProgramExercise.exercise))
+            .where(ProgramExercise.program_id == ws.program_id)
         )
         program_exercises = result.scalars().all()
         for ex in program_exercises:
@@ -476,22 +478,22 @@ async def complete_session(
                 if ex.deload_mode == "reset":
                     ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                     ex.weight = ex.base_weight
-                    ex.consecutive_failures = 0
+                    ex.exercise.consecutive_failures = 0
             else:
                 # Per-exercise logic based on failed_exercise_ids
                 if ex.id in body.failed_exercise_ids:
-                    ex.consecutive_failures += 1
-                    if ex.consecutive_failures >= ex.failure_threshold:
+                    ex.exercise.consecutive_failures += 1
+                    if ex.exercise.consecutive_failures >= ex.failure_threshold:
                         if ex.deload_mode == "percent":
                             # StrongLifts: 10% deload, floor to nearest 2.5 kg
                             ex.weight = math.floor(ex.weight * 0.9 / 2.5) * 2.5
                         else:
                             ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                             ex.weight = ex.base_weight
-                        ex.consecutive_failures = 0
+                        ex.exercise.consecutive_failures = 0
                 else:
                     ex.weight = round(ex.weight + ex.increment_kg, 2)
-                    ex.consecutive_failures = 0
+                    ex.exercise.consecutive_failures = 0
 
     ws.completed_at = datetime.now(timezone.utc)
     await session.commit()
