@@ -129,6 +129,10 @@
 
       // Sali — treeni
       workout_idle_heading: "Aloita treeni",
+      last_session_label: "Edellinen treeni",
+      last_session_today: "tänään",
+      last_session_yesterday: "eilen",
+      last_session_days_ago: "{n} päivää sitten",
       label_select_program: "Valitse ohjelma",
       start_workout_btn: "Aloita treeni",
       complete_workout_btn_text: "Treeni valmis!",
@@ -284,6 +288,10 @@
 
       // Gym — workout
       workout_idle_heading: "Start workout",
+      last_session_label: "Last workout",
+      last_session_today: "today",
+      last_session_yesterday: "yesterday",
+      last_session_days_ago: "{n} days ago",
       label_select_program: "Select program",
       start_workout_btn: "Start workout",
       complete_workout_btn_text: "Workout done!",
@@ -1145,6 +1153,7 @@
   var workoutIdleEl = document.getElementById("workout-idle");
   var workoutActiveEl = document.getElementById("workout-active");
   var workoutProgramSelect = document.getElementById("workout-program-select");
+  var lastSessionInfoEl = document.getElementById("last-session-info");
   var startWorkoutBtn = document.getElementById("start-workout-btn");
   var completeWorkoutBtn = document.getElementById("complete-workout-btn");
   var activeProgramNameEl = document.getElementById("active-program-name");
@@ -1698,7 +1707,38 @@
 
   // ---------- Workout ----------
 
+  function relativeDay(dateStr) {
+    if (!dateStr) return "";
+    var then = new Date(dateStr);
+    var now = new Date();
+    var thenDay = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+    var nowDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var diffDays = Math.round((nowDay - thenDay) / 86400000);
+    if (diffDays === 0) return t("last_session_today");
+    if (diffDays === 1) return t("last_session_yesterday");
+    return t("last_session_days_ago").replace("{n}", diffDays);
+  }
+
   async function loadWorkoutTab() {
+    var sessions;
+    try {
+      sessions = await apiFetch(GYM_API + "/sessions");
+    } catch (_) {}
+
+    // Show last completed session info
+    lastSessionInfoEl.hidden = true;
+    if (sessions) {
+      var lastDone = sessions.find(function (s) { return s.completed_at; });
+      if (lastDone) {
+        var ago = relativeDay(lastDone.completed_at || lastDone.started_at);
+        lastSessionInfoEl.innerHTML =
+          '<span class="last-session-label">' + t("last_session_label") + ':</span> ' +
+          '<strong>' + (lastDone.program_name || "–") + '</strong>' +
+          '<span class="last-session-ago"> · ' + ago + '</span>';
+        lastSessionInfoEl.hidden = false;
+      }
+    }
+
     try {
       var programs = await apiFetch(GYM_API + "/programs?active=true");
       if (!programs) return;
@@ -1719,7 +1759,7 @@
     var savedId = localStorage.getItem("gymActiveSessionId");
     if (savedId) {
       try {
-        var sessions = await apiFetch(GYM_API + "/sessions");
+        if (!sessions) sessions = await apiFetch(GYM_API + "/sessions");
         if (sessions) {
           var found = sessions.find(function (s) {
             return String(s.id) === savedId && !s.completed_at;
