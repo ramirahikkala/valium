@@ -163,6 +163,12 @@
       // Admin
       admin_tab: "Admin",
       admin_users_heading: "Käyttäjät",
+      admin_invites_heading: "Kutsut",
+      admin_invite_placeholder: "sähköposti@esimerkki.fi",
+      admin_invite_btn: "Kutsu",
+      admin_invite_pending: "Odottaa kirjautumista",
+      admin_invite_revoke: "Peruuta",
+      admin_no_invites: "Ei odottavia kutsuja.",
       app_tasks_label: "Tehtävät",
       app_gym_label: "Sali",
       no_apps_available: "Sinulla ei ole käyttöoikeutta mihinkään sovellukseen.",
@@ -328,6 +334,12 @@
       // Admin
       admin_tab: "Admin",
       admin_users_heading: "Users",
+      admin_invites_heading: "Invites",
+      admin_invite_placeholder: "email@example.com",
+      admin_invite_btn: "Invite",
+      admin_invite_pending: "Pending sign-in",
+      admin_invite_revoke: "Revoke",
+      admin_no_invites: "No pending invites.",
       app_tasks_label: "Tasks",
       app_gym_label: "Gym",
       no_apps_available: "You don't have access to any apps.",
@@ -2324,6 +2336,74 @@
     } catch (_) {
       // error shown by apiFetch
     }
+    await loadAdminInvites();
+  }
+
+  async function loadAdminInvites() {
+    var invitesEl = document.getElementById("admin-invites-list");
+    if (!invitesEl) return;
+    invitesEl.innerHTML = "";
+    try {
+      var invites = await apiFetch("/api/admin/invites");
+      if (!invites) return;
+      if (invites.length === 0) {
+        invitesEl.innerHTML = '<p class="admin-no-invites">' + t("admin_no_invites") + "</p>";
+        return;
+      }
+      invites.forEach(function (inv) {
+        var row = document.createElement("div");
+        row.className = "admin-invite-row";
+
+        var emailSpan = document.createElement("span");
+        emailSpan.className = "admin-invite-email";
+        emailSpan.textContent = inv.email;
+        row.appendChild(emailSpan);
+
+        var badge = document.createElement("span");
+        badge.className = "admin-invite-badge";
+        badge.textContent = t("admin_invite_pending");
+        row.appendChild(badge);
+
+        var revokeBtn = document.createElement("button");
+        revokeBtn.className = "btn btn-sm btn-danger-outline";
+        revokeBtn.textContent = t("admin_invite_revoke");
+        revokeBtn.addEventListener("click", async function () {
+          revokeBtn.disabled = true;
+          try {
+            await apiFetch("/api/admin/invites/" + encodeURIComponent(inv.email), { method: "DELETE" });
+            await loadAdminInvites();
+          } catch (_) {
+            revokeBtn.disabled = false;
+          }
+        });
+        row.appendChild(revokeBtn);
+
+        invitesEl.appendChild(row);
+      });
+    } catch (_) {
+      // error shown by apiFetch
+    }
+  }
+
+  var adminInviteForm = document.getElementById("admin-invite-form");
+  if (adminInviteForm) {
+    adminInviteForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById("admin-invite-email");
+      var email = emailInput.value.trim();
+      if (!email) return;
+      try {
+        await apiFetch("/api/admin/invites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email }),
+        });
+        emailInput.value = "";
+        await loadAdminInvites();
+      } catch (_) {
+        // error shown by apiFetch
+      }
+    });
   }
 
   function renderAdminUser(u) {

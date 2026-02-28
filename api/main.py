@@ -20,7 +20,7 @@ from auth import (
 from database import get_session
 from admin_router import router as admin_router
 from gym_router import router as gym_router
-from models import Alarm, List, Task, TaskStatus, User, UserSettings
+from models import Alarm, List, Task, TaskStatus, User, UserInvite, UserSettings
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
     AlarmCreate,
@@ -117,13 +117,22 @@ async def google_sign_in(
     name = idinfo.get("name", "")
     picture = idinfo.get("picture")
 
-    # Find or create user
+    # Find existing user
     result = await session.execute(select(User).where(User.google_id == google_id))
     user = result.scalar_one_or_none()
 
     if user is None:
+        # Check if the email is on the invite list
+        invite = await session.get(UserInvite, email.lower())
+        if invite is None:
+            raise HTTPException(
+                status_code=403,
+                detail="Registration is closed. Contact the admin to get access.",
+            )
+        # Consume the invite and create the account
         user = User(google_id=google_id, email=email, name=name, picture=picture)
         session.add(user)
+        await session.delete(invite)
         await session.commit()
         await session.refresh(user)
 

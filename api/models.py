@@ -76,6 +76,17 @@ class User(Base):
     )
 
 
+class UserInvite(Base):
+    """Stores email addresses pre-approved for registration by the admin."""
+
+    __tablename__ = "user_invites"
+
+    email: Mapped[str] = mapped_column(String(255), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+
 class UserAppAccess(Base):
     """Stores per-user app access permissions."""
 

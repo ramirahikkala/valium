@@ -6,8 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import ADMIN_USER_ID, ALL_APPS, get_current_user, get_user_features
 from database import get_session
-from models import User, UserAppAccess
-from schemas import AdminUserResponse, FeatureUpdate
+from models import List, User, UserAppAccess, UserInvite
+from schemas import AdminCreateUser, AdminUserResponse, FeatureUpdate, UserInviteResponse
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -43,6 +43,51 @@ async def list_users(
             )
         )
     return out
+
+
+@router.get("/invites", response_model=list[UserInviteResponse])
+async def list_invites(
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> list[UserInvite]:
+    """List all pending email invites. Admin-only."""
+    result = await session.execute(select(UserInvite).order_by(UserInvite.created_at))
+    return list(result.scalars().all())
+
+
+@router.post("/invites", response_model=UserInviteResponse, status_code=201)
+async def create_invite(
+    body: AdminCreateUser,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> UserInvite:
+    """Add an email to the invite list. Admin-only."""
+    email = body.email.strip().lower()
+    existing_user = await session.execute(select(User).where(User.email == email))
+    if existing_user.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="User with this email already exists")
+    existing_invite = await session.get(UserInvite, email)
+    if existing_invite is not None:
+        raise HTTPException(status_code=409, detail="Invite already exists for this email")
+    invite = UserInvite(email=email)
+    session.add(invite)
+    await session.commit()
+    await session.refresh(invite)
+    return invite
+
+
+@router.delete("/invites/{email}", status_code=204)
+async def delete_invite(
+    email: str,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Remove a pending invite. Admin-only."""
+    invite = await session.get(UserInvite, email.lower())
+    if invite is None:
+        raise HTTPException(status_code=404, detail="Invite not found")
+    await session.delete(invite)
+    await session.commit()
 
 
 @router.put("/users/{user_id}/features", response_model=dict)

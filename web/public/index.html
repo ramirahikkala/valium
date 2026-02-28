@@ -162,6 +162,13 @@
         <div id="admin-view" class="admin-view" hidden>
           <h2 class="gym-section-heading" data-i18n="admin_users_heading">Käyttäjät</h2>
           <div id="admin-users-list" class="admin-user-list"></div>
+
+          <h2 class="gym-section-heading admin-invites-heading" data-i18n="admin_invites_heading">Kutsut</h2>
+          <form id="admin-invite-form" class="inline-form admin-invite-form">
+            <input type="email" id="admin-invite-email" data-i18n-placeholder="admin_invite_placeholder" placeholder="sähköposti@esimerkki.fi" required autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-sm" data-i18n="admin_invite_btn">Kutsu</button>
+          </form>
+          <div id="admin-invites-list" class="admin-invites-list"></div>
         </div>
 
         <!-- Gym view -->

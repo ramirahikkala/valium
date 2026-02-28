@@ -47,6 +47,21 @@ class FeatureUpdate(BaseModel):
     enabled: bool
 
 
+class AdminCreateUser(BaseModel):
+    """Schema for admin creating a new user by email (pre-registration)."""
+
+    email: str
+
+
+class UserInviteResponse(BaseModel):
+    """Schema returned for a pending invite."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    email: str
+    created_at: datetime
+
+
 class AuthResponse(BaseModel):
     """Schema returned after successful authentication."""
 
