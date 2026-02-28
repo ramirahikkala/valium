@@ -350,3 +350,77 @@ class SessionSetResponse(BaseModel):
     weight_used: float
     reps_done: int
     completed_at: datetime
+
+
+# ---------- Plants ----------
+
+
+class PlantLocationCreate(BaseModel):
+    """Schema for creating a plant location."""
+
+    name: str
+
+
+class PlantLocationUpdate(BaseModel):
+    """Schema for renaming a plant location."""
+
+    name: str
+
+
+class PlantLocationResponse(BaseModel):
+    """Schema returned for a single plant location."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+
+
+class PlantCreate(BaseModel):
+    """Schema for creating a plant."""
+
+    latin_name: str
+    common_name: str | None = None
+    cultivar: str | None = None
+    year_acquired: int | None = None
+    source: str | None = None
+    location_id: int | None = None
+    category: str = "perennial"
+    status: str = "active"
+    lost_year: int | None = None
+    notes: str | None = None
+
+
+class PlantUpdate(BaseModel):
+    """Schema for updating a plant. All fields are optional."""
+
+    latin_name: str | None = None
+    common_name: str | None = None
+    cultivar: str | None = None
+    year_acquired: int | None = None
+    source: str | None = None
+    location_id: int | None = None
+    category: str | None = None
+    status: str | None = None
+    lost_year: int | None = None
+    notes: str | None = None
+
+
+class PlantResponse(BaseModel):
+    """Schema returned for a single plant."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    latin_name: str
+    common_name: str | None
+    cultivar: str | None
+    year_acquired: int | None
+    source: str | None
+    location_id: int | None
+    location_name: str | None = None
+    category: str
+    status: str
+    lost_year: int | None
+    notes: str | None
+    created_at: datetime

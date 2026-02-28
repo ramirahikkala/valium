@@ -74,6 +74,10 @@ class User(Base):
     app_access: Mapped[list["UserAppAccess"]] = relationship(
         "UserAppAccess", back_populates="user"
     )
+    plant_locations: Mapped[list["PlantLocation"]] = relationship(
+        "PlantLocation", back_populates="user"
+    )
+    plants: Mapped[list["Plant"]] = relationship("Plant", back_populates="user")
 
 
 class UserInvite(Base):
@@ -364,3 +368,56 @@ class SessionSet(Base):
 
     session: Mapped[WorkoutSession] = relationship("WorkoutSession", back_populates="sets")
     exercise: Mapped[Exercise | None] = relationship("Exercise", back_populates="session_sets")
+
+
+# ---------- Plants models ----------
+
+
+class PlantLocation(Base):
+    """Represents a named location where plants can be placed."""
+
+    __tablename__ = "plant_locations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+
+    user: Mapped["User"] = relationship("User", back_populates="plant_locations")
+    plants: Mapped[list["Plant"]] = relationship("Plant", back_populates="location")
+
+
+class Plant(Base):
+    """Represents a plant in the user's catalogue."""
+
+    __tablename__ = "plants"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    latin_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    common_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cultivar: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    year_acquired: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    location_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("plant_locations.id", ondelete="SET NULL"), nullable=True
+    )
+    category: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="perennial", server_default="perennial"
+    )
+    status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="active", server_default="active"
+    )
+    lost_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="plants")
+    location: Mapped["PlantLocation | None"] = relationship(
+        "PlantLocation", back_populates="plants"
+    )

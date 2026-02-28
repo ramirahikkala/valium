@@ -20,6 +20,7 @@ from auth import (
 from database import get_session
 from admin_router import router as admin_router
 from gym_router import router as gym_router
+from plants_router import router as plants_router
 from models import Alarm, List, Task, TaskStatus, User, UserInvite, UserSettings
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
@@ -55,6 +56,7 @@ app = FastAPI(title="Valium", description="A simple todo API", lifespan=lifespan
 
 app.include_router(gym_router)
 app.include_router(admin_router)
+app.include_router(plants_router)
 
 app.add_middleware(
     CORSMiddleware,

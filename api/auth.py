@@ -20,7 +20,7 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_DAYS = 7
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "1"))
-ALL_APPS = ["tasks", "gym"]
+ALL_APPS = ["tasks", "gym", "plants"]
 
 bearer_scheme = HTTPBearer()
 
