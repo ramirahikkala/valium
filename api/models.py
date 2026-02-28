@@ -71,6 +71,25 @@ class User(Base):
     settings: Mapped["UserSettings | None"] = relationship(
         "UserSettings", back_populates="user", uselist=False
     )
+    app_access: Mapped[list["UserAppAccess"]] = relationship(
+        "UserAppAccess", back_populates="user"
+    )
+
+
+class UserAppAccess(Base):
+    """Stores per-user app access permissions."""
+
+    __tablename__ = "user_app_access"
+
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    app: Mapped[str] = mapped_column(String(50), primary_key=True)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+
+    user: Mapped["User"] = relationship("User", back_populates="app_access")
 
 
 class UserSettings(Base):

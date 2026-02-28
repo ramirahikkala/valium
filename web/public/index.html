@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Valium - Todo App</title>
+  <title>Valium</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
 </head>
@@ -75,6 +75,13 @@
               <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">Ohjelmat</button>
               <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">Historia</button>
             </div>
+          </div>
+
+          <!-- Admin -->
+          <div class="sidebar-section" id="sidebar-section-admin" hidden>
+            <button class="sidebar-section-btn" id="view-tab-admin" data-view="admin">
+              <span class="sidebar-label" data-i18n="admin_tab">Admin</span>
+            </button>
           </div>
 
         </nav>
@@ -149,6 +156,12 @@
             <ul id="task-list" class="task-list" aria-live="polite"></ul>
             <p id="empty-state" class="empty-state" data-i18n="empty_all" hidden>Ei tehtäviä. Lisää yksi yllä!</p>
           </section>
+        </div>
+
+        <!-- Admin view -->
+        <div id="admin-view" class="admin-view" hidden>
+          <h2 class="gym-section-heading" data-i18n="admin_users_heading">Käyttäjät</h2>
+          <div id="admin-users-list" class="admin-user-list"></div>
         </div>
 
         <!-- Gym view -->

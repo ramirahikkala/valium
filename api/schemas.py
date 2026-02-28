@@ -25,6 +25,26 @@ class UserResponse(BaseModel):
     email: str
     name: str
     picture: str | None
+    is_admin: bool = False
+    features: dict[str, bool] = {}
+
+
+class AdminUserResponse(BaseModel):
+    """Schema returned for a user in the admin panel."""
+
+    id: int
+    email: str
+    name: str
+    picture: str | None
+    is_admin: bool
+    features: dict[str, bool]
+
+
+class FeatureUpdate(BaseModel):
+    """Schema for updating a user's app feature flag."""
+
+    app: str
+    enabled: bool
 
 
 class AuthResponse(BaseModel):

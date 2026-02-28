@@ -10,12 +10,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from auth import (
+    ADMIN_USER_ID,
     GOOGLE_CLIENT_ID,
     create_jwt,
     get_current_user,
+    get_user_features,
     verify_google_token,
 )
 from database import get_session
+from admin_router import router as admin_router
 from gym_router import router as gym_router
 from models import Alarm, List, Task, TaskStatus, User, UserSettings
 from scheduler import start_scheduler, stop_scheduler
@@ -51,6 +54,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Valium", description="A simple todo API", lifespan=lifespan)
 
 app.include_router(gym_router)
+app.include_router(admin_router)
 
 app.add_middleware(
     CORSMiddleware,
@@ -135,6 +139,7 @@ async def google_sign_in(
         await session.commit()
 
     token = create_jwt(user.id)
+    features = await get_user_features(user.id, session)
     return AuthResponse(
         token=token,
         user=UserResponse(
@@ -142,6 +147,8 @@ async def google_sign_in(
             email=user.email,
             name=user.name,
             picture=user.picture,
+            is_admin=(user.id == ADMIN_USER_ID),
+            features=features,
         ),
     )
 
@@ -149,13 +156,17 @@ async def google_sign_in(
 @app.get("/auth/me", response_model=UserResponse)
 async def get_me(
     current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
 ) -> UserResponse:
     """Return the current authenticated user's info."""
+    features = await get_user_features(current_user.id, session)
     return UserResponse(
         id=current_user.id,
         email=current_user.email,
         name=current_user.name,
         picture=current_user.picture,
+        is_admin=(current_user.id == ADMIN_USER_ID),
+        features=features,
     )
 
 

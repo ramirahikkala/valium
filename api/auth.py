@@ -12,7 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
-from models import User
+from models import User, UserAppAccess
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 JWT_SECRET = os.getenv("JWT_SECRET", "dev-secret-change-in-production")
@@ -20,6 +20,7 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_DAYS = 7
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY", "")
 ADMIN_USER_ID = int(os.getenv("ADMIN_USER_ID", "1"))
+ALL_APPS = ["tasks", "gym"]
 
 bearer_scheme = HTTPBearer()
 
@@ -66,6 +67,19 @@ def decode_jwt(token: str) -> dict:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
         )
+
+
+async def get_user_features(user_id: int, session: AsyncSession) -> dict[str, bool]:
+    """Load app feature flags for a user. Defaults to True for any missing app."""
+    result = await session.execute(
+        select(UserAppAccess).where(UserAppAccess.user_id == user_id)
+    )
+    rows = result.scalars().all()
+    features = {app: True for app in ALL_APPS}
+    for row in rows:
+        if row.app in features:
+            features[row.app] = row.enabled
+    return features
 
 
 async def get_current_user(

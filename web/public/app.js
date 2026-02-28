@@ -159,6 +159,15 @@
       session_badge_active: "Kesken",
       no_sets_text: "Ei kirjattuja sarjoja.",
       sets_load_error: "Virhe haettaessa sarjoja.",
+
+      // Admin
+      admin_tab: "Admin",
+      admin_users_heading: "Käyttäjät",
+      app_tasks_label: "Tehtävät",
+      app_gym_label: "Sali",
+      no_apps_available: "Sinulla ei ole käyttöoikeutta mihinkään sovellukseen.",
+      feature_enabled: "Käytössä",
+      feature_disabled: "Poissa",
     },
     en: {
       // Navigation
@@ -315,6 +324,15 @@
       session_badge_active: "Active",
       no_sets_text: "No logged sets.",
       sets_load_error: "Error loading sets.",
+
+      // Admin
+      admin_tab: "Admin",
+      admin_users_heading: "Users",
+      app_tasks_label: "Tasks",
+      app_gym_label: "Gym",
+      no_apps_available: "You don't have access to any apps.",
+      feature_enabled: "Enabled",
+      feature_disabled: "Disabled",
     },
   };
 
@@ -1049,6 +1067,39 @@
       .then(function () { closeEditModal(); return loadTasks(); });
   });
 
+  // ---------- Feature flags ----------
+
+  function applyFeatureFlags() {
+    var features = (currentUser && currentUser.features) || { tasks: true, gym: true };
+    var isAdmin = !!(currentUser && currentUser.is_admin);
+
+    // Show/hide nav tabs based on features
+    viewTabTasks.hidden = !features.tasks;
+    viewTabGym.hidden = !features.gym;
+    var adminSection = document.getElementById("sidebar-section-admin");
+    if (adminSection) adminSection.hidden = !isAdmin;
+
+    // Determine first allowed view
+    var firstView = null;
+    if (features.tasks) firstView = "tasks";
+    else if (features.gym) firstView = "gym";
+    else if (isAdmin) firstView = "admin";
+
+    if (firstView) {
+      switchToView(firstView);
+    } else {
+      // No apps available — show message
+      tasksView.hidden = true;
+      gymView.hidden = true;
+      adminView.hidden = true;
+      var noAppsEl = document.getElementById("no-apps-message");
+      if (noAppsEl) {
+        noAppsEl.hidden = false;
+        noAppsEl.textContent = t("no_apps_available");
+      }
+    }
+  }
+
   // ---------- App init ----------
 
   async function initApp() {
@@ -1067,6 +1118,7 @@
       }
     }
     showApp();
+    applyFeatureFlags();
     await loadLists();
     await loadTasks();
   }
@@ -1122,8 +1174,10 @@
   // Gym DOM elements — view toggle
   var viewTabTasks = document.getElementById("view-tab-tasks");
   var viewTabGym = document.getElementById("view-tab-gym");
+  var viewTabAdmin = document.getElementById("view-tab-admin");
   var tasksView = document.getElementById("tasks-view");
   var gymView = document.getElementById("gym-view");
+  var adminView = document.getElementById("admin-view");
   var gymTabButtons = document.querySelectorAll(".sidebar-gym-btn");
 
   // Gym DOM elements — sections
@@ -1202,20 +1256,35 @@
 
   viewTabTasks.addEventListener("click", function () { switchToView("tasks"); closeSidebarOnMobile(); });
   viewTabGym.addEventListener("click", function () { switchToView("gym"); });
+  viewTabAdmin.addEventListener("click", function () { switchToView("admin"); closeSidebarOnMobile(); });
 
   function switchToView(view) {
     if (view === "gym") {
       tasksView.hidden = true;
       gymView.hidden = false;
+      adminView.hidden = true;
       viewTabTasks.classList.remove("active");
       viewTabGym.classList.add("active");
+      viewTabAdmin.classList.remove("active");
       sidebarGymChildren.hidden = false;
       switchGymTab(gymCurrentTab);
+    } else if (view === "admin") {
+      tasksView.hidden = true;
+      gymView.hidden = true;
+      adminView.hidden = false;
+      viewTabTasks.classList.remove("active");
+      viewTabGym.classList.remove("active");
+      viewTabAdmin.classList.add("active");
+      sidebarGymChildren.hidden = true;
+      loadAdminPanel();
+      closeSidebarOnMobile();
     } else {
       tasksView.hidden = false;
       gymView.hidden = true;
+      adminView.hidden = true;
       viewTabTasks.classList.add("active");
       viewTabGym.classList.remove("active");
+      viewTabAdmin.classList.remove("active");
       sidebarGymChildren.hidden = true;
       closeSidebarOnMobile();
     }
@@ -2237,5 +2306,116 @@
       setsEl.innerHTML = '<p class="session-no-sets">' + t("sets_load_error") + '</p>';
     }
   });
+
+  // ========== ADMIN MODULE ==========
+
+  var APP_LABELS = { tasks: "app_tasks_label", gym: "app_gym_label" };
+
+  async function loadAdminPanel() {
+    var listEl = document.getElementById("admin-users-list");
+    if (!listEl) return;
+    listEl.innerHTML = "";
+    try {
+      var users = await apiFetch("/api/admin/users");
+      if (!users) return;
+      users.forEach(function (u) {
+        listEl.appendChild(renderAdminUser(u));
+      });
+    } catch (_) {
+      // error shown by apiFetch
+    }
+  }
+
+  function renderAdminUser(u) {
+    var item = document.createElement("div");
+    item.className = "admin-user-item";
+
+    // User info row
+    var info = document.createElement("div");
+    info.className = "admin-user-info";
+
+    if (u.picture) {
+      var img = document.createElement("img");
+      img.className = "admin-user-avatar";
+      img.src = u.picture;
+      img.alt = u.name;
+      info.appendChild(img);
+    }
+
+    var nameBlock = document.createElement("div");
+    nameBlock.className = "admin-user-name-block";
+
+    var nameEl = document.createElement("div");
+    nameEl.className = "admin-user-name";
+    nameEl.textContent = u.name;
+    nameBlock.appendChild(nameEl);
+
+    var emailEl = document.createElement("div");
+    emailEl.className = "admin-user-email";
+    emailEl.textContent = u.email;
+    nameBlock.appendChild(emailEl);
+
+    info.appendChild(nameBlock);
+
+    if (u.is_admin) {
+      var badge = document.createElement("span");
+      badge.className = "admin-badge-admin";
+      badge.textContent = "Admin";
+      info.appendChild(badge);
+    }
+
+    item.appendChild(info);
+
+    // Feature toggles
+    var featRows = document.createElement("div");
+    featRows.className = "admin-feature-rows";
+
+    Object.keys(APP_LABELS).forEach(function (app) {
+      var enabled = u.features[app] !== false; // default true
+      var row = document.createElement("div");
+      row.className = "admin-feature-row";
+
+      var label = document.createElement("span");
+      label.className = "admin-feature-label";
+      label.textContent = t(APP_LABELS[app]);
+      row.appendChild(label);
+
+      var btn = document.createElement("button");
+      btn.className = "btn btn-sm feature-toggle-btn " + (enabled ? "enabled" : "disabled");
+      btn.textContent = enabled ? t("feature_enabled") : t("feature_disabled");
+      btn.dataset.userId = u.id;
+      btn.dataset.app = app;
+      btn.dataset.enabled = String(enabled);
+      btn.addEventListener("click", function () {
+        toggleUserFeature(btn, u.id, app);
+      });
+      row.appendChild(btn);
+
+      featRows.appendChild(row);
+    });
+
+    item.appendChild(featRows);
+    return item;
+  }
+
+  async function toggleUserFeature(btn, userId, app) {
+    var currentEnabled = btn.dataset.enabled === "true";
+    var newEnabled = !currentEnabled;
+    btn.disabled = true;
+    try {
+      await apiFetch("/api/admin/users/" + userId + "/features", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ app: app, enabled: newEnabled }),
+      });
+      btn.dataset.enabled = String(newEnabled);
+      btn.className = "btn btn-sm feature-toggle-btn " + (newEnabled ? "enabled" : "disabled");
+      btn.textContent = newEnabled ? t("feature_enabled") : t("feature_disabled");
+    } catch (_) {
+      // error shown by apiFetch
+    } finally {
+      btn.disabled = false;
+    }
+  }
 
 })();
