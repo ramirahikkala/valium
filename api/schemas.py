@@ -260,6 +260,7 @@ class ExerciseUpdate(BaseModel):
     position: int | None = None
     auto_increment: bool | None = None
     increment_kg: float | None = None
+    base_weight: float | None = None
     reset_increment_kg: float | None = None
     deload_mode: str | None = None
     failure_threshold: int | None = None
