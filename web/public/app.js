@@ -1871,6 +1871,10 @@
       ? '<button class="btn ewc-fail-btn' + (isFailed ? " ewc-failed" : "") + '" data-ex-id="' + ex.id + '">' +
         (isFailed ? t("failed_label") : t("fail_btn")) + "</button>"
       : "";
+    var failStreakHtml = (ex.auto_increment && ex.consecutive_failures > 0)
+      ? '<span class="ewc-fail-streak" title="' + ex.consecutive_failures + " / " + (ex.failure_threshold || 3) + '">✗ ' +
+        ex.consecutive_failures + "\u00a0/\u00a0" + (ex.failure_threshold || 3) + "</span>"
+      : "";
     card.innerHTML =
       '<div class="ewc-header">' +
       '<span class="ewc-name">' + escapeHtml(ex.exercise_name) + autoincBadge + "</span>" +
@@ -1887,7 +1891,7 @@
       '<div class="ewc-actions">' +
       '<button class="btn btn-primary ewc-log-btn" data-ex-id="' + ex.id + '"' + (state !== "idle" ? " hidden" : "") + ">" + t("log_set_btn") + "</button>" +
       '<button class="btn btn-secondary ewc-skip-btn" data-ex-id="' + ex.id + '" hidden>' + t("skip_rest_btn") + "</button>" +
-      failBtnHtml +
+      failBtnHtml + failStreakHtml +
       "</div>";
     return card;
   }
