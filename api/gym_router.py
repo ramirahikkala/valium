@@ -476,8 +476,8 @@ async def complete_session(
             elif body.session_outcome == "failed_reset":
                 # legacy: immediate global reset for reset-mode exercises
                 if ex.deload_mode == "reset":
-                    ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                     ex.weight = ex.base_weight
+                    ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                     ex.exercise.consecutive_failures = 0
             else:
                 # Per-exercise logic based on failed_exercise_ids
@@ -488,8 +488,8 @@ async def complete_session(
                             # StrongLifts: 10% deload, floor to nearest 2.5 kg
                             ex.weight = math.floor(ex.weight * 0.9 / 2.5) * 2.5
                         else:
-                            ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                             ex.weight = ex.base_weight
+                            ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
                         ex.exercise.consecutive_failures = 0
                 else:
                     ex.weight = round(ex.weight + ex.increment_kg, 2)
