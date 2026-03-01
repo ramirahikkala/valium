@@ -390,6 +390,7 @@ class PlantCreate(BaseModel):
     status: str = "active"
     lost_year: int | None = None
     notes: str | None = None
+    own_seeds: bool = False
 
 
 class PlantUpdate(BaseModel):
@@ -405,6 +406,7 @@ class PlantUpdate(BaseModel):
     status: str | None = None
     lost_year: int | None = None
     notes: str | None = None
+    own_seeds: bool | None = None
 
 
 class PlantResponse(BaseModel):
@@ -424,4 +426,5 @@ class PlantResponse(BaseModel):
     status: str
     lost_year: int | None
     notes: str | None
+    own_seeds: bool
     created_at: datetime

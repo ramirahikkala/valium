@@ -35,6 +35,7 @@ def _plant_response(plant: Plant) -> PlantResponse:
         status=plant.status,
         lost_year=plant.lost_year,
         notes=plant.notes,
+        own_seeds=plant.own_seeds,
         created_at=plant.created_at,
     )
 

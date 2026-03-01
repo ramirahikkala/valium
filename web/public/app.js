@@ -223,6 +223,7 @@
       plant_label_location: "Sijainti",
       plant_label_year_acquired: "Vuosi hankittu",
       plant_label_source: "Lähde / mistä saatu",
+      plant_label_own_seeds: "Oma siemenkasvatus",
       plant_label_notes: "Muistiinpanot",
       plant_no_location: "— ei sijaintia —",
       delete_plant_confirm: "Poistetaanko kasvi?",
@@ -462,6 +463,7 @@
       plant_label_location: "Location",
       plant_label_year_acquired: "Year acquired",
       plant_label_source: "Source / where obtained",
+      plant_label_own_seeds: "Own seed cultivation",
       plant_label_notes: "Notes",
       plant_no_location: "— no location —",
       delete_plant_confirm: "Delete this plant?",
@@ -2752,6 +2754,7 @@
   var plantLocationInput = document.getElementById("plant-location");
   var plantYearAcquiredInput = document.getElementById("plant-year-acquired");
   var plantSourceInput = document.getElementById("plant-source");
+  var plantOwnSeedsInput = document.getElementById("plant-own-seeds");
   var plantNotesInput = document.getElementById("plant-notes");
   var plantModalCancelBtn = document.getElementById("plant-modal-cancel");
 
@@ -3001,6 +3004,9 @@
     if (plant.year_acquired) {
       meta.push('<span class="plant-year-tag">' + plant.year_acquired + "</span>");
     }
+    if (plant.own_seeds) {
+      meta.push('<span class="plant-badge plant-own-seeds-badge" title="' + t("plant_label_own_seeds") + '">\uD83C\uDF31</span>');
+    }
 
     card.innerHTML =
       '<div class="plant-card-header">' + nameLine + commonLine + "</div>" +
@@ -3077,6 +3083,7 @@
         : "",
       plant.location_name ? '<span class="plant-location-tag">\uD83D\uDCCD ' + escapeHtml(plant.location_name) + "</span>" : "",
       plant.year_acquired ? '<span class="plant-year-tag">' + plant.year_acquired + "</span>" : "",
+      plant.own_seeds ? '<span class="plant-badge plant-own-seeds-badge" title="' + t("plant_label_own_seeds") + '">\uD83C\uDF31 ' + escapeHtml(t("plant_label_own_seeds")) + "</span>" : "",
     ].filter(Boolean);
     plantsDetailBadges.innerHTML = badges.join("");
 
@@ -3163,6 +3170,7 @@
     plantLocationInput.value = plant && plant.location_id ? plant.location_id : "";
     plantYearAcquiredInput.value = plant ? (plant.year_acquired || "") : "";
     plantSourceInput.value = plant ? (plant.source || "") : "";
+    plantOwnSeedsInput.checked = plant ? !!plant.own_seeds : false;
     plantNotesInput.value = plant ? (plant.notes || "") : "";
 
     plantModal.hidden = false;
@@ -3193,6 +3201,7 @@
       location_id: plantLocationInput.value ? parseInt(plantLocationInput.value, 10) : null,
       year_acquired: plantYearAcquiredInput.value ? parseInt(plantYearAcquiredInput.value, 10) : null,
       source: plantSourceInput.value.trim() || null,
+      own_seeds: plantOwnSeedsInput.checked,
       notes: plantNotesInput.value.trim() || null,
     };
     try {
