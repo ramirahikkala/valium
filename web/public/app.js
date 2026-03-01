@@ -227,6 +227,16 @@
       plant_no_location: "— ei sijaintia —",
       delete_plant_confirm: "Poistetaanko kasvi?",
 
+      // Kasvit — ryhmittely ja näkymät
+      plants_group_by_none: "Ei ryhmittelyä",
+      plants_group_by_category: "Kategorian mukaan",
+      plants_group_by_location: "Sijainnin mukaan",
+      plants_group_by_status: "Tilan mukaan",
+      plants_view_grid: "Kortit",
+      plants_view_list: "Lista",
+      plants_back_btn: "← Takaisin",
+      plant_no_location: "— ei sijaintia —",
+
       // Kasvit — sijainnit
       plants_locations_heading: "Sijainnit",
       new_location_placeholder: "Uusi sijainti...",
@@ -455,6 +465,16 @@
       plant_label_notes: "Notes",
       plant_no_location: "— no location —",
       delete_plant_confirm: "Delete this plant?",
+
+      // Plants — grouping and views
+      plants_group_by_none: "No grouping",
+      plants_group_by_category: "By category",
+      plants_group_by_location: "By location",
+      plants_group_by_status: "By status",
+      plants_view_grid: "Cards",
+      plants_view_list: "List",
+      plants_back_btn: "\u2190 Back",
+      plant_no_location: "— no location —",
 
       // Plants — locations
       plants_locations_heading: "Locations",
@@ -2687,18 +2707,32 @@
   var plantsFilterCategory = "";
   var plantsFilterLocation = "";
   var plantsSearchQuery = "";
+  var plantsViewMode = "grid";   // "grid" | "list"
+  var plantsGroupBy = "";        // "" | "category" | "location" | "status"
+  var plantsCurrentDetail = null;
 
   // Plants DOM elements
   var plantsTabButtons = document.querySelectorAll(".sidebar-plants-btn");
   var plantsListSection = document.getElementById("plants-list-section");
   var plantsLocationsSection = document.getElementById("plants-locations-section");
+  var plantsDetailSection = document.getElementById("plants-detail-section");
   var addPlantBtn = document.getElementById("add-plant-btn");
   var plantsSearchInput = document.getElementById("plants-search");
   var plantsFilterStatusEl = document.getElementById("plants-filter-status");
   var plantsFilterCategoryEl = document.getElementById("plants-filter-category");
   var plantsFilterLocationEl = document.getElementById("plants-filter-location");
+  var plantsGroupByEl = document.getElementById("plants-group-by");
+  var plantsViewGridBtn = document.getElementById("plants-view-grid-btn");
+  var plantsViewListBtn = document.getElementById("plants-view-list-btn");
   var plantsGridEl = document.getElementById("plants-grid");
   var plantsCountEl = document.getElementById("plants-count");
+  var plantsDetailBackBtn = document.getElementById("plants-detail-back-btn");
+  var plantsDetailEditBtn = document.getElementById("plants-detail-edit-btn");
+  var plantsDetailLatin = document.getElementById("plants-detail-latin");
+  var plantsDetailCultivar = document.getElementById("plants-detail-cultivar");
+  var plantsDetailCommon = document.getElementById("plants-detail-common");
+  var plantsDetailBadges = document.getElementById("plants-detail-badges");
+  var plantsDetailFields = document.getElementById("plants-detail-fields");
   var addLocationForm = document.getElementById("add-location-form");
   var newLocationNameInput = document.getElementById("new-location-name");
   var locationsListEl = document.getElementById("locations-list");
@@ -2732,10 +2766,12 @@
 
   function switchPlantsTab(tab) {
     plantsCurrentTab = tab;
+    plantsCurrentDetail = null;
     plantsTabButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.plantsTab === tab);
     });
     plantsListSection.hidden = tab !== "list";
+    plantsDetailSection.hidden = true;
     plantsLocationsSection.hidden = tab !== "locations";
     if (tab === "list") loadPlants();
     else if (tab === "locations") loadLocations();
@@ -2876,6 +2912,7 @@
 
   function renderPlants(plants) {
     plantsGridEl.innerHTML = "";
+    plantsGridEl.className = plantsViewMode === "list" ? "plants-list" : "plants-grid";
     if (plantsCountEl) {
       plantsCountEl.textContent = plants.length > 0 ? tf("plants_count", { n: plants.length }) : "";
     }
@@ -2884,9 +2921,59 @@
       plantsGridEl.innerHTML = '<p class="plants-empty">' + t(hasFilters ? "plants_no_results" : "plants_empty") + "</p>";
       return;
     }
-    plants.forEach(function (plant) {
-      plantsGridEl.appendChild(createPlantCard(plant));
+
+    if (!plantsGroupBy) {
+      plants.forEach(function (p) {
+        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p) : createPlantCard(p));
+      });
+      return;
+    }
+
+    // Grouped render
+    var groups = Object.create(null);
+    var groupOrder = [];
+    plants.forEach(function (p) {
+      var key = plantGroupKey(p, plantsGroupBy);
+      if (!groups[key]) { groups[key] = []; groupOrder.push(key); }
+      groups[key].push(p);
     });
+    groupOrder.forEach(function (key) {
+      var heading = document.createElement("div");
+      heading.className = "plants-group-heading";
+      heading.textContent = plantGroupLabel(key, plantsGroupBy);
+      plantsGridEl.appendChild(heading);
+      groups[key].forEach(function (p) {
+        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p) : createPlantCard(p));
+      });
+    });
+  }
+
+  function plantGroupKey(plant, groupBy) {
+    if (groupBy === "category") return plant.category || "other";
+    if (groupBy === "location") return plant.location_name || "";
+    if (groupBy === "status") return plant.status || "active";
+    return "";
+  }
+
+  function plantGroupLabel(key, groupBy) {
+    if (groupBy === "category") return plantCategoryLabel(key);
+    if (groupBy === "status") return plantStatusLabel(key);
+    if (groupBy === "location") return key || t("plant_no_location");
+    return key;
+  }
+
+  function createPlantRow(plant) {
+    var row = document.createElement("div");
+    row.className = "plant-list-row";
+    row.dataset.id = plant.id;
+    var name = '<span class="plant-card-latin" style="font-style:italic">' + escapeHtml(plant.latin_name) + "</span>" +
+      (plant.cultivar ? ' <span class="plant-card-cultivar">\u2018' + escapeHtml(plant.cultivar) + "\u2019</span>" : "") +
+      (plant.common_name ? ' <span class="plant-list-common">\u2013 ' + escapeHtml(plant.common_name) + "</span>" : "");
+    row.innerHTML = '<span class="plant-list-name">' + name + "</span>" +
+      (plant.status !== "active"
+        ? '<span class="plant-badge plant-status-' + plant.status + '">' + escapeHtml(plantStatusLabel(plant.status)) + "</span>"
+        : "");
+    return row;
   }
 
   function createPlantCard(plant) {
@@ -2928,6 +3015,12 @@
 
   plantsGridEl.addEventListener("click", async function (e) {
     var btn = e.target.closest("[data-action]");
+    var card = e.target.closest(".plant-card, .plant-list-row");
+    if (card && !btn) {
+      var id = parseInt(card.dataset.id, 10);
+      var plant = plantsData.find(function (p) { return p.id === id; });
+      if (plant) { openPlantDetail(plant); return; }
+    }
     if (!btn) return;
     var action = btn.dataset.action;
     var id = parseInt(btn.dataset.id, 10);
@@ -2941,6 +3034,76 @@
         loadPlants();
       } catch (_) {}
     }
+  });
+
+  // ---------- View toggle ----------
+
+  plantsViewGridBtn.addEventListener("click", function () {
+    plantsViewMode = "grid";
+    plantsViewGridBtn.classList.add("active");
+    plantsViewListBtn.classList.remove("active");
+    renderPlants(plantsData);
+  });
+
+  plantsViewListBtn.addEventListener("click", function () {
+    plantsViewMode = "list";
+    plantsViewListBtn.classList.add("active");
+    plantsViewGridBtn.classList.remove("active");
+    renderPlants(plantsData);
+  });
+
+  plantsGroupByEl.addEventListener("change", function () {
+    plantsGroupBy = this.value;
+    renderPlants(plantsData);
+  });
+
+  // ---------- Detail view ----------
+
+  function openPlantDetail(plant) {
+    plantsCurrentDetail = plant;
+    plantsListSection.hidden = true;
+    plantsDetailSection.hidden = false;
+
+    plantsDetailLatin.textContent = plant.latin_name;
+    plantsDetailCultivar.textContent = plant.cultivar ? "\u2018" + plant.cultivar + "\u2019" : "";
+    plantsDetailCultivar.hidden = !plant.cultivar;
+    plantsDetailCommon.textContent = plant.common_name || "";
+    plantsDetailCommon.hidden = !plant.common_name;
+
+    var badges = [
+      '<span class="plant-badge plant-cat-badge">' + escapeHtml(plantCategoryLabel(plant.category)) + "</span>",
+      plant.status !== "active"
+        ? '<span class="plant-badge plant-status-' + plant.status + '">' + escapeHtml(plantStatusLabel(plant.status)) + "</span>"
+        : "",
+      plant.location_name ? '<span class="plant-location-tag">\uD83D\uDCCD ' + escapeHtml(plant.location_name) + "</span>" : "",
+      plant.year_acquired ? '<span class="plant-year-tag">' + plant.year_acquired + "</span>" : "",
+    ].filter(Boolean);
+    plantsDetailBadges.innerHTML = badges.join("");
+
+    var fields = [];
+    if (plant.year_acquired) fields.push([t("plant_label_year_acquired"), plant.year_acquired]);
+    if (plant.source) fields.push([t("plant_label_source"), plant.source]);
+    if (plant.status === "lost" && plant.lost_year) fields.push([t("plant_label_lost_year"), plant.lost_year]);
+    if (plant.notes) fields.push([t("plant_label_notes"), plant.notes]);
+
+    plantsDetailFields.innerHTML = fields.map(function (f) {
+      return '<div class="plant-detail-field">' +
+        '<span class="plant-detail-label">' + escapeHtml(String(f[0])) + "</span>" +
+        '<span class="plant-detail-value">' + escapeHtml(String(f[1])) + "</span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function closePlantDetail() {
+    plantsDetailSection.hidden = true;
+    plantsListSection.hidden = false;
+    plantsCurrentDetail = null;
+  }
+
+  plantsDetailBackBtn.addEventListener("click", closePlantDetail);
+
+  plantsDetailEditBtn.addEventListener("click", function () {
+    if (plantsCurrentDetail) openPlantModal(plantsCurrentDetail);
   });
 
   // ---------- Filters ----------
@@ -3010,6 +3173,11 @@
     plantModal.hidden = true;
     plantModalForm.reset();
     plantLostYearGroup.hidden = true;
+    // If detail was open when edit was triggered, re-show detail section
+    if (plantsCurrentDetail) {
+      plantsListSection.hidden = true;
+      plantsDetailSection.hidden = false;
+    }
   }
 
   plantModalForm.addEventListener("submit", async function (e) {
@@ -3041,8 +3209,14 @@
           body: JSON.stringify(payload),
         });
       }
+      var editingDetail = plantsCurrentDetail && id && parseInt(id, 10) === plantsCurrentDetail.id;
       closePlantModal();
-      loadPlants();
+      await loadPlants();
+      // If we were editing a plant from its detail view, re-open updated detail
+      if (editingDetail) {
+        var updated = plantsData.find(function (p) { return p.id === parseInt(id, 10); });
+        if (updated) openPlantDetail(updated);
+      }
     } catch (_) {}
   });
 

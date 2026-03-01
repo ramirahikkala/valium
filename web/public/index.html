@@ -263,6 +263,10 @@
             <div class="plants-toolbar">
               <button class="btn btn-primary btn-sm" id="add-plant-btn" data-i18n="add_plant_btn">+ Lisää kasvi</button>
               <input type="search" id="plants-search" class="plants-search" data-i18n-placeholder="plants_search_placeholder" placeholder="Hae...">
+              <div class="plants-view-toggle" role="group" aria-label="Näkymä">
+                <button id="plants-view-grid-btn" class="btn btn-icon active" title="Kortit">⊞</button>
+                <button id="plants-view-list-btn" class="btn btn-icon" title="Lista">☰</button>
+              </div>
             </div>
             <div class="plants-filters">
               <select id="plants-filter-status" class="plants-filter-select">
@@ -286,9 +290,31 @@
               <select id="plants-filter-location" class="plants-filter-select">
                 <option value="" data-i18n="plants_all_locations">Kaikki sijainnit</option>
               </select>
+              <select id="plants-group-by" class="plants-filter-select">
+                <option value="" data-i18n="plants_group_by_none">Ei ryhmittelyä</option>
+                <option value="category" data-i18n="plants_group_by_category">Kategorian mukaan</option>
+                <option value="location" data-i18n="plants_group_by_location">Sijainnin mukaan</option>
+                <option value="status" data-i18n="plants_group_by_status">Tilan mukaan</option>
+              </select>
             </div>
             <div id="plants-count" class="plants-count"></div>
             <div id="plants-grid" class="plants-grid"></div>
+          </div>
+
+          <!-- Plant detail sub-view -->
+          <div id="plants-detail-section" class="plants-section" hidden>
+            <div class="plants-detail-back">
+              <button class="btn btn-secondary btn-sm" id="plants-detail-back-btn" data-i18n="plants_back_btn">← Takaisin</button>
+              <button class="btn btn-icon btn-sm" id="plants-detail-edit-btn">✎</button>
+            </div>
+            <div class="plants-detail-header">
+              <h2 id="plants-detail-latin" class="plants-detail-latin"></h2>
+              <div id="plants-detail-cultivar" class="plants-detail-cultivar" hidden></div>
+              <div id="plants-detail-common" class="plants-detail-common" hidden></div>
+              <div id="plants-detail-badges" class="plant-card-meta"></div>
+            </div>
+            <div id="plants-detail-fields" class="plants-detail-fields"></div>
+            <div id="plants-detail-extra" class="plants-detail-extra"></div>
           </div>
 
           <!-- Locations sub-view -->
