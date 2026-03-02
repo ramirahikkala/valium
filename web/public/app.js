@@ -261,7 +261,7 @@
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
       plant_ai_regenerate_btn: "✨ Luo uudelleen",
       plant_ai_summarizing: "Luodaan...",
-      plant_ai_fetch_image_btn: "✨ Hae AI-kuva",
+      plant_ai_fetch_image_btn: "🔍 Hae kuva verkosta",
       plant_ai_fetching_image: "Haetaan...",
       plant_image_source: "Kuvan lähde",
       plant_edit_btn: "✎ Muokkaa",
@@ -526,8 +526,8 @@
       plant_ai_summary_btn: "✨ Generate summary",
       plant_ai_regenerate_btn: "✨ Regenerate",
       plant_ai_summarizing: "Generating...",
-      plant_ai_fetch_image_btn: "✨ Fetch AI image",
-      plant_ai_fetching_image: "Fetching...",
+      plant_ai_fetch_image_btn: "🔍 Search image online",
+      plant_ai_fetching_image: "Searching...",
       plant_image_source: "Image source",
       plant_edit_btn: "✎ Edit",
       plant_edit_delete_btn: "Delete plant",
@@ -3623,6 +3623,7 @@
       setTimeout(function () { plantsEditWikiImageBtn.textContent = t("plant_ai_fetch_image_btn"); }, 4000);
     }
     plantsEditWikiImageBtn.disabled = false;
+    plantsEditWikiImageBtn.textContent = t("plant_ai_fetch_image_btn");
   });
 
   // ---------- Lightbox ----------
