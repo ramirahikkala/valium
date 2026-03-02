@@ -259,6 +259,7 @@
       plant_ai_searching: "Haetaan...",
       plant_ai_summary_heading: "AI-yhteenveto",
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
+      plant_ai_regenerate_btn: "✨ Luo uudelleen",
       plant_ai_summarizing: "Luodaan...",
       plant_ai_fetch_image_btn: "✨ Hae AI-kuva",
       plant_ai_fetching_image: "Haetaan...",
@@ -523,6 +524,7 @@
       plant_ai_searching: "Searching...",
       plant_ai_summary_heading: "AI summary",
       plant_ai_summary_btn: "✨ Generate summary",
+      plant_ai_regenerate_btn: "✨ Regenerate",
       plant_ai_summarizing: "Generating...",
       plant_ai_fetch_image_btn: "✨ Fetch AI image",
       plant_ai_fetching_image: "Fetching...",
@@ -3446,6 +3448,7 @@
       plantsEditAiSummarySection.hidden = true;
     }
 
+    plantsEditAiSummaryBtn.textContent = summaryBtnLabel();
     plantsEditSection.scrollTop = 0;
     plantEditLatinNameInput.focus();
   }
@@ -3579,6 +3582,12 @@
 
   // ---------- AI: plant summary (edit section) ----------
 
+  function summaryBtnLabel() {
+    return plantsCurrentDetail && plantsCurrentDetail.ai_summary
+      ? t("plant_ai_regenerate_btn")
+      : t("plant_ai_summary_btn");
+  }
+
   plantsEditAiSummaryBtn.addEventListener("click", async function () {
     if (!plantsCurrentDetail) return;
     plantsEditAiSummaryBtn.disabled = true;
@@ -3593,9 +3602,10 @@
       }
     } catch (err) {
       plantsEditAiSummaryBtn.textContent = err.message || "Virhe";
-      setTimeout(function () { plantsEditAiSummaryBtn.textContent = t("plant_ai_summary_btn"); }, 4000);
+      setTimeout(function () { plantsEditAiSummaryBtn.textContent = summaryBtnLabel(); }, 4000);
     }
     plantsEditAiSummaryBtn.disabled = false;
+    plantsEditAiSummaryBtn.textContent = summaryBtnLabel();
   });
 
   // ---------- AI: image fetch (edit section) ----------
