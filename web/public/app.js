@@ -3317,9 +3317,12 @@
 
   // ---------- AI: plant name fill ----------
 
+  var plantAiErrorEl = document.getElementById("plant-ai-error");
+
   plantAiSearchBtn.addEventListener("click", async function () {
     var q = plantAiQueryInput.value.trim();
     if (!q) return;
+    plantAiErrorEl.hidden = true;
     plantAiSearchBtn.disabled = true;
     plantAiSearchBtn.textContent = t("plant_ai_searching");
     try {
@@ -3330,7 +3333,10 @@
         if (res.category) plantCategoryInput.value = res.category;
         if (res.notes) plantNotesInput.value = res.notes;
       }
-    } catch (_) {}
+    } catch (err) {
+      plantAiErrorEl.textContent = err.message || "Virhe";
+      plantAiErrorEl.hidden = false;
+    }
     plantAiSearchBtn.disabled = false;
     plantAiSearchBtn.textContent = t("plant_ai_search_btn");
   });
@@ -3349,9 +3355,11 @@
         plantsAiSummaryEl.hidden = false;
         plantsCurrentDetail = updated;
       }
-    } catch (_) {}
+    } catch (err) {
+      plantsAiSummaryBtn.textContent = err.message || "Virhe";
+      setTimeout(function () { plantsAiSummaryBtn.textContent = t("plant_ai_summary_btn"); }, 4000);
+    }
     plantsAiSummaryBtn.disabled = false;
-    plantsAiSummaryBtn.textContent = t("plant_ai_summary_btn");
   });
 
   // ---------- AI: Wikipedia image ----------
@@ -3364,9 +3372,11 @@
       await apiFetch(
         "/api/ai/plants/" + plantsCurrentDetail.id + "/fetch-image", { method: "POST" });
       await reloadCurrentDetail();
-    } catch (_) {}
+    } catch (err) {
+      plantsWikiImageBtn.textContent = err.message || "Virhe";
+      setTimeout(function () { plantsWikiImageBtn.textContent = t("plant_ai_fetch_image_btn"); }, 4000);
+    }
     plantsWikiImageBtn.disabled = false;
-    plantsWikiImageBtn.textContent = t("plant_ai_fetch_image_btn");
   });
 
   // ---------- Lightbox ----------

@@ -2418,6 +2418,14 @@ input[type="datetime-local"]:focus {
 .ai-search-row { display: flex; gap: 0.5rem; }
 .ai-search-row input { flex: 1; }
 .ai-divider { border: none; border-top: 1px solid var(--color-border); margin: 0.75rem 0; }
+.plant-ai-error {
+  margin-top: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--color-error-text);
+  background: var(--color-error-bg);
+  border-radius: var(--radius);
+  padding: 0.35rem 0.65rem;
+}
 
 /* AI summary in plant detail */
 .plants-ai-summary {
