@@ -3305,7 +3305,7 @@
     plantAiSearchBtn.disabled = true;
     plantAiSearchBtn.textContent = t("plant_ai_searching");
     try {
-      var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(q));
+      var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(q), { method: "POST" });
       if (res) {
         if (res.latin_name) plantLatinNameInput.value = res.latin_name;
         if (res.common_name) plantCommonNameInput.value = res.common_name;
