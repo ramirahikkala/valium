@@ -2288,3 +2288,118 @@ input[type="datetime-local"]:focus {
   background: #dcfce7;
   color: #15803d;
 }
+
+/* ---------- Plant card image ---------- */
+
+.plant-card-image {
+  width: calc(100% + 2rem);
+  aspect-ratio: 4/3;
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+  margin: -0.85rem -1rem 0.6rem;
+}
+.plant-card-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ---------- Image gallery in detail view ---------- */
+
+.plants-detail-images {
+  margin-bottom: 1.25rem;
+}
+.plants-image-gallery {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.6rem;
+}
+
+.plant-thumb {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 2px solid var(--color-border);
+  cursor: pointer;
+}
+.plant-thumb.is-primary {
+  border-color: var(--color-primary);
+}
+.plant-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.plant-thumb-actions {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.2rem;
+  background: rgba(0, 0, 0, 0.55);
+  padding: 0.2rem 0.3rem;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.plant-thumb:hover .plant-thumb-actions {
+  opacity: 1;
+}
+
+.btn-thumb {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 0.85em;
+  cursor: pointer;
+  padding: 0 0.2rem;
+  line-height: 1;
+}
+.btn-thumb-del {
+  color: #fca5a5;
+}
+.thumb-primary-badge {
+  color: gold;
+  font-size: 0.85em;
+}
+.plants-upload-btn {
+  cursor: pointer;
+}
+
+/* ---------- Lightbox ---------- */
+
+.plant-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.88);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.plant-lightbox[hidden] {
+  display: none !important;
+}
+.plant-lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: var(--radius);
+}
+.plant-lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+}

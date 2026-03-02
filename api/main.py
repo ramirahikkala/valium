@@ -2,9 +2,11 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -53,6 +55,10 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Valium", description="A simple todo API", lifespan=lifespan)
+
+UPLOAD_DIR = Path("/app/plant_images")
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/plant-images", StaticFiles(directory=UPLOAD_DIR), name="plant-images")
 
 app.include_router(gym_router)
 app.include_router(admin_router)

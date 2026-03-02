@@ -243,6 +243,13 @@
       new_location_placeholder: "Uusi sijainti...",
       no_locations: "Ei sijainteja. Lisää yllä.",
       delete_location_confirm: "Poistetaanko sijainti \"{name}\"? Kasvit säilyvät ilman sijaintia.",
+
+      // Kasvit — kuvat
+      plant_image_upload_btn: "+ Lisää kuva",
+      plant_image_set_primary: "Aseta pääkuvaksi",
+      plant_image_delete_confirm: "Poistetaanko kuva?",
+      plant_image_caption_ph: "Kuvateksti...",
+      plant_uploading: "Ladataan...",
     },
     en: {
       // Navigation
@@ -483,6 +490,13 @@
       new_location_placeholder: "New location...",
       no_locations: "No locations. Add one above.",
       delete_location_confirm: "Delete location \"{name}\"? Plants will remain without a location.",
+
+      // Plants — images
+      plant_image_upload_btn: "+ Add photo",
+      plant_image_set_primary: "Set as primary",
+      plant_image_delete_confirm: "Delete photo?",
+      plant_image_caption_ph: "Caption...",
+      plant_uploading: "Uploading...",
     },
   };
 
@@ -600,6 +614,10 @@
       options.headers = options.headers || {};
       if (authToken) {
         options.headers["Authorization"] = "Bearer " + authToken;
+      }
+      // Don't set Content-Type for FormData — browser sets it with boundary automatically
+      if (options.body instanceof FormData) {
+        delete options.headers["Content-Type"];
       }
       var res = await fetch(url, options);
       if (res.status === 401) {
@@ -2735,6 +2753,11 @@
   var plantsDetailCommon = document.getElementById("plants-detail-common");
   var plantsDetailBadges = document.getElementById("plants-detail-badges");
   var plantsDetailFields = document.getElementById("plants-detail-fields");
+  var plantsImageGallery = document.getElementById("plants-image-gallery");
+  var plantsImageUpload = document.getElementById("plants-image-upload");
+  var plantLightbox = document.getElementById("plant-image-lightbox");
+  var plantLightboxImg = document.getElementById("plant-lightbox-img");
+  var plantLightboxClose = document.getElementById("plant-lightbox-close");
   var addLocationForm = document.getElementById("add-location-form");
   var newLocationNameInput = document.getElementById("new-location-name");
   var locationsListEl = document.getElementById("locations-list");
@@ -3008,7 +3031,12 @@
       meta.push('<span class="plant-badge plant-own-seeds-badge" title="' + t("plant_label_own_seeds") + '">\uD83C\uDF31</span>');
     }
 
+    var imageHtml = plant.primary_image_url
+      ? '<div class="plant-card-image"><img src="' + escapeHtml(plant.primary_image_url) + '" alt="" loading="lazy"></div>'
+      : "";
+
     card.innerHTML =
+      imageHtml +
       '<div class="plant-card-header">' + nameLine + commonLine + "</div>" +
       '<div class="plant-card-meta">' + meta.join("") + "</div>" +
       '<div class="plant-card-actions">' +
@@ -3065,6 +3093,35 @@
 
   // ---------- Detail view ----------
 
+  function renderImageGallery(images) {
+    plantsImageGallery.innerHTML = "";
+    images.forEach(function (img, idx) {
+      var url = "/api/plant-images/" + img.filename;
+      var thumb = document.createElement("div");
+      thumb.className = "plant-thumb" + (idx === 0 ? " is-primary" : "");
+      thumb.innerHTML =
+        '<img src="' + escapeHtml(url) + '" alt="">' +
+        '<div class="plant-thumb-actions">' +
+          (idx > 0
+            ? '<button class="btn-thumb" data-img-action="primary" data-img-id="' + img.id + '">\u2605</button>'
+            : '<span class="thumb-primary-badge">\u2605</span>') +
+          '<button class="btn-thumb btn-thumb-del" data-img-action="delete" data-img-id="' + img.id + '">\u2715</button>' +
+        '</div>';
+      thumb.querySelector("img").addEventListener("click", function () {
+        plantLightboxImg.src = url;
+        plantLightbox.hidden = false;
+      });
+      plantsImageGallery.appendChild(thumb);
+    });
+  }
+
+  async function reloadCurrentDetail() {
+    if (!plantsCurrentDetail) return;
+    await loadPlants();
+    var updated = plantsData.find(function (p) { return p.id === plantsCurrentDetail.id; });
+    if (updated) openPlantDetail(updated);
+  }
+
   function openPlantDetail(plant) {
     plantsCurrentDetail = plant;
     plantsListSection.hidden = true;
@@ -3086,6 +3143,8 @@
       plant.own_seeds ? '<span class="plant-badge plant-own-seeds-badge" title="' + t("plant_label_own_seeds") + '">\uD83C\uDF31 ' + escapeHtml(t("plant_label_own_seeds")) + "</span>" : "",
     ].filter(Boolean);
     plantsDetailBadges.innerHTML = badges.join("");
+
+    renderImageGallery(plant.images || []);
 
     var fields = [];
     if (plant.year_acquired) fields.push([t("plant_label_year_acquired"), plant.year_acquired]);
@@ -3111,6 +3170,46 @@
 
   plantsDetailEditBtn.addEventListener("click", function () {
     if (plantsCurrentDetail) openPlantModal(plantsCurrentDetail);
+  });
+
+  // ---------- Image upload ----------
+
+  plantsImageUpload.addEventListener("change", async function () {
+    var file = this.files[0];
+    if (!file || !plantsCurrentDetail) return;
+    this.value = "";
+    var fd = new FormData();
+    fd.append("file", file);
+    try {
+      await apiFetch(PLANTS_API + "/" + plantsCurrentDetail.id + "/images", { method: "POST", body: fd });
+      await reloadCurrentDetail();
+    } catch (_) {}
+  });
+
+  plantsImageGallery.addEventListener("click", async function (e) {
+    var btn = e.target.closest("[data-img-action]");
+    if (!btn || !plantsCurrentDetail) return;
+    var id = plantsCurrentDetail.id;
+    var imgId = btn.dataset.imgId;
+    if (btn.dataset.imgAction === "primary") {
+      try {
+        await apiFetch(PLANTS_API + "/" + id + "/images/" + imgId + "/set-primary", { method: "POST" });
+        await reloadCurrentDetail();
+      } catch (_) {}
+    } else if (btn.dataset.imgAction === "delete") {
+      if (!confirm(t("plant_image_delete_confirm"))) return;
+      try {
+        await apiFetch(PLANTS_API + "/" + id + "/images/" + imgId, { method: "DELETE" });
+        await reloadCurrentDetail();
+      } catch (_) {}
+    }
+  });
+
+  // ---------- Lightbox ----------
+
+  plantLightboxClose.addEventListener("click", function () { plantLightbox.hidden = true; });
+  plantLightbox.addEventListener("click", function (e) {
+    if (e.target === plantLightbox) plantLightbox.hidden = true;
   });
 
   // ---------- Filters ----------

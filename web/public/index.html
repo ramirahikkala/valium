@@ -313,6 +313,13 @@
               <div id="plants-detail-common" class="plants-detail-common" hidden></div>
               <div id="plants-detail-badges" class="plant-card-meta"></div>
             </div>
+            <div id="plants-detail-images" class="plants-detail-images">
+              <div id="plants-image-gallery" class="plants-image-gallery"></div>
+              <label class="btn btn-secondary btn-sm plants-upload-btn">
+                <span data-i18n="plant_image_upload_btn">+ Lisää kuva</span>
+                <input type="file" id="plants-image-upload" accept="image/*" hidden>
+              </label>
+            </div>
             <div id="plants-detail-fields" class="plants-detail-fields"></div>
             <div id="plants-detail-extra" class="plants-detail-extra"></div>
           </div>
@@ -550,6 +557,12 @@
         </div>
       </form>
     </div>
+  </div>
+
+  <!-- Plant image lightbox -->
+  <div id="plant-image-lightbox" class="plant-lightbox" hidden>
+    <button id="plant-lightbox-close" class="plant-lightbox-close">&#x2715;</button>
+    <img id="plant-lightbox-img" class="plant-lightbox-img" src="" alt="">
   </div>
 
   <script src="https://accounts.google.com/gsi/client" async></script>

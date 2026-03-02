@@ -409,6 +409,23 @@ class PlantUpdate(BaseModel):
     own_seeds: bool | None = None
 
 
+class PlantImageResponse(BaseModel):
+    """Schema returned for a single plant image."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    filename: str
+    caption: str | None
+    sort_order: int
+
+
+class PlantImageCaptionUpdate(BaseModel):
+    """Schema for updating a plant image caption."""
+
+    caption: str | None = None
+
+
 class PlantResponse(BaseModel):
     """Schema returned for a single plant."""
 
@@ -428,3 +445,5 @@ class PlantResponse(BaseModel):
     notes: str | None
     own_seeds: bool
     created_at: datetime
+    images: list[PlantImageResponse] = []
+    primary_image_url: str | None = None

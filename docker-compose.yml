@@ -11,6 +11,8 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+    volumes:
+      - plant_images:/app/plant_images
 
   web:
     build: ./web
@@ -18,3 +20,6 @@ services:
       API_URL: http://api:8000
     depends_on:
       - api
+
+volumes:
+  plant_images:

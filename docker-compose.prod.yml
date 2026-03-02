@@ -6,6 +6,8 @@ services:
       - default
       - db-network
       - caddy-proxy
+    volumes:
+      - plant_images:/app/plant_images
 
   web:
     networks:
@@ -18,3 +20,6 @@ networks:
   db-network:
     external: true
     name: db-network
+
+volumes:
+  plant_images:

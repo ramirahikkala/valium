@@ -422,3 +422,31 @@ class Plant(Base):
     location: Mapped["PlantLocation | None"] = relationship(
         "PlantLocation", back_populates="plants"
     )
+    images: Mapped[list["PlantImage"]] = relationship(
+        "PlantImage",
+        back_populates="plant",
+        order_by="PlantImage.sort_order, PlantImage.created_at",
+        cascade="all, delete-orphan",
+    )
+
+
+class PlantImage(Base):
+    """Represents a photo attached to a plant."""
+
+    __tablename__ = "plant_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    plant_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("plants.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    caption: Mapped[str | None] = mapped_column(Text, nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    plant: Mapped["Plant"] = relationship("Plant", back_populates="images")
