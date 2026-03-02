@@ -2494,10 +2494,17 @@ input[type="datetime-local"]:focus {
 .admin-ai-form select { flex: 1; min-width: 140px; }
 
 /* Plant edit section */
+.plants-edit-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
 .plants-edit-heading {
   font-size: 1.1rem;
   font-weight: 600;
-  margin: 0 0 1rem;
+  margin: 0;
 }
 .plants-edit-section-heading {
   font-size: 0.8rem;

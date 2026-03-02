@@ -342,19 +342,11 @@
               <button class="btn btn-secondary btn-sm" id="plants-edit-back-btn" data-i18n="plants_back_btn">← Takaisin</button>
               <button class="btn btn-danger btn-sm" id="plants-edit-delete-btn" data-i18n="plant_edit_delete_btn">Poista kasvi</button>
             </div>
-            <h2 class="plants-edit-heading" id="plants-edit-heading" data-i18n="plant_modal_edit_heading">Muokkaa kasvia</h2>
-
-            <div class="form-group ai-search-group">
-              <div class="ai-search-row">
-                <input type="text" id="plant-edit-ai-query"
-                       data-i18n-placeholder="plant_ai_search_ph"
-                       placeholder="Hae kasvia (suomi/latina)..." autocomplete="off">
-                <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-ai-search-btn"
-                        data-i18n="plant_ai_search_btn">✨ Hae</button>
-              </div>
-              <div id="plant-edit-ai-error" class="plant-ai-error" hidden></div>
+            <div class="plants-edit-heading-row">
+              <h2 class="plants-edit-heading" id="plants-edit-heading" data-i18n="plant_modal_edit_heading">Muokkaa kasvia</h2>
+              <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-ai-fill-btn"
+                      data-i18n="plant_ai_fill_btn">✨ Täydennä AI:lla</button>
             </div>
-            <div class="ai-divider"></div>
 
             <form id="plant-edit-form">
               <input type="hidden" id="plant-edit-id">

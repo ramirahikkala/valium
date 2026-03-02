@@ -258,6 +258,7 @@
       plant_ai_search_btn: "✨ Hae",
       plant_ai_searching: "Haetaan...",
       plant_ai_summary_heading: "AI-yhteenveto",
+      plant_ai_fill_btn: "✨ Täydennä AI:lla",
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
       plant_ai_regenerate_btn: "✨ Luo uudelleen",
       plant_ai_summarizing: "Luodaan...",
@@ -523,6 +524,7 @@
       plant_ai_search_btn: "✨ Search",
       plant_ai_searching: "Searching...",
       plant_ai_summary_heading: "AI summary",
+      plant_ai_fill_btn: "✨ Fill with AI",
       plant_ai_summary_btn: "✨ Generate summary",
       plant_ai_regenerate_btn: "✨ Regenerate",
       plant_ai_summarizing: "Generating...",
@@ -2864,9 +2866,7 @@
   // Plant edit section elements
   var plantsEditBackBtn = document.getElementById("plants-edit-back-btn");
   var plantsEditDeleteBtn = document.getElementById("plants-edit-delete-btn");
-  var plantEditAiQueryInput = document.getElementById("plant-edit-ai-query");
-  var plantEditAiSearchBtn = document.getElementById("plant-edit-ai-search-btn");
-  var plantEditAiErrorEl = document.getElementById("plant-edit-ai-error");
+  var plantEditAiFillBtn = document.getElementById("plant-edit-ai-fill-btn");
   var plantEditForm = document.getElementById("plant-edit-form");
   var plantEditIdInput = document.getElementById("plant-edit-id");
   var plantEditLatinNameInput = document.getElementById("plant-edit-latin-name");
@@ -3435,8 +3435,6 @@
     plantEditSourceInput.value = plant.source || "";
     plantEditOwnSeedsInput.checked = !!plant.own_seeds;
     plantEditNotesInput.value = plant.notes || "";
-    plantEditAiQueryInput.value = "";
-    plantEditAiErrorEl.hidden = true;
 
     renderEditGallery(plant.images || []);
 
@@ -3556,28 +3554,27 @@
     plantAiSearchBtn.textContent = t("plant_ai_search_btn");
   });
 
-  // ---------- AI: plant name fill (edit section) ----------
+  // ---------- AI: fill missing fields (edit section) ----------
 
-  plantEditAiSearchBtn.addEventListener("click", async function () {
-    var q = plantEditAiQueryInput.value.trim();
-    if (!q) return;
-    plantEditAiErrorEl.hidden = true;
-    plantEditAiSearchBtn.disabled = true;
-    plantEditAiSearchBtn.textContent = t("plant_ai_searching");
+  plantEditAiFillBtn.addEventListener("click", async function () {
+    var query = plantEditLatinNameInput.value.trim() || plantEditCommonNameInput.value.trim();
+    if (!query) return;
+    plantEditAiFillBtn.disabled = true;
+    plantEditAiFillBtn.textContent = t("plant_ai_searching");
     try {
-      var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(q), { method: "POST" });
+      var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(query), { method: "POST" });
       if (res) {
-        if (res.latin_name) plantEditLatinNameInput.value = res.latin_name;
-        if (res.common_name) plantEditCommonNameInput.value = res.common_name;
-        if (res.category) plantEditCategoryInput.value = res.category;
-        if (res.notes) plantEditNotesInput.value = res.notes;
+        if (!plantEditLatinNameInput.value.trim() && res.latin_name) plantEditLatinNameInput.value = res.latin_name;
+        if (!plantEditCommonNameInput.value.trim() && res.common_name) plantEditCommonNameInput.value = res.common_name;
+        if (!plantEditCategoryInput.value && res.category) plantEditCategoryInput.value = res.category;
+        if (!plantEditNotesInput.value.trim() && res.notes) plantEditNotesInput.value = res.notes;
       }
     } catch (err) {
-      plantEditAiErrorEl.textContent = err.message || "Virhe";
-      plantEditAiErrorEl.hidden = false;
+      plantEditAiFillBtn.textContent = err.message || "Virhe";
+      setTimeout(function () { plantEditAiFillBtn.textContent = t("plant_ai_fill_btn"); }, 4000);
     }
-    plantEditAiSearchBtn.disabled = false;
-    plantEditAiSearchBtn.textContent = t("plant_ai_search_btn");
+    plantEditAiFillBtn.disabled = false;
+    plantEditAiFillBtn.textContent = t("plant_ai_fill_btn");
   });
 
   // ---------- AI: plant summary (edit section) ----------
