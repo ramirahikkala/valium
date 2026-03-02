@@ -417,6 +417,7 @@ class PlantImageResponse(BaseModel):
     id: int
     filename: str
     caption: str | None
+    source_url: str | None
     sort_order: int
 
 

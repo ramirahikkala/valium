@@ -262,6 +262,7 @@
       plant_ai_summarizing: "Luodaan...",
       plant_ai_fetch_image_btn: "✨ Hae AI-kuva",
       plant_ai_fetching_image: "Haetaan...",
+      plant_image_source: "Kuvan lähde",
       plant_edit_btn: "✎ Muokkaa",
       plant_edit_delete_btn: "Poista kasvi",
       plant_edit_images_heading: "Kuvat",
@@ -525,6 +526,7 @@
       plant_ai_summarizing: "Generating...",
       plant_ai_fetch_image_btn: "✨ Fetch AI image",
       plant_ai_fetching_image: "Fetching...",
+      plant_image_source: "Image source",
       plant_edit_btn: "✎ Edit",
       plant_edit_delete_btn: "Delete plant",
       plant_edit_images_heading: "Photos",
@@ -3313,7 +3315,10 @@
       var url = "/api/plant-images/" + img.filename;
       var thumb = document.createElement("div");
       thumb.className = "plant-thumb";
-      thumb.innerHTML = '<img src="' + escapeHtml(url) + '" alt="">';
+      var sourceHtml = img.source_url
+        ? '<a class="plant-thumb-source" href="' + escapeHtml(img.source_url) + '" target="_blank" rel="noopener" title="' + t("plant_image_source") + '">\uD83D\uDD17</a>'
+        : "";
+      thumb.innerHTML = '<img src="' + escapeHtml(url) + '" alt="">' + sourceHtml;
       thumb.querySelector("img").addEventListener("click", function () {
         plantLightboxImg.src = url;
         plantLightbox.hidden = false;
@@ -3328,8 +3333,12 @@
       var url = "/api/plant-images/" + img.filename;
       var thumb = document.createElement("div");
       thumb.className = "plant-thumb" + (idx === 0 ? " is-primary" : "");
+      var sourceHtml = img.source_url
+        ? '<a class="plant-thumb-source" href="' + escapeHtml(img.source_url) + '" target="_blank" rel="noopener" title="' + t("plant_image_source") + '">\uD83D\uDD17</a>'
+        : "";
       thumb.innerHTML =
         '<img src="' + escapeHtml(url) + '" alt="">' +
+        sourceHtml +
         '<div class="plant-thumb-actions">' +
           (idx > 0
             ? '<button class="btn-thumb" data-img-action="primary" data-img-id="' + img.id + '">\u2605</button>'

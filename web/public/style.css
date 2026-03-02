@@ -2379,6 +2379,23 @@ input[type="datetime-local"]:focus {
 .plants-upload-btn {
   cursor: pointer;
 }
+.plant-thumb-source {
+  position: absolute;
+  bottom: 0.2rem;
+  left: 0.2rem;
+  font-size: 0.7rem;
+  line-height: 1;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  border-radius: 3px;
+  padding: 0.1rem 0.25rem;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.plant-thumb:hover .plant-thumb-source {
+  opacity: 1;
+}
 
 /* ---------- Lightbox ---------- */
 
