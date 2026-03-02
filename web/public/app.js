@@ -2608,10 +2608,11 @@
         return;
       }
       adminAiProvidersList.innerHTML = providers.map(function (p) {
-        return '<div class="admin-ai-provider-row">' +
+        return '<div class="admin-ai-provider-row" data-ai-id="' + p.id + '">' +
           '<span class="admin-ai-label">' + escapeHtml(p.label || p.provider) + " \u2014 " + escapeHtml(p.model) + "</span>" +
           '<span class="plant-badge ' + (p.enabled ? "plant-cat-badge" : "plant-status-lost") + '">' +
             escapeHtml(p.enabled ? t("feature_enabled") : t("feature_disabled")) + "</span>" +
+          '<button class="btn btn-secondary btn-sm" data-ai-edit="' + p.id + '" data-ai-model="' + escapeHtml(p.model) + '" data-ai-label="' + escapeHtml(p.label || "") + '">✎</button>' +
           '<button class="btn btn-danger btn-sm" data-ai-delete="' + p.id + '">' + escapeHtml(t("delete_btn")) + "</button>" +
           "</div>";
       }).join("");
@@ -2872,13 +2873,60 @@
 
   if (adminAiProvidersList) {
     adminAiProvidersList.addEventListener("click", async function (e) {
-      var btn = e.target.closest("[data-ai-delete]");
-      if (!btn) return;
-      if (!confirm(t("admin_ai_delete_confirm"))) return;
-      try {
-        await apiFetch("/api/ai/providers/" + btn.dataset.aiDelete, { method: "DELETE" });
+      // Delete
+      var delBtn = e.target.closest("[data-ai-delete]");
+      if (delBtn) {
+        if (!confirm(t("admin_ai_delete_confirm"))) return;
+        try {
+          await apiFetch("/api/ai/providers/" + delBtn.dataset.aiDelete, { method: "DELETE" });
+          await loadAdminAiProviders();
+        } catch (_) {}
+        return;
+      }
+
+      // Edit: open inline form
+      var editBtn = e.target.closest("[data-ai-edit]");
+      if (editBtn) {
+        var row = editBtn.closest(".admin-ai-provider-row");
+        var id = editBtn.dataset.aiEdit;
+        var currentModel = editBtn.dataset.aiModel;
+        var currentLabel = editBtn.dataset.aiLabel;
+        row.innerHTML =
+          '<input class="admin-ai-edit-model" type="text" value="' + escapeHtml(currentModel) + '" placeholder="Malli">' +
+          '<input class="admin-ai-edit-label" type="text" value="' + escapeHtml(currentLabel) + '" placeholder="Nimi (valinnainen)">' +
+          '<input class="admin-ai-edit-key" type="password" placeholder="Uusi API-avain (tyhjä = ei muutosta)">' +
+          '<button class="btn btn-primary btn-sm" data-ai-save="' + id + '">Tallenna</button>' +
+          '<button class="btn btn-secondary btn-sm" data-ai-cancel>Peruuta</button>';
+        row.querySelector(".admin-ai-edit-model").focus();
+        return;
+      }
+
+      // Save edit
+      var saveBtn = e.target.closest("[data-ai-save]");
+      if (saveBtn) {
+        var row = saveBtn.closest(".admin-ai-provider-row");
+        var id = saveBtn.dataset.aiSave;
+        var model = row.querySelector(".admin-ai-edit-model").value.trim();
+        var label = row.querySelector(".admin-ai-edit-label").value.trim() || null;
+        var api_key = row.querySelector(".admin-ai-edit-key").value.trim() || undefined;
+        if (!model) return;
+        var body = { model: model, label: label };
+        if (api_key) body.api_key = api_key;
+        try {
+          await apiFetch("/api/ai/providers/" + id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          await loadAdminAiProviders();
+        } catch (_) {}
+        return;
+      }
+
+      // Cancel edit
+      if (e.target.closest("[data-ai-cancel]")) {
         await loadAdminAiProviders();
-      } catch (_) {}
+      }
     });
   }
 
