@@ -2475,3 +2475,33 @@ input[type="datetime-local"]:focus {
 }
 .admin-ai-form input,
 .admin-ai-form select { flex: 1; min-width: 140px; }
+
+/* Plant edit section */
+.plants-edit-heading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1rem;
+}
+.plants-edit-section-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: 0 0 0.75rem;
+}
+.plants-edit-images-section,
+.plants-edit-ai-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+.plants-edit-image-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+.plants-edit-ai-section .plants-ai-summary-section {
+  margin-bottom: 0.75rem;
+}
