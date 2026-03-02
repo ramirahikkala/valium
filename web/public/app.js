@@ -2601,38 +2601,6 @@
     } catch (_) {}
   }
 
-  if (adminAiForm) {
-    adminAiForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var provider = document.getElementById("ai-provider-select").value;
-      var model = document.getElementById("ai-model-input").value.trim();
-      var api_key = document.getElementById("ai-key-input").value.trim();
-      var label = document.getElementById("ai-label-input").value.trim() || null;
-      if (!model || !api_key) return;
-      try {
-        await apiFetch("/api/ai/providers", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ provider: provider, model: model, api_key: api_key, label: label }),
-        });
-        adminAiForm.reset();
-        await loadAdminAiProviders();
-      } catch (_) {}
-    });
-  }
-
-  if (adminAiProvidersList) {
-    adminAiProvidersList.addEventListener("click", async function (e) {
-      var btn = e.target.closest("[data-ai-delete]");
-      if (!btn) return;
-      if (!confirm(t("admin_ai_delete_confirm"))) return;
-      try {
-        await apiFetch("/api/ai/providers/" + btn.dataset.aiDelete, { method: "DELETE" });
-        await loadAdminAiProviders();
-      } catch (_) {}
-    });
-  }
-
   async function loadAdminInvites() {
     var invitesEl = document.getElementById("admin-invites-list");
     if (!invitesEl) return;
@@ -2864,6 +2832,38 @@
   var plantsWikiImageBtn = document.getElementById("plants-wiki-image-btn");
   var adminAiProvidersList = document.getElementById("admin-ai-providers-list");
   var adminAiForm = document.getElementById("admin-ai-form");
+
+  if (adminAiForm) {
+    adminAiForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var provider = document.getElementById("ai-provider-select").value;
+      var model = document.getElementById("ai-model-input").value.trim();
+      var api_key = document.getElementById("ai-key-input").value.trim();
+      var label = document.getElementById("ai-label-input").value.trim() || null;
+      if (!model || !api_key) return;
+      try {
+        await apiFetch("/api/ai/providers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: provider, model: model, api_key: api_key, label: label }),
+        });
+        adminAiForm.reset();
+        await loadAdminAiProviders();
+      } catch (_) {}
+    });
+  }
+
+  if (adminAiProvidersList) {
+    adminAiProvidersList.addEventListener("click", async function (e) {
+      var btn = e.target.closest("[data-ai-delete]");
+      if (!btn) return;
+      if (!confirm(t("admin_ai_delete_confirm"))) return;
+      try {
+        await apiFetch("/api/ai/providers/" + btn.dataset.aiDelete, { method: "DELETE" });
+        await loadAdminAiProviders();
+      } catch (_) {}
+    });
+  }
 
   // ---------- Plants tab switching ----------
 
