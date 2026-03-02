@@ -174,6 +174,19 @@
           <h2 class="gym-section-heading" data-i18n="admin_users_heading">Käyttäjät</h2>
           <div id="admin-users-list" class="admin-user-list"></div>
 
+          <h2 class="gym-section-heading" data-i18n="admin_ai_heading">AI-asetukset</h2>
+          <div id="admin-ai-providers-list" class="admin-ai-list"></div>
+          <form id="admin-ai-form" class="admin-ai-form">
+            <select id="ai-provider-select">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI (GPT)</option>
+            </select>
+            <input type="text" id="ai-model-input" placeholder="claude-sonnet-4-6" required autocomplete="off">
+            <input type="password" id="ai-key-input" placeholder="API-avain" required autocomplete="off">
+            <input type="text" id="ai-label-input" placeholder="Nimi (valinnainen)" autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+          </form>
+
           <h2 class="gym-section-heading admin-invites-heading" data-i18n="admin_invites_heading">Kutsut</h2>
           <form id="admin-invite-form" class="inline-form admin-invite-form">
             <input type="email" id="admin-invite-email" data-i18n-placeholder="admin_invite_placeholder" placeholder="sähköposti@esimerkki.fi" required autocomplete="off">
@@ -319,9 +332,15 @@
                 <span data-i18n="plant_image_upload_btn">+ Lisää kuva</span>
                 <input type="file" id="plants-image-upload" accept="image/*" hidden>
               </label>
+              <button id="plants-wiki-image-btn" class="btn btn-secondary btn-sm"
+                      data-i18n="plant_ai_fetch_image_btn">Hae kuva Wikistä</button>
             </div>
             <div id="plants-detail-fields" class="plants-detail-fields"></div>
-            <div id="plants-detail-extra" class="plants-detail-extra"></div>
+            <div id="plants-detail-extra" class="plants-detail-extra">
+              <div id="plants-detail-ai-summary" class="plants-ai-summary" hidden></div>
+              <button id="plants-ai-summary-btn" class="btn btn-secondary btn-sm"
+                      data-i18n="plant_ai_summary_btn">✨ Luo AI-yhteenveto</button>
+            </div>
           </div>
 
           <!-- Locations sub-view -->
@@ -485,6 +504,16 @@
       <h2 id="plant-modal-title" data-i18n="plant_modal_add_heading">Lisää kasvi</h2>
       <form id="plant-modal-form">
         <input type="hidden" id="plant-modal-id">
+        <div class="form-group ai-search-group">
+          <div class="ai-search-row">
+            <input type="text" id="plant-ai-query"
+                   data-i18n-placeholder="plant_ai_search_ph"
+                   placeholder="Hae kasvia (suomi/latina)..." autocomplete="off">
+            <button type="button" class="btn btn-secondary btn-sm" id="plant-ai-search-btn"
+                    data-i18n="plant_ai_search_btn">✨ Hae</button>
+          </div>
+        </div>
+        <div class="ai-divider"></div>
         <div class="form-group">
           <label for="plant-latin-name" data-i18n="plant_label_latin">Tieteellinen nimi</label>
           <input type="text" id="plant-latin-name" required autocomplete="off">

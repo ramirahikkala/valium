@@ -444,6 +444,50 @@ class PlantResponse(BaseModel):
     lost_year: int | None
     notes: str | None
     own_seeds: bool
+    ai_summary: str | None = None
     created_at: datetime
     images: list[PlantImageResponse] = []
     primary_image_url: str | None = None
+
+
+# ---------- AI providers ----------
+
+
+class AIProviderCreate(BaseModel):
+    """Schema for adding an AI provider."""
+
+    provider: str
+    model: str
+    api_key: str
+    label: str | None = None
+    enabled: bool = True
+
+
+class AIProviderUpdate(BaseModel):
+    """Schema for updating an AI provider. All fields optional."""
+
+    model: str | None = None
+    api_key: str | None = None
+    label: str | None = None
+    enabled: bool | None = None
+
+
+class AIProviderResponse(BaseModel):
+    """Schema returned for an AI provider (api_key omitted)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    provider: str
+    model: str
+    label: str | None
+    enabled: bool
+
+
+class PlantFillNameResponse(BaseModel):
+    """Schema returned by the plant AI fill-name endpoint."""
+
+    latin_name: str | None = None
+    common_name: str | None = None
+    category: str | None = None
+    notes: str | None = None

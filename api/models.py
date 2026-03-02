@@ -414,6 +414,7 @@ class Plant(Base):
     lost_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     own_seeds: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    ai_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -450,3 +451,22 @@ class PlantImage(Base):
     )
 
     plant: Mapped["Plant"] = relationship("Plant", back_populates="images")
+
+
+# ---------- AI providers ----------
+
+
+class AIProvider(Base):
+    """Represents a configured AI provider (Anthropic or OpenAI)."""
+
+    __tablename__ = "ai_providers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    model: Mapped[str] = mapped_column(String(100), nullable=False)
+    api_key: Mapped[str] = mapped_column(Text, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )

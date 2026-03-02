@@ -250,6 +250,18 @@
       plant_image_delete_confirm: "Poistetaanko kuva?",
       plant_image_caption_ph: "Kuvateksti...",
       plant_uploading: "Ladataan...",
+
+      // AI
+      admin_ai_heading: "AI-asetukset",
+      admin_ai_no_providers: "Ei AI-palveluja.",
+      admin_ai_delete_confirm: "Poistetaanko provider?",
+      plant_ai_search_ph: "Hae kasvia...",
+      plant_ai_search_btn: "✨ Hae",
+      plant_ai_searching: "Haetaan...",
+      plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
+      plant_ai_summarizing: "Luodaan...",
+      plant_ai_fetch_image_btn: "Hae kuva Wikistä",
+      plant_ai_fetching_image: "Haetaan...",
     },
     en: {
       // Navigation
@@ -497,6 +509,18 @@
       plant_image_delete_confirm: "Delete photo?",
       plant_image_caption_ph: "Caption...",
       plant_uploading: "Uploading...",
+
+      // AI
+      admin_ai_heading: "AI settings",
+      admin_ai_no_providers: "No AI providers configured.",
+      admin_ai_delete_confirm: "Delete provider?",
+      plant_ai_search_ph: "Search plant...",
+      plant_ai_search_btn: "✨ Search",
+      plant_ai_searching: "Searching...",
+      plant_ai_summary_btn: "✨ Generate summary",
+      plant_ai_summarizing: "Generating...",
+      plant_ai_fetch_image_btn: "Fetch image from Wiki",
+      plant_ai_fetching_image: "Fetching...",
     },
   };
 
@@ -2554,6 +2578,59 @@
       // error shown by apiFetch
     }
     await loadAdminInvites();
+    await loadAdminAiProviders();
+  }
+
+  async function loadAdminAiProviders() {
+    if (!adminAiProvidersList) return;
+    try {
+      var providers = await apiFetch("/api/ai/providers");
+      if (!providers) return;
+      if (!providers.length) {
+        adminAiProvidersList.innerHTML = '<p class="empty-state">' + escapeHtml(t("admin_ai_no_providers")) + "</p>";
+        return;
+      }
+      adminAiProvidersList.innerHTML = providers.map(function (p) {
+        return '<div class="admin-ai-provider-row">' +
+          '<span class="admin-ai-label">' + escapeHtml(p.label || p.provider) + " \u2014 " + escapeHtml(p.model) + "</span>" +
+          '<span class="plant-badge ' + (p.enabled ? "plant-cat-badge" : "plant-status-lost") + '">' +
+            escapeHtml(p.enabled ? t("feature_enabled") : t("feature_disabled")) + "</span>" +
+          '<button class="btn btn-danger btn-sm" data-ai-delete="' + p.id + '">' + escapeHtml(t("delete_btn")) + "</button>" +
+          "</div>";
+      }).join("");
+    } catch (_) {}
+  }
+
+  if (adminAiForm) {
+    adminAiForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var provider = document.getElementById("ai-provider-select").value;
+      var model = document.getElementById("ai-model-input").value.trim();
+      var api_key = document.getElementById("ai-key-input").value.trim();
+      var label = document.getElementById("ai-label-input").value.trim() || null;
+      if (!model || !api_key) return;
+      try {
+        await apiFetch("/api/ai/providers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ provider: provider, model: model, api_key: api_key, label: label }),
+        });
+        adminAiForm.reset();
+        await loadAdminAiProviders();
+      } catch (_) {}
+    });
+  }
+
+  if (adminAiProvidersList) {
+    adminAiProvidersList.addEventListener("click", async function (e) {
+      var btn = e.target.closest("[data-ai-delete]");
+      if (!btn) return;
+      if (!confirm(t("admin_ai_delete_confirm"))) return;
+      try {
+        await apiFetch("/api/ai/providers/" + btn.dataset.aiDelete, { method: "DELETE" });
+        await loadAdminAiProviders();
+      } catch (_) {}
+    });
   }
 
   async function loadAdminInvites() {
@@ -2780,6 +2857,13 @@
   var plantOwnSeedsInput = document.getElementById("plant-own-seeds");
   var plantNotesInput = document.getElementById("plant-notes");
   var plantModalCancelBtn = document.getElementById("plant-modal-cancel");
+  var plantAiQueryInput = document.getElementById("plant-ai-query");
+  var plantAiSearchBtn = document.getElementById("plant-ai-search-btn");
+  var plantsAiSummaryBtn = document.getElementById("plants-ai-summary-btn");
+  var plantsAiSummaryEl = document.getElementById("plants-detail-ai-summary");
+  var plantsWikiImageBtn = document.getElementById("plants-wiki-image-btn");
+  var adminAiProvidersList = document.getElementById("admin-ai-providers-list");
+  var adminAiForm = document.getElementById("admin-ai-form");
 
   // ---------- Plants tab switching ----------
 
@@ -3158,6 +3242,14 @@
         '<span class="plant-detail-value">' + escapeHtml(String(f[1])) + "</span>" +
         "</div>";
     }).join("");
+
+    if (plant.ai_summary) {
+      plantsAiSummaryEl.textContent = plant.ai_summary;
+      plantsAiSummaryEl.hidden = false;
+    } else {
+      plantsAiSummaryEl.textContent = "";
+      plantsAiSummaryEl.hidden = true;
+    }
   }
 
   function closePlantDetail() {
@@ -3203,6 +3295,60 @@
         await reloadCurrentDetail();
       } catch (_) {}
     }
+  });
+
+  // ---------- AI: plant name fill ----------
+
+  plantAiSearchBtn.addEventListener("click", async function () {
+    var q = plantAiQueryInput.value.trim();
+    if (!q) return;
+    plantAiSearchBtn.disabled = true;
+    plantAiSearchBtn.textContent = t("plant_ai_searching");
+    try {
+      var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(q));
+      if (res) {
+        if (res.latin_name) plantLatinNameInput.value = res.latin_name;
+        if (res.common_name) plantCommonNameInput.value = res.common_name;
+        if (res.category) plantCategoryInput.value = res.category;
+        if (res.notes) plantNotesInput.value = res.notes;
+      }
+    } catch (_) {}
+    plantAiSearchBtn.disabled = false;
+    plantAiSearchBtn.textContent = t("plant_ai_search_btn");
+  });
+
+  // ---------- AI: plant summary ----------
+
+  plantsAiSummaryBtn.addEventListener("click", async function () {
+    if (!plantsCurrentDetail) return;
+    plantsAiSummaryBtn.disabled = true;
+    plantsAiSummaryBtn.textContent = t("plant_ai_summarizing");
+    try {
+      var updated = await apiFetch(
+        "/api/ai/plants/" + plantsCurrentDetail.id + "/summary", { method: "POST" });
+      if (updated && updated.ai_summary) {
+        plantsAiSummaryEl.textContent = updated.ai_summary;
+        plantsAiSummaryEl.hidden = false;
+        plantsCurrentDetail = updated;
+      }
+    } catch (_) {}
+    plantsAiSummaryBtn.disabled = false;
+    plantsAiSummaryBtn.textContent = t("plant_ai_summary_btn");
+  });
+
+  // ---------- AI: Wikipedia image ----------
+
+  plantsWikiImageBtn.addEventListener("click", async function () {
+    if (!plantsCurrentDetail) return;
+    plantsWikiImageBtn.disabled = true;
+    plantsWikiImageBtn.textContent = t("plant_ai_fetching_image");
+    try {
+      await apiFetch(
+        "/api/ai/plants/" + plantsCurrentDetail.id + "/fetch-image", { method: "POST" });
+      await reloadCurrentDetail();
+    } catch (_) {}
+    plantsWikiImageBtn.disabled = false;
+    plantsWikiImageBtn.textContent = t("plant_ai_fetch_image_btn");
   });
 
   // ---------- Lightbox ----------

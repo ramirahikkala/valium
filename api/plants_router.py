@@ -47,6 +47,7 @@ def _plant_response(plant: Plant) -> PlantResponse:
         lost_year=plant.lost_year,
         notes=plant.notes,
         own_seeds=plant.own_seeds,
+        ai_summary=plant.ai_summary,
         created_at=plant.created_at,
         images=[PlantImageResponse.model_validate(i) for i in imgs],
         primary_image_url=primary,
