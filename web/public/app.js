@@ -261,7 +261,7 @@
       plant_ai_summary_heading: "AI-yhteenveto",
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
       plant_ai_summarizing: "Luodaan...",
-      plant_ai_fetch_image_btn: "Hae kuva Wikistä",
+      plant_ai_fetch_image_btn: "✨ Hae AI-kuva",
       plant_ai_fetching_image: "Haetaan...",
     },
     en: {
@@ -521,7 +521,7 @@
       plant_ai_summary_heading: "AI summary",
       plant_ai_summary_btn: "✨ Generate summary",
       plant_ai_summarizing: "Generating...",
-      plant_ai_fetch_image_btn: "Fetch image from Wiki",
+      plant_ai_fetch_image_btn: "✨ Fetch AI image",
       plant_ai_fetching_image: "Fetching...",
     },
   };
@@ -985,6 +985,28 @@
     var div = document.createElement("div");
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
+  }
+
+  function renderMarkdown(text) {
+    // Escape HTML first, then apply markdown patterns
+    var html = escapeHtml(text);
+    // Bold and italic
+    html = html.replace(/\*\*\*(.+?)\*\*\*/g, "<strong><em>$1</em></strong>");
+    html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+    html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+    // Headings (## and ###)
+    html = html.replace(/^### (.+)$/gm, "<h4>$1</h4>");
+    html = html.replace(/^## (.+)$/gm, "<h3>$1</h3>");
+    html = html.replace(/^# (.+)$/gm, "<h3>$1</h3>");
+    // Unordered lists
+    html = html.replace(/^[-*] (.+)$/gm, "<li>$1</li>");
+    html = html.replace(/(<li>[\s\S]*?<\/li>)(\n<li>|$)/g, "$1$2");
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, "<ul>$&</ul>");
+    // Paragraphs (double newline)
+    html = html.replace(/\n\n+/g, "</p><p>");
+    // Single newlines inside paragraphs
+    html = html.replace(/([^>\n])\n([^<\n])/g, "$1<br>$2");
+    return "<p>" + html + "</p>";
   }
 
   var sortableInstance = null;
@@ -3313,10 +3335,10 @@
     }).join("");
 
     if (plant.ai_summary) {
-      plantsAiSummaryEl.textContent = plant.ai_summary;
+      plantsAiSummaryEl.innerHTML = renderMarkdown(plant.ai_summary);
       plantsAiSummarySection.hidden = false;
     } else {
-      plantsAiSummaryEl.textContent = "";
+      plantsAiSummaryEl.innerHTML = "";
       plantsAiSummarySection.hidden = true;
     }
   }
@@ -3402,7 +3424,7 @@
       var updated = await apiFetch(
         "/api/ai/plants/" + plantsCurrentDetail.id + "/summary", { method: "POST" });
       if (updated && updated.ai_summary) {
-        plantsAiSummaryEl.textContent = updated.ai_summary;
+        plantsAiSummaryEl.innerHTML = renderMarkdown(updated.ai_summary);
         plantsAiSummarySection.hidden = false;
         plantsCurrentDetail = updated;
       }
