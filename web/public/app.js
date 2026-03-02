@@ -3544,7 +3544,6 @@
         if (res.latin_name) plantLatinNameInput.value = res.latin_name;
         if (res.common_name) plantCommonNameInput.value = res.common_name;
         if (res.category) plantCategoryInput.value = res.category;
-        if (res.notes) plantNotesInput.value = res.notes;
       }
     } catch (err) {
       plantAiErrorEl.textContent = err.message || "Virhe";
@@ -3567,7 +3566,6 @@
         if (!plantEditLatinNameInput.value.trim() && res.latin_name) plantEditLatinNameInput.value = res.latin_name;
         if (!plantEditCommonNameInput.value.trim() && res.common_name) plantEditCommonNameInput.value = res.common_name;
         if (!plantEditCategoryInput.value && res.category) plantEditCategoryInput.value = res.category;
-        if (!plantEditNotesInput.value.trim() && res.notes) plantEditNotesInput.value = res.notes;
       }
     } catch (err) {
       plantEditAiFillBtn.textContent = err.message || "Virhe";
