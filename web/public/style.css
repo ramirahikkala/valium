@@ -2428,6 +2428,19 @@ input[type="datetime-local"]:focus {
 }
 
 /* AI summary in plant detail */
+.plants-ai-summary-section {
+  margin-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+.plants-ai-summary-heading {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 0.5rem;
+}
 .plants-ai-summary {
   background: var(--color-primary-light, #f0f7ff);
   border-radius: var(--radius, 0.5rem);

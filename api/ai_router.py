@@ -102,7 +102,9 @@ async def fill_plant_name(
         "Return ONLY valid JSON with these keys: "
         '{"latin_name": "...", "common_name": "...", '
         '"category": "perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other", '
-        '"notes": "..."}'
+        '"notes": "..."}. '
+        "common_name must be in Finnish. notes must be in Finnish. "
+        "latin_name must be the correct scientific Latin name."
     )
     try:
         raw = await ai_complete(session, prompt)

@@ -258,6 +258,7 @@
       plant_ai_search_ph: "Hae kasvia...",
       plant_ai_search_btn: "✨ Hae",
       plant_ai_searching: "Haetaan...",
+      plant_ai_summary_heading: "AI-yhteenveto",
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
       plant_ai_summarizing: "Luodaan...",
       plant_ai_fetch_image_btn: "Hae kuva Wikistä",
@@ -517,6 +518,7 @@
       plant_ai_search_ph: "Search plant...",
       plant_ai_search_btn: "✨ Search",
       plant_ai_searching: "Searching...",
+      plant_ai_summary_heading: "AI summary",
       plant_ai_summary_btn: "✨ Generate summary",
       plant_ai_summarizing: "Generating...",
       plant_ai_fetch_image_btn: "Fetch image from Wiki",
@@ -2847,6 +2849,7 @@
   var plantAiSearchBtn = document.getElementById("plant-ai-search-btn");
   var plantsAiSummaryBtn = document.getElementById("plants-ai-summary-btn");
   var plantsAiSummaryEl = document.getElementById("plants-detail-ai-summary");
+  var plantsAiSummarySection = document.getElementById("plants-ai-summary-section");
   var plantsWikiImageBtn = document.getElementById("plants-wiki-image-btn");
   var adminAiProvidersList = document.getElementById("admin-ai-providers-list");
   var adminAiForm = document.getElementById("admin-ai-form");
@@ -3311,10 +3314,10 @@
 
     if (plant.ai_summary) {
       plantsAiSummaryEl.textContent = plant.ai_summary;
-      plantsAiSummaryEl.hidden = false;
+      plantsAiSummarySection.hidden = false;
     } else {
       plantsAiSummaryEl.textContent = "";
-      plantsAiSummaryEl.hidden = true;
+      plantsAiSummarySection.hidden = true;
     }
   }
 
@@ -3400,7 +3403,7 @@
         "/api/ai/plants/" + plantsCurrentDetail.id + "/summary", { method: "POST" });
       if (updated && updated.ai_summary) {
         plantsAiSummaryEl.textContent = updated.ai_summary;
-        plantsAiSummaryEl.hidden = false;
+        plantsAiSummarySection.hidden = false;
         plantsCurrentDetail = updated;
       }
     } catch (err) {
