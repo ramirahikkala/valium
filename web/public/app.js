@@ -1508,6 +1508,7 @@
   viewTabAdmin.addEventListener("click", function () { switchToView("admin"); closeSidebarOnMobile(); });
   viewTabPlants.addEventListener("click", function () { switchToView("plants"); closeSidebarOnMobile(); });
 
+  var sidebarTasksChildren = document.getElementById("sidebar-tasks-children");
   var sidebarPlantsChildren = document.getElementById("sidebar-plants-children");
 
   function switchToView(view) {
@@ -1521,7 +1522,8 @@
     viewTabGym.classList.remove("active");
     viewTabAdmin.classList.remove("active");
     viewTabPlants.classList.remove("active");
-    // Hide sub-navs
+    // Hide all sub-navs
+    sidebarTasksChildren.hidden = true;
     sidebarGymChildren.hidden = true;
     if (sidebarPlantsChildren) sidebarPlantsChildren.hidden = true;
 
@@ -1544,6 +1546,7 @@
       // Default: tasks
       tasksView.hidden = false;
       viewTabTasks.classList.add("active");
+      sidebarTasksChildren.hidden = false;
       location.hash = "tasks";
     }
   }
