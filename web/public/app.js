@@ -1280,7 +1280,21 @@
     else if (features.plants) firstView = "plants";
     else if (isAdmin) firstView = "admin";
 
-    if (firstView) {
+    // Restore view from URL hash if possible
+    var hashParts = location.hash.slice(1).split("/");
+    var hashView = hashParts[0];
+    var hashSubtab = hashParts[1];
+    var viewAllowed = {
+      tasks: !!features.tasks,
+      gym: !!features.gym,
+      plants: !!features.plants,
+      admin: isAdmin,
+    };
+    if (hashView && viewAllowed[hashView]) {
+      if (hashView === "gym" && hashSubtab) gymCurrentTab = hashSubtab;
+      if (hashView === "plants" && hashSubtab) plantsCurrentTab = hashSubtab;
+      switchToView(hashView);
+    } else if (firstView) {
       switchToView(firstView);
     } else {
       // No apps available — show message
@@ -1483,6 +1497,7 @@
     } else if (view === "admin") {
       adminView.hidden = false;
       viewTabAdmin.classList.add("active");
+      location.hash = "admin";
       loadAdminPanel();
     } else if (view === "plants") {
       plantsView.hidden = false;
@@ -1493,6 +1508,7 @@
       // Default: tasks
       tasksView.hidden = false;
       viewTabTasks.classList.add("active");
+      location.hash = "tasks";
     }
   }
 
@@ -1507,6 +1523,7 @@
 
   function switchGymTab(tab) {
     gymCurrentTab = tab;
+    location.hash = "gym/" + tab;
     gymTabButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.gymTab === tab);
     });
@@ -2877,6 +2894,7 @@
   function switchPlantsTab(tab) {
     plantsCurrentTab = tab;
     plantsCurrentDetail = null;
+    location.hash = "plants/" + tab;
     plantsTabButtons.forEach(function (btn) {
       btn.classList.toggle("active", btn.dataset.plantsTab === tab);
     });
