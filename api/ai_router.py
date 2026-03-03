@@ -139,7 +139,7 @@ async def generate_plant_summary(
     session: AsyncSession = Depends(get_session),
 ) -> PlantResponse:
     """Generate and save a Finnish AI summary for a plant."""
-    plant = await _load_plant(session, plant_id, current_user)
+    plant, _ = await _load_plant(session, plant_id, current_user)
     prompt = (
         f"Write a short informative summary in Finnish about {plant.latin_name}. "
         "Include characteristics, care tips, origin. Max 150 words."
@@ -153,7 +153,7 @@ async def generate_plant_summary(
 
     plant.ai_summary = summary.strip()
     await session.commit()
-    plant = await _load_plant(session, plant_id, current_user)
+    plant, _ = await _load_plant(session, plant_id, current_user)
     return _plant_response(plant)
 
 
@@ -164,7 +164,7 @@ async def fetch_plant_image(
     session: AsyncSession = Depends(get_session),
 ) -> PlantResponse:
     """Search iNaturalist, Wikimedia Commons, and GBIF for a plant image."""
-    plant = await _load_plant(session, plant_id, current_user)
+    plant, _ = await _load_plant(session, plant_id, current_user)
 
     # Search multiple sources (sync calls wrapped in thread)
     result = await asyncio.to_thread(_find_plant_image, plant.latin_name)
@@ -214,7 +214,7 @@ async def fetch_plant_image(
     session.add(image)
     await session.commit()
 
-    plant = await _load_plant(session, plant_id, current_user)
+    plant, _ = await _load_plant(session, plant_id, current_user)
     return _plant_response(plant)
 
 

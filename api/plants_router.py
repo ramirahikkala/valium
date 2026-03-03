@@ -151,6 +151,114 @@ async def delete_location(
     await session.commit()
 
 
+# ---------- Plant collection shares ----------
+
+
+@router.get("/collection/shares", response_model=list[PlantCollectionShareResponse])
+async def get_collection_shares(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[PlantCollectionShareResponse]:
+    """List all shares for the current user's plant collection."""
+    result = await session.execute(
+        select(PlantCollectionShare)
+        .options(
+            selectinload(PlantCollectionShare.shared_with),
+            selectinload(PlantCollectionShare.owner),
+        )
+        .where(PlantCollectionShare.owner_user_id == current_user.id)
+    )
+    shares = result.scalars().all()
+    return [
+        PlantCollectionShareResponse(
+            id=s.id,
+            owner_user_id=s.owner_user_id,
+            owner_name=s.owner.name,
+            shared_with_user_id=s.shared_with_user_id,
+            shared_with_name=s.shared_with.name,
+            permission=s.permission,
+        )
+        for s in shares
+    ]
+
+
+@router.post("/collection/shares", response_model=PlantCollectionShareResponse, status_code=201)
+async def create_collection_share(
+    body: PlantCollectionShareCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantCollectionShareResponse:
+    """Share the current user's plant collection with another user."""
+    target_result = await session.execute(select(User).where(User.email == body.email))
+    target = target_result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot share with yourself")
+
+    existing = await session.execute(
+        select(PlantCollectionShare).where(
+            PlantCollectionShare.owner_user_id == current_user.id,
+            PlantCollectionShare.shared_with_user_id == target.id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Already shared with this user")
+
+    share = PlantCollectionShare(
+        owner_user_id=current_user.id,
+        shared_with_user_id=target.id,
+        permission=body.permission,
+    )
+    session.add(share)
+    await session.commit()
+    await session.refresh(share)
+    return PlantCollectionShareResponse(
+        id=share.id,
+        owner_user_id=current_user.id,
+        owner_name=current_user.name,
+        shared_with_user_id=target.id,
+        shared_with_name=target.name,
+        permission=share.permission,
+    )
+
+
+@router.delete("/collection/shares/{share_id}", status_code=204)
+async def delete_collection_share(
+    share_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Remove a plant collection share."""
+    share = await session.get(PlantCollectionShare, share_id)
+    if share is None or share.owner_user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Share not found")
+    await session.delete(share)
+    await session.commit()
+
+
+@router.get("/shared-with-me", response_model=list[SharedCollectionInfo])
+async def get_shared_with_me(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[SharedCollectionInfo]:
+    """Get all plant collections shared with the current user."""
+    result = await session.execute(
+        select(PlantCollectionShare)
+        .options(selectinload(PlantCollectionShare.owner))
+        .where(PlantCollectionShare.shared_with_user_id == current_user.id)
+    )
+    shares = result.scalars().all()
+    return [
+        SharedCollectionInfo(
+            owner_user_id=s.owner_user_id,
+            owner_name=s.owner.name,
+            permission=s.permission,
+        )
+        for s in shares
+    ]
+
+
 # ---------- Plants ----------
 
 
@@ -374,111 +482,3 @@ async def set_primary_image(
     await session.commit()
     await session.refresh(target)
     return PlantImageResponse.model_validate(target)
-
-
-# ---------- Plant collection shares ----------
-
-
-@router.get("/collection/shares", response_model=list[PlantCollectionShareResponse])
-async def get_collection_shares(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> list[PlantCollectionShareResponse]:
-    """List all shares for the current user's plant collection."""
-    result = await session.execute(
-        select(PlantCollectionShare)
-        .options(
-            selectinload(PlantCollectionShare.shared_with),
-            selectinload(PlantCollectionShare.owner),
-        )
-        .where(PlantCollectionShare.owner_user_id == current_user.id)
-    )
-    shares = result.scalars().all()
-    return [
-        PlantCollectionShareResponse(
-            id=s.id,
-            owner_user_id=s.owner_user_id,
-            owner_name=s.owner.name,
-            shared_with_user_id=s.shared_with_user_id,
-            shared_with_name=s.shared_with.name,
-            permission=s.permission,
-        )
-        for s in shares
-    ]
-
-
-@router.post("/collection/shares", response_model=PlantCollectionShareResponse, status_code=201)
-async def create_collection_share(
-    body: PlantCollectionShareCreate,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> PlantCollectionShareResponse:
-    """Share the current user's plant collection with another user."""
-    target_result = await session.execute(select(User).where(User.email == body.email))
-    target = target_result.scalar_one_or_none()
-    if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if target.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot share with yourself")
-
-    existing = await session.execute(
-        select(PlantCollectionShare).where(
-            PlantCollectionShare.owner_user_id == current_user.id,
-            PlantCollectionShare.shared_with_user_id == target.id,
-        )
-    )
-    if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="Already shared with this user")
-
-    share = PlantCollectionShare(
-        owner_user_id=current_user.id,
-        shared_with_user_id=target.id,
-        permission=body.permission,
-    )
-    session.add(share)
-    await session.commit()
-    await session.refresh(share)
-    return PlantCollectionShareResponse(
-        id=share.id,
-        owner_user_id=current_user.id,
-        owner_name=current_user.name,
-        shared_with_user_id=target.id,
-        shared_with_name=target.name,
-        permission=share.permission,
-    )
-
-
-@router.delete("/collection/shares/{share_id}", status_code=204)
-async def delete_collection_share(
-    share_id: int,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> None:
-    """Remove a plant collection share."""
-    share = await session.get(PlantCollectionShare, share_id)
-    if share is None or share.owner_user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Share not found")
-    await session.delete(share)
-    await session.commit()
-
-
-@router.get("/shared-with-me", response_model=list[SharedCollectionInfo])
-async def get_shared_with_me(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> list[SharedCollectionInfo]:
-    """Get all plant collections shared with the current user."""
-    result = await session.execute(
-        select(PlantCollectionShare)
-        .options(selectinload(PlantCollectionShare.owner))
-        .where(PlantCollectionShare.shared_with_user_id == current_user.id)
-    )
-    shares = result.scalars().all()
-    return [
-        SharedCollectionInfo(
-            owner_user_id=s.owner_user_id,
-            owner_name=s.owner.name,
-            permission=s.permission,
-        )
-        for s in shares
-    ]
