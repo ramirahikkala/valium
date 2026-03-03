@@ -1401,9 +1401,13 @@
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
-      if (!editModal.hidden) closeEditModal();
-      if (!gymModal.hidden) closeGymModal();
-      if (!document.getElementById("complete-workout-modal").hidden) closeCompleteWorkoutModal();
+      if (!editModal.hidden) { closeEditModal(); return; }
+      if (!gymModal.hidden) { closeGymModal(); return; }
+      if (!document.getElementById("complete-workout-modal").hidden) { closeCompleteWorkoutModal(); return; }
+      if (plantLightbox && !plantLightbox.hidden) { plantLightbox.hidden = true; return; }
+      if (plantModal && !plantModal.hidden) { closePlantModal(); return; }
+      if (listShareModal && !listShareModal.hidden) { listShareModal.hidden = true; return; }
+      if (plantShareModal && !plantShareModal.hidden) { plantShareModal.hidden = true; return; }
     }
   });
 
