@@ -3568,11 +3568,7 @@
     card.innerHTML =
       imageHtml +
       '<div class="plant-card-header">' + nameLine + commonLine + "</div>" +
-      '<div class="plant-card-meta">' + meta.join("") + "</div>" +
-      '<div class="plant-card-actions">' +
-      '<button class="btn btn-icon btn-sm" data-action="edit-plant" data-id="' + plant.id + '">' + t("task_edit_btn") + "</button>" +
-      '<button class="btn btn-danger btn-sm" data-action="delete-plant" data-id="' + plant.id + '">' + t("delete_btn") + "</button>" +
-      "</div>";
+      '<div class="plant-card-meta">' + meta.join("") + "</div>";
 
     return card;
   }
