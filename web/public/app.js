@@ -269,6 +269,21 @@
       plant_edit_delete_btn: "Poista kasvi",
       plant_edit_images_heading: "Kuvat",
       delete_plant_confirm: "Poistetaanko kasvi? Tätä ei voi peruuttaa.",
+
+      // Jako
+      share_list_title: "Jaa lista",
+      share_collection_title: "Jaa kokoelma",
+      share_perm_read: "Luku",
+      share_perm_write: "Muokkaus",
+      share_add_btn: "Jaa",
+      share_added: "Lisätty.",
+      share_remove_btn: "Poista",
+      share_self_error: "Ei voi jakaa itselle.",
+      share_not_found: "Käyttäjää ei löydy.",
+      shared_lists_label: "Jaetut",
+      shared_collections_label: "Jaetut kokoelmat",
+      share_collection_btn: "👥 Jaa kokoelma",
+      list_share_icon: "(jaettu)",
     },
     en: {
       // Navigation
@@ -535,6 +550,21 @@
       plant_edit_delete_btn: "Delete plant",
       plant_edit_images_heading: "Photos",
       delete_plant_confirm: "Delete this plant? This cannot be undone.",
+
+      // Sharing
+      share_list_title: "Share list",
+      share_collection_title: "Share collection",
+      share_perm_read: "Read",
+      share_perm_write: "Edit",
+      share_add_btn: "Share",
+      share_added: "Shared.",
+      share_remove_btn: "Remove",
+      share_self_error: "Cannot share with yourself.",
+      share_not_found: "User not found.",
+      shared_lists_label: "Shared",
+      shared_collections_label: "Shared collections",
+      share_collection_btn: "👥 Share collection",
+      list_share_icon: "(shared)",
     },
   };
 
@@ -630,6 +660,7 @@
   var currentUser = null;
   var lists = [];
   var currentListId = null;
+  var currentListPermission = "owner";  // 'owner' | 'read' | 'write'
   var currentFilter = "all";
 
   // ---------- API helpers ----------
@@ -699,7 +730,9 @@
     authToken = null;
     currentUser = null;
     currentListId = null;
+    currentListPermission = "owner";
     lists = [];
+    currentPlantsOwner = null;
     localStorage.removeItem("authToken");
     showLogin();
     // Re-render Google button so it's clickable again
@@ -801,7 +834,9 @@
 
   function renderListTabs() {
     listTabs.innerHTML = "";
-    lists.forEach(function (lst) {
+    // Only render owned lists in the main tab list
+    var ownedLists = lists.filter(function (l) { return l.permission === "owner"; });
+    ownedLists.forEach(function (lst) {
       var tab = document.createElement("button");
       tab.className = "list-tab" + (lst.id === currentListId ? " active" : "");
       tab.dataset.listId = lst.id;
@@ -809,8 +844,19 @@
       tab.setAttribute("aria-selected", lst.id === currentListId ? "true" : "false");
       tab.textContent = lst.name;
 
-      // Delete button (don't allow deleting last list)
-      if (lists.length > 1) {
+      // Share button
+      var shareBtn = document.createElement("span");
+      shareBtn.className = "list-tab-share";
+      shareBtn.textContent = "\uD83D\uDC65";
+      shareBtn.title = t("share_list_title");
+      shareBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        openListShareModal(lst.id);
+      });
+      tab.appendChild(shareBtn);
+
+      // Delete button (don't allow deleting last owned list)
+      if (ownedLists.length > 1) {
         var delBtn = document.createElement("span");
         delBtn.className = "list-tab-delete";
         delBtn.textContent = "\u00d7";
@@ -826,24 +872,65 @@
 
       tab.addEventListener("click", function () {
         currentListId = lst.id;
+        currentListPermission = "owner";
         renderListTabs();
+        renderSharedListItems();
         loadTasks();
       });
 
       listTabs.appendChild(tab);
     });
+
+    // Render shared lists in the sidebar-shared-lists section
+    renderSharedListItems();
+  }
+
+  function renderSharedListItems() {
+    var sharedLists = lists.filter(function (l) { return l.permission !== "owner"; });
+    var sharedSection = document.getElementById("sidebar-shared-lists");
+    var sharedItems = document.getElementById("sidebar-shared-lists-items");
+    if (!sharedSection || !sharedItems) return;
+    sharedSection.hidden = sharedLists.length === 0;
+    sharedItems.innerHTML = "";
+    sharedLists.forEach(function (lst) {
+      var item = document.createElement("div");
+      item.className = "sidebar-shared-item" + (lst.id === currentListId ? " active" : "");
+      item.textContent = lst.name + " (" + (lst.owner_name || "") + ")";
+      item.addEventListener("click", function () {
+        currentListId = lst.id;
+        currentListPermission = lst.permission;
+        renderListTabs();
+        renderSharedListItems();
+        loadTasks();
+        // Update add-task UI based on permission
+        updateTaskWriteUI();
+      });
+      sharedItems.appendChild(item);
+    });
+  }
+
+  function updateTaskWriteUI() {
+    var canWrite = !currentListId || currentListPermission === "owner" || currentListPermission === "write";
+    var addTaskToggle = document.getElementById("add-task-toggle");
+    if (addTaskToggle) addTaskToggle.hidden = !canWrite;
   }
 
   async function loadLists() {
     try {
       lists = await apiFetch(API_LISTS);
       if (!lists) return;
-      // If no current list selected, pick the first one
+      // If no current list selected, pick the first owned one (or any)
       if (!currentListId && lists.length > 0) {
-        currentListId = lists[0].id;
+        var ownedFirst = lists.find(function (l) { return l.permission === "owner"; }) || lists[0];
+        currentListId = ownedFirst.id;
+        currentListPermission = ownedFirst.permission;
+      } else if (currentListId) {
+        var found = lists.find(function (l) { return l.id === currentListId; });
+        if (found) currentListPermission = found.permission;
       }
       renderListTabs();
       populateEditListSelect();
+      updateTaskWriteUI();
     } catch (_) {
       // error already shown
     }
@@ -868,9 +955,9 @@
   async function deleteList(listId) {
     try {
       await apiFetch(API_LISTS + "/" + listId, { method: "DELETE" });
-      // If we deleted the current list, switch to the first available
       if (currentListId === listId) {
         currentListId = null;
+        currentListPermission = "owner";
       }
       await loadLists();
       await loadTasks();
@@ -881,7 +968,8 @@
 
   function populateEditListSelect() {
     editListInput.innerHTML = "";
-    lists.forEach(function (lst) {
+    // Only allow moving tasks to owned or write-accessible lists
+    lists.filter(function (l) { return l.permission !== "read"; }).forEach(function (lst) {
       var opt = document.createElement("option");
       opt.value = lst.id;
       opt.textContent = lst.name;
@@ -896,6 +984,86 @@
     createList(name).then(function () {
       newListNameInput.value = "";
     });
+  });
+
+  // ---------- List share modal ----------
+
+  var listShareModal = document.getElementById("list-share-modal");
+  var listShareModalClose = document.getElementById("list-share-modal-close");
+  var listShareList = document.getElementById("list-share-list");
+  var listShareForm = document.getElementById("list-share-form");
+  var listShareEmailInput = document.getElementById("list-share-email");
+  var listSharePermissionInput = document.getElementById("list-share-permission");
+  var currentShareListId = null;
+
+  function openListShareModal(listId) {
+    currentShareListId = listId;
+    listShareModal.hidden = false;
+    loadListShares(listId);
+  }
+
+  listShareModalClose.addEventListener("click", function () {
+    listShareModal.hidden = true;
+    currentShareListId = null;
+  });
+
+  listShareModal.addEventListener("click", function (e) {
+    if (e.target === listShareModal) {
+      listShareModal.hidden = true;
+      currentShareListId = null;
+    }
+  });
+
+  async function loadListShares(listId) {
+    try {
+      var shares = await apiFetch(API_LISTS + "/" + listId + "/shares");
+      if (!shares) return;
+      renderListShares(shares);
+    } catch (_) {}
+  }
+
+  function renderListShares(shares) {
+    listShareList.innerHTML = "";
+    if (shares.length === 0) {
+      listShareList.innerHTML = '<p class="library-empty" style="font-size:0.85rem;color:var(--color-text-muted)">-</p>';
+      return;
+    }
+    shares.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "share-row";
+      var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
+      row.innerHTML =
+        '<span class="share-row-name">' + escapeHtml(s.shared_with_name) + ' <span class="share-row-perm">(' + permLabel + ')</span></span>' +
+        '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '">' + t("share_remove_btn") + '</button>';
+      row.querySelector("[data-share-id]").addEventListener("click", function () {
+        removeListShare(currentShareListId, s.id);
+      });
+      listShareList.appendChild(row);
+    });
+  }
+
+  async function removeListShare(listId, shareId) {
+    try {
+      await apiFetch(API_LISTS + "/" + listId + "/shares/" + shareId, { method: "DELETE" });
+      loadListShares(listId);
+    } catch (_) {}
+  }
+
+  listShareForm.addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!currentShareListId) return;
+    var email = listShareEmailInput.value.trim();
+    var permission = listSharePermissionInput.value;
+    if (!email) return;
+    try {
+      await apiFetch(API_LISTS + "/" + currentShareListId + "/shares", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, permission: permission }),
+      });
+      listShareEmailInput.value = "";
+      loadListShares(currentShareListId);
+    } catch (_) {}
   });
 
   // ---------- Render ----------
@@ -1367,6 +1535,8 @@
     applyFeatureFlags();
     await loadLists();
     await loadTasks();
+    // Load shared collections in background
+    loadSharedCollections();
   }
 
   // ---------- Bootstrap ----------
@@ -2832,6 +3002,8 @@
   var plantsViewMode = "grid";   // "grid" | "list"
   var plantsGroupBy = "";        // "" | "category" | "location" | "status"
   var plantsCurrentDetail = null;
+  var currentPlantsOwner = null;  // null = own plants, {owner_user_id, owner_name, permission} = shared
+  var sharedCollections = [];     // SharedCollectionInfo[]
 
   // Plants DOM elements
   var plantsTabButtons = document.querySelectorAll(".sidebar-plants-btn");
@@ -2998,6 +3170,9 @@
 
   plantsTabButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
+      // Clicking a plants tab explicitly switches to own plants
+      currentPlantsOwner = null;
+      renderSharedCollectionsSidebar();
       switchPlantsTab(btn.dataset.plantsTab);
       closeSidebarOnMobile();
     });
@@ -3015,7 +3190,7 @@
     plantsEditSection.hidden = true;
     plantsLocationsSection.hidden = tab !== "locations";
     if (tab === "list") loadPlants();
-    else if (tab === "locations") loadLocations();
+    else if (tab === "locations") { currentPlantsOwner = null; loadLocations(); }
   }
 
   // ---------- Locations ----------
@@ -3125,24 +3300,160 @@
 
   async function loadPlants() {
     try {
-      // Also refresh locations so filter is current
-      var locs = await apiFetch(PLANTS_API + "/locations");
-      if (locs) {
-        plantsLocations = locs;
-        populatePlantLocationSelect();
-        populateLocationFilter();
+      // Refresh locations for own plants only
+      if (!currentPlantsOwner) {
+        var locs = await apiFetch(PLANTS_API + "/locations");
+        if (locs) {
+          plantsLocations = locs;
+          populatePlantLocationSelect();
+          populateLocationFilter();
+        }
       }
       var params = [];
       if (plantsFilterStatus) params.push("status=" + encodeURIComponent(plantsFilterStatus));
       if (plantsFilterCategory) params.push("category=" + encodeURIComponent(plantsFilterCategory));
       if (plantsFilterLocation) params.push("location_id=" + encodeURIComponent(plantsFilterLocation));
       if (plantsSearchQuery) params.push("search=" + encodeURIComponent(plantsSearchQuery));
+      if (currentPlantsOwner) params.push("owner_id=" + currentPlantsOwner.owner_user_id);
       var url = PLANTS_API + (params.length ? "?" + params.join("&") : "");
       var plants = await apiFetch(url);
       if (!plants) return;
       plantsData = plants;
       renderPlants(plants);
+      updatePlantsWriteUI();
     } catch (_) {}
+  }
+
+  function updatePlantsWriteUI() {
+    var canWrite = !currentPlantsOwner || currentPlantsOwner.permission === "write";
+    var addPlantBtn = document.getElementById("add-plant-btn");
+    var plantsShareBtn = document.getElementById("plants-share-btn");
+    if (addPlantBtn) addPlantBtn.hidden = !canWrite || !!currentPlantsOwner;
+    if (plantsShareBtn) plantsShareBtn.hidden = !!currentPlantsOwner;
+    // Update edit/delete buttons in detail view
+    var detailEditBtn = document.getElementById("plants-detail-edit-btn");
+    var editDeleteBtn = document.getElementById("plants-edit-delete-btn");
+    if (detailEditBtn) detailEditBtn.hidden = !canWrite;
+    if (editDeleteBtn) editDeleteBtn.hidden = !canWrite;
+  }
+
+  // ---------- Plant collection share modal ----------
+
+  var plantShareModal = document.getElementById("plant-share-modal");
+  var plantShareModalClose = document.getElementById("plant-share-modal-close");
+  var plantShareList = document.getElementById("plant-share-list");
+  var plantShareForm = document.getElementById("plant-share-form");
+  var plantShareEmailInput = document.getElementById("plant-share-email");
+  var plantSharePermissionInput = document.getElementById("plant-share-permission");
+  var plantsShareBtn = document.getElementById("plants-share-btn");
+
+  if (plantsShareBtn) {
+    plantsShareBtn.addEventListener("click", function () {
+      plantShareModal.hidden = false;
+      loadPlantCollectionShares();
+    });
+  }
+
+  if (plantShareModalClose) {
+    plantShareModalClose.addEventListener("click", function () {
+      plantShareModal.hidden = true;
+    });
+  }
+
+  if (plantShareModal) {
+    plantShareModal.addEventListener("click", function (e) {
+      if (e.target === plantShareModal) plantShareModal.hidden = true;
+    });
+  }
+
+  async function loadPlantCollectionShares() {
+    try {
+      var shares = await apiFetch(PLANTS_API + "/collection/shares");
+      if (!shares) return;
+      renderPlantCollectionShares(shares);
+    } catch (_) {}
+  }
+
+  function renderPlantCollectionShares(shares) {
+    if (!plantShareList) return;
+    plantShareList.innerHTML = "";
+    if (shares.length === 0) {
+      plantShareList.innerHTML = '<p class="library-empty" style="font-size:0.85rem;color:var(--color-text-muted)">-</p>';
+      return;
+    }
+    shares.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "share-row";
+      var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
+      row.innerHTML =
+        '<span class="share-row-name">' + escapeHtml(s.shared_with_name) + ' <span class="share-row-perm">(' + permLabel + ')</span></span>' +
+        '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '">' + t("share_remove_btn") + '</button>';
+      row.querySelector("[data-share-id]").addEventListener("click", function () {
+        removePlantCollectionShare(s.id);
+      });
+      plantShareList.appendChild(row);
+    });
+  }
+
+  async function removePlantCollectionShare(shareId) {
+    try {
+      await apiFetch(PLANTS_API + "/collection/shares/" + shareId, { method: "DELETE" });
+      loadPlantCollectionShares();
+    } catch (_) {}
+  }
+
+  if (plantShareForm) {
+    plantShareForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var email = plantShareEmailInput.value.trim();
+      var permission = plantSharePermissionInput.value;
+      if (!email) return;
+      try {
+        await apiFetch(PLANTS_API + "/collection/shares", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, permission: permission }),
+        });
+        plantShareEmailInput.value = "";
+        loadPlantCollectionShares();
+      } catch (_) {}
+    });
+  }
+
+  // ---------- Shared collections sidebar ----------
+
+  async function loadSharedCollections() {
+    try {
+      var collections = await apiFetch(PLANTS_API + "/shared-with-me");
+      if (!collections) return;
+      sharedCollections = collections;
+      renderSharedCollectionsSidebar();
+    } catch (_) {}
+  }
+
+  function renderSharedCollectionsSidebar() {
+    var section = document.getElementById("sidebar-shared-plants");
+    var itemsEl = document.getElementById("sidebar-shared-plants-items");
+    if (!section || !itemsEl) return;
+    section.hidden = sharedCollections.length === 0;
+    itemsEl.innerHTML = "";
+    sharedCollections.forEach(function (col) {
+      var item = document.createElement("div");
+      var isActive = currentPlantsOwner && currentPlantsOwner.owner_user_id === col.owner_user_id;
+      item.className = "sidebar-shared-item" + (isActive ? " active" : "");
+      item.textContent = col.owner_name;
+      item.addEventListener("click", function () {
+        currentPlantsOwner = col;
+        renderSharedCollectionsSidebar();
+        switchToView("plants");
+        switchPlantsTab("list");
+      });
+      itemsEl.appendChild(item);
+    });
+    // Also "own plants" item if there is a shared collection active
+    if (currentPlantsOwner) {
+      // Nothing extra needed; "Kasvit" button in sidebar resets to own
+    }
   }
 
   function plantCategoryLabel(cat) {
@@ -3377,6 +3688,7 @@
     plantsListSection.hidden = true;
     plantsEditSection.hidden = true;
     plantsDetailSection.hidden = false;
+    updatePlantsWriteUI();
 
     plantsDetailLatin.textContent = plant.latin_name;
     plantsDetailCultivar.textContent = plant.cultivar ? "\u2018" + plant.cultivar + "\u2019" : "";

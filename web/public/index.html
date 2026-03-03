@@ -62,6 +62,10 @@
                 >
                 <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_list_btn">+ Lista</button>
               </form>
+              <div id="sidebar-shared-lists" class="sidebar-shared-section" hidden>
+                <div class="sidebar-section-label" data-i18n="shared_lists_label">Jaetut</div>
+                <div id="sidebar-shared-lists-items"></div>
+              </div>
             </div>
           </div>
 
@@ -85,6 +89,10 @@
             <div class="sidebar-children" id="sidebar-plants-children" hidden>
               <button class="sidebar-plants-btn active" data-plants-tab="list" data-i18n="plants_list_tab">Kasvit</button>
               <button class="sidebar-plants-btn" data-plants-tab="locations" data-i18n="plants_locations_tab">Sijainnit</button>
+              <div id="sidebar-shared-plants" class="sidebar-shared-section" hidden>
+                <div class="sidebar-section-label" data-i18n="shared_collections_label">Jaetut kokoelmat</div>
+                <div id="sidebar-shared-plants-items"></div>
+              </div>
             </div>
           </div>
 
@@ -275,6 +283,7 @@
           <div id="plants-list-section" class="plants-section">
             <div class="plants-toolbar">
               <button class="btn btn-primary btn-sm" id="add-plant-btn" data-i18n="add_plant_btn">+ Lisää kasvi</button>
+              <button class="btn btn-secondary btn-sm" id="plants-share-btn" data-i18n="share_collection_btn">👥 Jaa kokoelma</button>
               <input type="search" id="plants-search" class="plants-search" data-i18n-placeholder="plants_search_placeholder" placeholder="Hae...">
               <div class="plants-view-toggle" role="group" aria-label="Näkymä">
                 <button id="plants-view-grid-btn" class="btn btn-icon active" title="Kortit">⊞</button>
@@ -687,6 +696,44 @@
           <button type="button" class="btn btn-secondary" id="plant-modal-cancel" data-i18n="cancel">Peruuta</button>
           <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- List share modal -->
+  <div id="list-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="share_list_title">Jaa lista</h2>
+        <button class="modal-close" id="list-share-modal-close">&#x2715;</button>
+      </div>
+      <div id="list-share-list" class="share-list"></div>
+      <form id="list-share-form" class="share-add-form">
+        <input type="email" id="list-share-email" placeholder="email@example.com" required autocomplete="off">
+        <select id="list-share-permission">
+          <option value="read" data-i18n="share_perm_read">Luku</option>
+          <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Plant collection share modal -->
+  <div id="plant-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="share_collection_title">Jaa kokoelma</h2>
+        <button class="modal-close" id="plant-share-modal-close">&#x2715;</button>
+      </div>
+      <div id="plant-share-list" class="share-list"></div>
+      <form id="plant-share-form" class="share-add-form">
+        <input type="email" id="plant-share-email" placeholder="email@example.com" required autocomplete="off">
+        <select id="plant-share-permission">
+          <option value="read" data-i18n="share_perm_read">Luku</option>
+          <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
       </form>
     </div>
   </div>
