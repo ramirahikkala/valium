@@ -193,7 +193,7 @@ header {
 
 .app-layout {
   display: flex;
-  min-height: calc(100vh - 54px);
+  height: calc(100vh - 54px);
   position: relative;
 }
 
