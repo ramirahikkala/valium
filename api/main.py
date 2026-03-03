@@ -24,7 +24,7 @@ from admin_router import router as admin_router
 from ai_router import router as ai_router
 from gym_router import router as gym_router
 from plants_router import router as plants_router
-from models import Alarm, List, Task, TaskStatus, User, UserInvite, UserSettings
+from models import Alarm, List, ListShare, Task, TaskStatus, User, UserInvite, UserSettings
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
     AlarmCreate,
@@ -35,6 +35,8 @@ from schemas import (
     AuthResponse,
     ListCreate,
     ListResponse,
+    ListShareCreate,
+    ListShareResponse,
     TaskCreate,
     TaskReorder,
     TaskResponse,
@@ -231,24 +233,109 @@ async def update_user_settings(
 # ---------- Lists ----------
 
 
-async def _verify_list_ownership(session: AsyncSession, list_id: int, user: User) -> List:
-    """Load a list and verify the current user owns it. Raises 404 if not found/owned."""
+async def _verify_list_access(
+    session: AsyncSession,
+    list_id: int,
+    user: User,
+    require_write: bool = False,
+) -> tuple[List, str]:
+    """Load a list and verify access. Returns (list, permission) where permission is 'owner'|'read'|'write'."""
     lst = await session.get(List, list_id)
-    if lst is None or lst.user_id != user.id:
+    if lst is None:
         raise HTTPException(status_code=404, detail="List not found")
-    return lst
+    if lst.user_id == user.id:
+        return lst, "owner"
+    result = await session.execute(
+        select(ListShare).where(
+            ListShare.list_id == list_id,
+            ListShare.shared_with_user_id == user.id,
+        )
+    )
+    share = result.scalar_one_or_none()
+    if share is None:
+        raise HTTPException(status_code=404, detail="List not found")
+    if require_write and share.permission != "write":
+        raise HTTPException(status_code=403, detail="Write permission required")
+    return lst, share.permission
 
 
 @app.get("/lists", response_model=list[ListResponse])
 async def list_lists(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
-) -> list[List]:
-    """List all lists belonging to the current user."""
-    result = await session.execute(
-        select(List).where(List.user_id == current_user.id).order_by(List.name)
+) -> list[ListResponse]:
+    """List all lists owned by or shared with the current user."""
+    # Owned lists
+    owned_result = await session.execute(
+        select(List)
+        .options(selectinload(List.shares).selectinload(ListShare.shared_with))
+        .where(List.user_id == current_user.id)
+        .order_by(List.name)
     )
-    return list(result.scalars().all())
+    owned_lists = list(owned_result.scalars().all())
+
+    # Shared lists
+    shared_ids_result = await session.execute(
+        select(ListShare.list_id).where(ListShare.shared_with_user_id == current_user.id)
+    )
+    shared_ids = [row[0] for row in shared_ids_result.all()]
+
+    shared_result = await session.execute(
+        select(List)
+        .where(List.id.in_(shared_ids))
+        .order_by(List.name)
+    )
+    shared_lists = list(shared_result.scalars().all())
+
+    # Load shares for each list to get permission info
+    responses: list[ListResponse] = []
+    for lst in owned_lists:
+        share_responses = [
+            ListShareResponse(
+                id=s.id,
+                shared_with_user_id=s.shared_with_user_id,
+                shared_with_name=s.shared_with.name,
+                shared_with_email=s.shared_with.email,
+                permission=s.permission,
+            )
+            for s in lst.shares
+        ]
+        responses.append(
+            ListResponse(
+                id=lst.id,
+                name=lst.name,
+                created_at=lst.created_at,
+                permission="owner",
+                owner_id=None,
+                owner_name=None,
+                shares=share_responses,
+            )
+        )
+
+    for lst in shared_lists:
+        share_result = await session.execute(
+            select(ListShare).where(
+                ListShare.list_id == lst.id,
+                ListShare.shared_with_user_id == current_user.id,
+            )
+        )
+        share = share_result.scalar_one_or_none()
+        perm = share.permission if share else "read"
+        # Load owner
+        owner = await session.get(User, lst.user_id)
+        responses.append(
+            ListResponse(
+                id=lst.id,
+                name=lst.name,
+                created_at=lst.created_at,
+                permission=perm,
+                owner_id=lst.user_id,
+                owner_name=owner.name if owner else None,
+                shares=[],
+            )
+        )
+
+    return responses
 
 
 @app.post("/lists", response_model=ListResponse, status_code=201)
@@ -277,7 +364,9 @@ async def delete_list(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a list. Tasks in this list will have list_id set to null."""
-    lst = await _verify_list_ownership(session, list_id, current_user)
+    lst, permission = await _verify_list_access(session, list_id, current_user)
+    if permission != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can delete a list")
     await session.delete(lst)
     await session.commit()
 
@@ -303,7 +392,7 @@ async def list_tasks(
     session: AsyncSession = Depends(get_session),
 ) -> list[TaskResponse]:
     """List tasks for a given list, optionally filtered by status."""
-    await _verify_list_ownership(session, list_id, current_user)
+    await _verify_list_access(session, list_id, current_user)
     stmt = (
         select(Task)
         .options(selectinload(Task.list), selectinload(Task.alarms))
@@ -323,7 +412,7 @@ async def create_task(
     session: AsyncSession = Depends(get_session),
 ) -> TaskResponse:
     """Create a new task in the specified list. New tasks are placed at the top (position 0)."""
-    await _verify_list_ownership(session, body.list_id, current_user)
+    await _verify_list_access(session, body.list_id, current_user, require_write=True)
 
     # Shift existing tasks in the same list down by 1 to make room at position 0
     await session.execute(
@@ -347,9 +436,8 @@ async def reorder_tasks(
         task = await _get_task_with_list(session, task_id)
         if task is None:
             raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-        # Verify user owns the list this task belongs to
         if task.list_id is not None:
-            await _verify_list_ownership(session, task.list_id, current_user)
+            await _verify_list_access(session, task.list_id, current_user, require_write=True)
         task.position = position
     await session.commit()
     stmt = (
@@ -372,9 +460,8 @@ async def get_task(
     task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    # Verify ownership through the list
     if task.list_id is not None:
-        await _verify_list_ownership(session, task.list_id, current_user)
+        await _verify_list_access(session, task.list_id, current_user)
     return _task_response(task)
 
 
@@ -389,13 +476,11 @@ async def update_task(
     task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    # Verify ownership through current list
     if task.list_id is not None:
-        await _verify_list_ownership(session, task.list_id, current_user)
+        await _verify_list_access(session, task.list_id, current_user, require_write=True)
     update_data = body.model_dump(exclude_unset=True)
-    # If moving to a different list, verify ownership of the target list
     if "list_id" in update_data and update_data["list_id"] is not None:
-        await _verify_list_ownership(session, update_data["list_id"], current_user)
+        await _verify_list_access(session, update_data["list_id"], current_user, require_write=True)
     for field, value in update_data.items():
         setattr(task, field, value)
     await session.commit()
@@ -414,9 +499,8 @@ async def delete_task(
     task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
-    # Verify ownership through the list
     if task.list_id is not None:
-        await _verify_list_ownership(session, task.list_id, current_user)
+        await _verify_list_access(session, task.list_id, current_user, require_write=True)
     await session.delete(task)
     await session.commit()
 
@@ -427,12 +511,12 @@ async def delete_task(
 async def _verify_task_ownership(
     session: AsyncSession, task_id: int, user: User,
 ) -> Task:
-    """Load a task and verify the current user owns it via its list. Raises 404 if not found/owned."""
+    """Load a task and verify the current user has write access via its list. Raises 404/403 if not."""
     task = await _get_task_with_list(session, task_id)
     if task is None:
         raise HTTPException(status_code=404, detail="Task not found")
     if task.list_id is not None:
-        await _verify_list_ownership(session, task.list_id, user)
+        await _verify_list_access(session, task.list_id, user, require_write=True)
     return task
 
 
@@ -528,4 +612,94 @@ async def delete_alarm(
     if alarm is None:
         raise HTTPException(status_code=404, detail="No alarm set for this task")
     await session.delete(alarm)
+    await session.commit()
+
+
+# ---------- List shares ----------
+
+
+@app.get("/lists/{list_id}/shares", response_model=list[ListShareResponse])
+async def get_list_shares(
+    list_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[ListShareResponse]:
+    """List all shares for a list. Only the owner can view this."""
+    lst, permission = await _verify_list_access(session, list_id, current_user)
+    if permission != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can manage shares")
+    result = await session.execute(
+        select(ListShare)
+        .options(selectinload(ListShare.shared_with))
+        .where(ListShare.list_id == list_id)
+    )
+    shares = result.scalars().all()
+    return [
+        ListShareResponse(
+            id=s.id,
+            shared_with_user_id=s.shared_with_user_id,
+            shared_with_name=s.shared_with.name,
+            shared_with_email=s.shared_with.email,
+            permission=s.permission,
+        )
+        for s in shares
+    ]
+
+
+@app.post("/lists/{list_id}/shares", response_model=ListShareResponse, status_code=201)
+async def create_list_share(
+    list_id: int,
+    body: ListShareCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ListShareResponse:
+    """Share a list with another user by email. Only the owner can share."""
+    lst, permission = await _verify_list_access(session, list_id, current_user)
+    if permission != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can manage shares")
+
+    target_result = await session.execute(select(User).where(User.email == body.email))
+    target = target_result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot share with yourself")
+
+    existing = await session.execute(
+        select(ListShare).where(
+            ListShare.list_id == list_id,
+            ListShare.shared_with_user_id == target.id,
+        )
+    )
+    if existing.scalar_one_or_none() is not None:
+        raise HTTPException(status_code=409, detail="Already shared with this user")
+
+    share = ListShare(list_id=list_id, shared_with_user_id=target.id, permission=body.permission)
+    session.add(share)
+    await session.commit()
+    await session.refresh(share)
+    return ListShareResponse(
+        id=share.id,
+        shared_with_user_id=target.id,
+        shared_with_name=target.name,
+        shared_with_email=target.email,
+        permission=share.permission,
+    )
+
+
+@app.delete("/lists/{list_id}/shares/{share_id}", status_code=204)
+async def delete_list_share(
+    list_id: int,
+    share_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Remove a share from a list. Only the owner can do this."""
+    lst, permission = await _verify_list_access(session, list_id, current_user)
+    if permission != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can manage shares")
+    share = await session.get(ListShare, share_id)
+    if share is None or share.list_id != list_id:
+        raise HTTPException(status_code=404, detail="Share not found")
+    await session.delete(share)
     await session.commit()

@@ -137,6 +137,9 @@ class List(Base):
 
     user: Mapped[User | None] = relationship("User", back_populates="lists")
     tasks: Mapped[list["Task"]] = relationship("Task", back_populates="list")
+    shares: Mapped[list["ListShare"]] = relationship(
+        "ListShare", cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         # Unique list name per user
@@ -452,6 +455,50 @@ class PlantImage(Base):
     )
 
     plant: Mapped["Plant"] = relationship("Plant", back_populates="images")
+
+
+# ---------- AI providers ----------
+
+
+class ListShare(Base):
+    """Represents a sharing record granting another user access to a list."""
+
+    __tablename__ = "list_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    list_id: Mapped[int] = mapped_column(ForeignKey("lists.id", ondelete="CASCADE"))
+    shared_with_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="read")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (
+        UniqueConstraint("list_id", "shared_with_user_id"),
+    )
+
+
+class PlantCollectionShare(Base):
+    """Represents a sharing record granting another user access to a plant collection."""
+
+    __tablename__ = "plant_collection_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    owner_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    shared_with_user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="read")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    owner: Mapped["User"] = relationship("User", foreign_keys=[owner_user_id])
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (
+        UniqueConstraint("owner_user_id", "shared_with_user_id"),
+    )
 
 
 # ---------- AI providers ----------

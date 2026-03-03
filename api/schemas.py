@@ -101,6 +101,49 @@ class ListCreate(BaseModel):
     name: str
 
 
+class ListShareCreate(BaseModel):
+    """Schema for sharing a list with another user."""
+
+    email: str
+    permission: str = "read"
+
+
+class ListShareResponse(BaseModel):
+    """Schema returned for a single list share record."""
+
+    id: int
+    shared_with_user_id: int
+    shared_with_name: str
+    shared_with_email: str
+    permission: str
+
+
+class PlantCollectionShareCreate(BaseModel):
+    """Schema for sharing a plant collection with another user."""
+
+    email: str
+    permission: str = "read"
+
+
+class PlantCollectionShareResponse(BaseModel):
+    """Schema returned for a single plant collection share record."""
+
+    id: int
+    owner_user_id: int
+    owner_name: str
+    shared_with_user_id: int
+    shared_with_name: str
+    permission: str
+
+
+class SharedCollectionInfo(BaseModel):
+    """Plant collection that has been shared with the current user."""
+
+    owner_user_id: int
+    owner_name: str
+    permission: str
+
+
 class ListResponse(BaseModel):
     """Schema returned for a single list."""
 
@@ -109,6 +152,10 @@ class ListResponse(BaseModel):
     id: int
     name: str
     created_at: datetime
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[ListShareResponse] = []
 
 
 # ---------- Tasks ----------
