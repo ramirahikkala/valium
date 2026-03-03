@@ -570,6 +570,10 @@ main {
 }
 
 input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
 select {
   width: 100%;
   min-height: 44px;
@@ -596,6 +600,10 @@ textarea {
 }
 
 input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
 select:focus,
 textarea:focus {
   outline: none;
