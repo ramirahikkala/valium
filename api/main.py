@@ -24,7 +24,7 @@ from admin_router import router as admin_router
 from ai_router import router as ai_router
 from gym_router import router as gym_router
 from plants_router import router as plants_router
-from models import Alarm, List, ListShare, Task, TaskStatus, User, UserInvite, UserSettings
+from models import Alarm, List, ListShare, Task, TaskStatus, User, UserSettings
 from scheduler import start_scheduler, stop_scheduler
 from schemas import (
     AlarmCreate,
@@ -47,6 +47,7 @@ from schemas import (
 )
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -134,17 +135,9 @@ async def google_sign_in(
     user = result.scalar_one_or_none()
 
     if user is None:
-        # Check if the email is on the invite list
-        invite = await session.get(UserInvite, email.lower())
-        if invite is None:
-            raise HTTPException(
-                status_code=403,
-                detail="Registration is closed. Contact the admin to get access.",
-            )
-        # Consume the invite and create the account
+        # Auto-register the new user
         user = User(google_id=google_id, email=email, name=name, picture=picture)
         session.add(user)
-        await session.delete(invite)
         await session.commit()
         await session.refresh(user)
 
@@ -152,6 +145,32 @@ async def google_sign_in(
         default_list = List(name="My Tasks", user_id=user.id)
         session.add(default_list)
         await session.commit()
+
+        # Notify admin about new registration (best-effort, non-blocking)
+        try:
+            admin_result = await session.execute(select(User).where(User.id == ADMIN_USER_ID))
+            admin_user = admin_result.scalar_one_or_none()
+            if admin_user:
+                from notifications import EmailSender
+                import asyncio
+
+                sender = EmailSender()
+                subject = f"Valium: uusi käyttäjä rekisteröityi — {name}"
+                html = f"""\
+<html><body style="font-family: sans-serif; color: #2d2d3f;">
+  <h2 style="color: #6c7bb5;">Uusi käyttäjä</h2>
+  <p><strong>Nimi:</strong> {name}</p>
+  <p><strong>Sähköposti:</strong> {email}</p>
+  <p>Käyttäjä on nyt rekisteröitynyt Valiumiin. Voit hallinnoida käyttäjiä admin-paneelista.</p>
+  <hr style="border: none; border-top: 1px solid #d8d8e8;">
+  <p style="color: #6b6b80; font-size: 0.8em;">Valium — your little helper for getting things done.</p>
+</body></html>"""
+                text = f"Uusi käyttäjä: {name} ({email})\n\nKäyttäjä on rekisteröitynyt Valiumiin."
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: sender.send(admin_user.email, subject, html, text)
+                )
+        except Exception:
+            logger.exception("Failed to send new-user notification to admin")
     else:
         # Update profile info on each login
         user.email = email
