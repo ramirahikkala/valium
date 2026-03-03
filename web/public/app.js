@@ -3001,6 +3001,7 @@
   var plantsSearchQuery = "";
   var plantsViewMode = "grid";   // "grid" | "list"
   var plantsGroupBy = "";        // "" | "category" | "location" | "status"
+  var plantsListScrollTop = 0;   // saved scroll position when entering detail/edit
   var plantsCurrentDetail = null;
   var currentPlantsOwner = null;  // null = own plants, {owner_user_id, owner_name, permission} = shared
   var sharedCollections = [];     // SharedCollectionInfo[]
@@ -3667,17 +3668,23 @@
     if (!plantsCurrentDetail) return;
     await loadPlants();
     var updated = plantsData.find(function (p) { return p.id === plantsCurrentDetail.id; });
-    if (updated) openPlantDetail(updated);
+    if (updated) {
+      history.replaceState({ valiumPage: "plant-detail", id: updated.id }, "");
+      _renderPlantDetail(updated);
+    }
   }
 
   async function reloadCurrentEdit() {
     if (!plantsCurrentDetail) return;
     await loadPlants();
     var updated = plantsData.find(function (p) { return p.id === plantsCurrentDetail.id; });
-    if (updated) openPlantEdit(updated);
+    if (updated) {
+      history.replaceState({ valiumPage: "plant-edit", id: updated.id }, "");
+      _renderPlantEdit(updated);
+    }
   }
 
-  function openPlantDetail(plant) {
+  function _renderPlantDetail(plant) {
     plantsCurrentDetail = plant;
     plantsListSection.hidden = true;
     plantsEditSection.hidden = true;
@@ -3725,7 +3732,13 @@
     }
   }
 
-  function openPlantEdit(plant) {
+  function openPlantDetail(plant) {
+    plantsListScrollTop = window.scrollY;
+    history.pushState({ valiumPage: "plant-detail", id: plant.id }, "");
+    _renderPlantDetail(plant);
+  }
+
+  function _renderPlantEdit(plant) {
     plantsCurrentDetail = plant;
     plantsListSection.hidden = true;
     plantsDetailSection.hidden = true;
@@ -3760,32 +3773,48 @@
     plantEditLatinNameInput.focus();
   }
 
+  function openPlantEdit(plant) {
+    history.pushState({ valiumPage: "plant-edit", id: plant.id }, "");
+    _renderPlantEdit(plant);
+  }
+
   function closePlantDetail() {
+    // Called by popstate handler — restore scroll and show list
     plantsDetailSection.hidden = true;
+    plantsEditSection.hidden = true;
     plantsListSection.hidden = false;
     plantsCurrentDetail = null;
+    requestAnimationFrame(function () { window.scrollTo(0, plantsListScrollTop); });
   }
 
-  function closePlantEdit() {
-    // Go back to detail if we have current detail, else list
-    if (plantsCurrentDetail) {
-      plantsEditSection.hidden = true;
-      plantsDetailSection.hidden = false;
-      openPlantDetail(plantsCurrentDetail);
-    } else {
-      plantsEditSection.hidden = true;
-      plantsListSection.hidden = false;
-    }
-  }
-
-  plantsDetailBackBtn.addEventListener("click", closePlantDetail);
+  // Back/cancel buttons delegate to browser history
+  plantsDetailBackBtn.addEventListener("click", function () { history.back(); });
+  plantsEditBackBtn.addEventListener("click", function () { history.back(); });
+  plantEditCancelBtn.addEventListener("click", function () { history.back(); });
 
   plantsDetailEditBtn.addEventListener("click", function () {
     if (plantsCurrentDetail) openPlantEdit(plantsCurrentDetail);
   });
 
-  plantsEditBackBtn.addEventListener("click", closePlantEdit);
-  plantEditCancelBtn.addEventListener("click", closePlantEdit);
+  // Handle browser back/forward within plants navigation
+  window.addEventListener("popstate", function (e) {
+    if (plantsView.hidden) return; // not in plants view
+    var state = e.state;
+    if (state && state.valiumPage === "plant-detail") {
+      var plant = plantsData.find(function (p) { return p.id === state.id; });
+      if (plant) _renderPlantDetail(plant);
+      return;
+    }
+    if (state && state.valiumPage === "plant-edit") {
+      var plant = plantsData.find(function (p) { return p.id === state.id; });
+      if (plant) _renderPlantEdit(plant);
+      return;
+    }
+    // Went back past all plant detail states — show list
+    if (!plantsDetailSection.hidden || !plantsEditSection.hidden) {
+      closePlantDetail();
+    }
+  });
 
   plantsEditDeleteBtn.addEventListener("click", async function () {
     if (!plantsCurrentDetail) return;
@@ -4067,8 +4096,9 @@
       await loadPlants();
       var updated = plantsData.find(function (p) { return p.id === parseInt(id, 10); });
       if (updated) {
-        plantsCurrentDetail = updated;
-        openPlantDetail(updated);
+        // Replace edit history entry with detail entry (no extra back step)
+        history.replaceState({ valiumPage: "plant-detail", id: updated.id }, "");
+        _renderPlantDetail(updated);
       } else {
         plantsEditSection.hidden = true;
         plantsListSection.hidden = false;
