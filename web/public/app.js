@@ -1476,8 +1476,6 @@
     if (plantsSection) plantsSection.hidden = !features.plants;
     var adminSection = document.getElementById("sidebar-section-admin");
     if (adminSection) adminSection.hidden = !isAdmin;
-    var plantsShareRow = document.getElementById("settings-plants-share-row");
-    if (plantsShareRow) plantsShareRow.hidden = !features.plants;
 
     // Determine first allowed view
     var firstView = null;
