@@ -539,3 +539,95 @@ class PlantFillNameResponse(BaseModel):
     common_name: str | None = None
     category: str | None = None
     notes: str | None = None
+
+
+# ---------- Checklist ----------
+
+
+class ChecklistTemplateItemCreate(BaseModel):
+    """Schema for adding an item to a checklist template."""
+
+    text: str
+
+
+class ChecklistTemplateItemResponse(BaseModel):
+    """Schema returned for a single template item."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    position: int
+
+
+class ChecklistTemplateCreate(BaseModel):
+    """Schema for creating a checklist template."""
+
+    name: str
+
+
+class ChecklistTemplateUpdate(BaseModel):
+    """Schema for renaming a checklist template."""
+
+    name: str
+
+
+class ChecklistTemplateIncludeResponse(BaseModel):
+    """Schema returned for a sub-template inclusion."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    child_id: int
+    child_name: str
+
+
+class ChecklistTemplateResponse(BaseModel):
+    """Schema returned for a single checklist template."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    items: list[ChecklistTemplateItemResponse] = []
+    includes: list[ChecklistTemplateIncludeResponse] = []
+
+
+class ChecklistSessionItemResponse(BaseModel):
+    """Schema returned for a single session item."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text: str
+    checked: bool
+    template_id: int | None
+    template_name: str | None
+    position: int
+
+
+class ChecklistSessionCreate(BaseModel):
+    """Schema for starting a packing session from selected templates."""
+
+    name: str
+    template_ids: list[int]
+
+
+class ChecklistSessionItemAdd(BaseModel):
+    """Schema for adding an ad-hoc item to a session."""
+
+    text: str
+    template_name: str | None = None
+
+
+class ChecklistSessionResponse(BaseModel):
+    """Schema returned for a single packing session."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    completed_at: datetime | None
+    items: list[ChecklistSessionItemResponse] = []

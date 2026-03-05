@@ -518,3 +518,84 @@ class AIProvider(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+
+
+# ---------- Checklist ----------
+
+
+class ChecklistTemplate(Base):
+    """A reusable checklist template (e.g. 'Basic overnight', 'Winter sports')."""
+
+    __tablename__ = "checklist_templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    items: Mapped[list["ChecklistTemplateItem"]] = relationship(
+        cascade="all, delete-orphan", order_by="ChecklistTemplateItem.position"
+    )
+    includes: Mapped[list["ChecklistTemplateInclude"]] = relationship(
+        foreign_keys="ChecklistTemplateInclude.parent_id",
+        cascade="all, delete-orphan",
+        order_by="ChecklistTemplateInclude.position",
+    )
+
+
+class ChecklistTemplateItem(Base):
+    """A single item within a checklist template."""
+
+    __tablename__ = "checklist_template_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[int] = mapped_column(ForeignKey("checklist_templates.id", ondelete="CASCADE"))
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ChecklistTemplateInclude(Base):
+    """Records that one template includes another as a sub-template."""
+
+    __tablename__ = "checklist_template_includes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    parent_id: Mapped[int] = mapped_column(ForeignKey("checklist_templates.id", ondelete="CASCADE"))
+    child_id: Mapped[int] = mapped_column(ForeignKey("checklist_templates.id", ondelete="CASCADE"))
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    child: Mapped["ChecklistTemplate"] = relationship("ChecklistTemplate", foreign_keys=[child_id])
+
+    __table_args__ = (UniqueConstraint("parent_id", "child_id"),)
+
+
+class ChecklistSession(Base):
+    """A single trip / packing instance created from one or more templates."""
+
+    __tablename__ = "checklist_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    items: Mapped[list["ChecklistSessionItem"]] = relationship(
+        cascade="all, delete-orphan", order_by="ChecklistSessionItem.position"
+    )
+
+
+class ChecklistSessionItem(Base):
+    """A single checkable item in a packing session."""
+
+    __tablename__ = "checklist_session_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("checklist_sessions.id", ondelete="CASCADE"))
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
+    checked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("checklist_templates.id", ondelete="SET NULL"), nullable=True
+    )
+    template_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")

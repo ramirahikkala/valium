@@ -81,6 +81,17 @@
             </div>
           </div>
 
+          <!-- Pakkauslista -->
+          <div class="sidebar-section" id="sidebar-section-checklist" hidden>
+            <button class="sidebar-section-btn" id="view-tab-checklist" data-view="checklist">
+              <span class="sidebar-label" data-i18n="checklist_tab">Pakkauslista</span>
+            </button>
+            <div class="sidebar-children" id="sidebar-checklist-children" hidden>
+              <button class="sidebar-checklist-btn active" data-checklist-tab="sessions" data-i18n="checklist_sessions_tab">Matkat</button>
+              <button class="sidebar-checklist-btn" data-checklist-tab="templates" data-i18n="checklist_templates_tab">Mallipohjat</button>
+            </div>
+          </div>
+
           <!-- Kasvit -->
           <div class="sidebar-section" id="sidebar-section-plants" hidden>
             <button class="sidebar-section-btn" id="view-tab-plants" data-view="plants">
@@ -275,6 +286,95 @@
             <div id="sessions-list"></div>
           </div>
 
+        </div>
+
+        <!-- Checklist view -->
+        <div id="checklist-view" hidden>
+
+          <!-- Sessions sub-view -->
+          <div id="checklist-sessions-section">
+            <div class="checklist-toolbar">
+              <h2 class="view-heading" data-i18n="checklist_sessions_heading">Matkat</h2>
+              <button id="new-session-btn" class="btn btn-primary btn-sm" data-i18n="checklist_new_session_btn">+ Uusi matka</button>
+            </div>
+            <div id="checklist-sessions-list"></div>
+          </div>
+
+          <!-- Session detail sub-view -->
+          <div id="checklist-session-detail" hidden>
+            <div class="checklist-toolbar">
+              <button id="session-back-btn" class="btn btn-icon" data-i18n-title="back">←</button>
+              <h2 id="session-detail-title" class="view-heading"></h2>
+              <button id="session-complete-btn" class="btn btn-sm" data-i18n="checklist_complete_btn">✓ Valmis</button>
+            </div>
+            <div id="session-progress-bar-wrap" class="checklist-progress-wrap">
+              <div id="session-progress-bar" class="checklist-progress-bar"></div>
+            </div>
+            <p id="session-progress-label" class="checklist-progress-label"></p>
+            <div id="session-items-list"></div>
+            <form id="session-add-item-form" class="checklist-add-form">
+              <input type="text" id="session-add-item-input" data-i18n-placeholder="checklist_add_item_ph" placeholder="Lisää kohde..." autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm" data-i18n="checklist_add_item_btn">Lisää</button>
+            </form>
+          </div>
+
+          <!-- Templates sub-view -->
+          <div id="checklist-templates-section" hidden>
+            <div class="checklist-toolbar">
+              <h2 class="view-heading" data-i18n="checklist_templates_heading">Mallipohjat</h2>
+              <button id="new-template-btn" class="btn btn-primary btn-sm" data-i18n="checklist_new_template_btn">+ Uusi mallipohja</button>
+            </div>
+            <div id="checklist-templates-list"></div>
+          </div>
+
+          <!-- Template detail/edit sub-view -->
+          <div id="checklist-template-detail" hidden>
+            <div class="checklist-toolbar">
+              <button id="template-back-btn" class="btn btn-icon" data-i18n-title="back">←</button>
+              <h2 id="template-detail-title" class="view-heading checklist-editable-title" contenteditable="true" spellcheck="false"></h2>
+              <button id="template-delete-btn" class="btn btn-danger btn-sm" data-i18n="delete_btn">Poista</button>
+            </div>
+            <div id="template-items-list"></div>
+            <form id="template-add-item-form" class="checklist-add-form">
+              <input type="text" id="template-add-item-input" data-i18n-placeholder="checklist_add_item_ph" placeholder="Lisää kohde..." autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm" data-i18n="checklist_add_item_btn">Lisää</button>
+            </form>
+            <div id="template-includes-section" class="checklist-includes-section">
+              <h3 class="checklist-sub-heading" data-i18n="checklist_includes_heading">Sisältää mallipohjat</h3>
+              <div id="template-includes-list"></div>
+              <div id="template-add-include-wrap" class="checklist-add-include-wrap">
+                <select id="template-add-include-select">
+                  <option value="" data-i18n="checklist_include_placeholder">Lisää mallipohja...</option>
+                </select>
+                <button id="template-add-include-btn" class="btn btn-sm" data-i18n="checklist_add_include_btn">Lisää</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- New session modal -->
+        <div id="new-session-modal" class="modal" hidden>
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2 data-i18n="checklist_new_session_title">Uusi matka</h2>
+              <button class="modal-close" id="new-session-modal-close">✕</button>
+            </div>
+            <form id="new-session-form">
+              <div class="form-group">
+                <label data-i18n="checklist_session_name_label">Matkan nimi</label>
+                <input type="text" id="new-session-name" required autocomplete="off" data-i18n-placeholder="checklist_session_name_ph" placeholder="esim. Talviloma Levillä">
+              </div>
+              <div class="form-group">
+                <label data-i18n="checklist_select_templates_label">Valitse mallipohjat</label>
+                <div id="new-session-templates" class="checklist-template-picker"></div>
+              </div>
+              <div class="modal-actions">
+                <button type="button" id="new-session-cancel" class="btn" data-i18n="cancel_btn">Peruuta</button>
+                <button type="submit" class="btn btn-primary" data-i18n="checklist_create_session_btn">Luo matka</button>
+              </div>
+            </form>
+          </div>
         </div>
 
         <!-- Plants view -->
