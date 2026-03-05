@@ -311,7 +311,7 @@
       checklist_delete_session_confirm: "Poistetaanko matka?",
       checklist_delete_template_confirm: "Poistetaanko mallipohja?",
       checklist_completed_label: "Valmis",
-      checklist_new_template_ph: "Mallipojan nimi...",
+      checklist_new_template_ph: "Mallipohjan nimi...",
     },
     en: {
       // Navigation

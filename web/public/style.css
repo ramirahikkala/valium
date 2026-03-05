@@ -355,9 +355,10 @@ header {
   cursor: pointer;
 }
 
-/* Gym and Plants sub-buttons inside sidebar */
+/* Gym, Plants and Checklist sub-buttons inside sidebar */
 .sidebar-gym-btn,
-.sidebar-plants-btn {
+.sidebar-plants-btn,
+.sidebar-checklist-btn {
   display: flex;
   align-items: center;
   width: 100%;
