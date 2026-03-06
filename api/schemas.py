@@ -133,6 +133,7 @@ class PlantCollectionShareResponse(BaseModel):
     owner_name: str
     shared_with_user_id: int
     shared_with_name: str
+    shared_with_email: str
     permission: str
 
 

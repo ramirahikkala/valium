@@ -323,6 +323,8 @@
       checklist_add_templates_title: "Lisää mallipohjia matkaan",
       checklist_add_templates_submit: "Lisää valitut",
       cancel_btn: "Peruuta",
+      transfer_ownership_btn: "Siirrä omistajuus",
+      transfer_ownership_confirm: "Siirretäänkö kaikki kasvit käyttäjälle {name}? Tätä ei voi peruuttaa.",
     },
     en: {
       // Navigation
@@ -643,6 +645,8 @@
       checklist_add_templates_title: "Add templates to trip",
       checklist_add_templates_submit: "Add selected",
       cancel_btn: "Cancel",
+      transfer_ownership_btn: "Transfer ownership",
+      transfer_ownership_confirm: "Transfer all plants to {name}? This cannot be undone.",
     },
   };
 
@@ -3495,9 +3499,26 @@
       var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
       row.innerHTML =
         '<span class="share-row-name">' + escapeHtml(s.shared_with_name) + ' <span class="share-row-perm">(' + permLabel + ')</span></span>' +
+        '<button class="btn btn-sm" data-transfer-email="' + escapeHtml(s.shared_with_email) + '" data-transfer-name="' + escapeHtml(s.shared_with_name) + '">' + t("transfer_ownership_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '">' + t("share_remove_btn") + '</button>';
       row.querySelector("[data-share-id]").addEventListener("click", function () {
         removePlantCollectionShare(s.id);
+      });
+      row.querySelector("[data-transfer-email]").addEventListener("click", async function (e) {
+        var email = e.currentTarget.dataset.transferEmail;
+        var name = e.currentTarget.dataset.transferName;
+        if (!confirm(t("transfer_ownership_confirm").replace("{name}", name))) return;
+        try {
+          await apiFetch(PLANTS_API + "/collection/transfer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email, permission: "write" }),
+          });
+          if (plantShareModal) plantShareModal.hidden = true;
+          currentPlantsOwner = null;
+          loadPlants();
+          loadSharedCollections();
+        } catch (_) {}
       });
       plantShareList.appendChild(row);
     });

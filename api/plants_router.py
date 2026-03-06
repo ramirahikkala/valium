@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from PIL import Image, ImageOps
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -176,6 +176,7 @@ async def get_collection_shares(
             owner_name=s.owner.name,
             shared_with_user_id=s.shared_with_user_id,
             shared_with_name=s.shared_with.name,
+            shared_with_email=s.shared_with.email,
             permission=s.permission,
         )
         for s in shares
@@ -219,6 +220,7 @@ async def create_collection_share(
         owner_name=current_user.name,
         shared_with_user_id=target.id,
         shared_with_name=target.name,
+        shared_with_email=target.email,
         permission=share.permission,
     )
 
@@ -234,6 +236,38 @@ async def delete_collection_share(
     if share is None or share.owner_user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Share not found")
     await session.delete(share)
+    await session.commit()
+
+
+@router.post("/collection/transfer", status_code=204)
+async def transfer_collection_ownership(
+    body: PlantCollectionShareCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Transfer all plants, locations and images to another user."""
+    target_result = await session.execute(select(User).where(User.email == body.email))
+    target = target_result.scalar_one_or_none()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    if target.id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot transfer to yourself")
+
+    # Move plants, locations and images to new owner
+    await session.execute(update(Plant).where(Plant.user_id == current_user.id).values(user_id=target.id))
+    await session.execute(update(PlantLocation).where(PlantLocation.user_id == current_user.id).values(user_id=target.id))
+    await session.execute(update(PlantImage).where(PlantImage.user_id == current_user.id).values(user_id=target.id))
+
+    # Remove any share between the two users (both directions)
+    shares_to_delete = (await session.execute(
+        select(PlantCollectionShare).where(
+            ((PlantCollectionShare.owner_user_id == current_user.id) & (PlantCollectionShare.shared_with_user_id == target.id)) |
+            ((PlantCollectionShare.owner_user_id == target.id) & (PlantCollectionShare.shared_with_user_id == current_user.id))
+        )
+    )).scalars().all()
+    for s in shares_to_delete:
+        await session.delete(s)
+
     await session.commit()
 
 
