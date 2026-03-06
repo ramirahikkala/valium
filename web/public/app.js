@@ -3539,28 +3539,22 @@
   }
 
   function renderSharedCollectionsSidebar() {
-    var section = document.getElementById("sidebar-shared-plants");
     var itemsEl = document.getElementById("sidebar-shared-plants-items");
-    if (!section || !itemsEl) return;
-    section.hidden = sharedCollections.length === 0;
+    if (!itemsEl) return;
     itemsEl.innerHTML = "";
     sharedCollections.forEach(function (col) {
-      var item = document.createElement("div");
       var isActive = currentPlantsOwner && currentPlantsOwner.owner_user_id === col.owner_user_id;
-      item.className = "sidebar-shared-item" + (isActive ? " active" : "");
-      item.textContent = col.owner_name;
-      item.addEventListener("click", function () {
+      var btn = document.createElement("button");
+      btn.className = "sidebar-plants-btn" + (isActive ? " active" : "");
+      btn.textContent = col.owner_name;
+      btn.addEventListener("click", function () {
         currentPlantsOwner = col;
         renderSharedCollectionsSidebar();
         switchToView("plants");
         switchPlantsTab("list");
       });
-      itemsEl.appendChild(item);
+      itemsEl.appendChild(btn);
     });
-    // Also "own plants" item if there is a shared collection active
-    if (currentPlantsOwner) {
-      // Nothing extra needed; "Kasvit" button in sidebar resets to own
-    }
   }
 
   function plantCategoryLabel(cat) {

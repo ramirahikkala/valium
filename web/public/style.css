@@ -1080,37 +1080,6 @@ input[type="datetime-local"]:focus {
   min-width: 180px;
 }
 
-.sidebar-shared-section {
-  margin-top: 0.5rem;
-}
-
-.sidebar-section-label {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  padding: 0.25rem 1rem;
-  letter-spacing: 0.05em;
-}
-
-.sidebar-shared-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 1rem;
-  cursor: pointer;
-  font-size: 0.85rem;
-  color: var(--color-text);
-}
-
-.sidebar-shared-item:hover {
-  background: var(--color-primary-light);
-}
-
-.sidebar-shared-item.active {
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  font-weight: 500;
-}
 
 /* Workout completion summary */
 .cwm-summary-list {
