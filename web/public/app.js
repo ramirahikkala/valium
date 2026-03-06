@@ -4011,12 +4011,12 @@
     }
 
     plantsEditAiSummaryBtn.textContent = summaryBtnLabel();
-    plantsEditSection.scrollTop = 0;
   }
 
   function openPlantEdit(plant) {
     history.pushState({ valiumPage: "plant-edit", id: plant.id }, "");
     _renderPlantEdit(plant);
+    plantsEditSection.scrollTop = 0;
   }
 
   function closePlantDetail() {
