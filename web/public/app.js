@@ -312,6 +312,13 @@
       checklist_delete_template_confirm: "Poistetaanko mallipohja?",
       checklist_completed_label: "Valmis",
       checklist_new_template_ph: "Mallipohjan nimi...",
+      share_session_title: "Jaa matka",
+      share_session_btn: "👥 Jaa",
+      share_templates_title: "Jaa mallipohjia",
+      share_templates_btn: "👥 Jaa mallipohjia",
+      share_templates_submit: "Jaa valitut",
+      checklist_shared_by: "Omistaja:",
+      checklist_shared_badge: "(jaettu)",
     },
     en: {
       // Navigation
@@ -621,6 +628,13 @@
       checklist_delete_template_confirm: "Delete this template?",
       checklist_completed_label: "Done",
       checklist_new_template_ph: "Template name...",
+      share_session_title: "Share trip",
+      share_session_btn: "👥 Share",
+      share_templates_title: "Share templates",
+      share_templates_btn: "👥 Share templates",
+      share_templates_submit: "Share selected",
+      checklist_shared_by: "Owner:",
+      checklist_shared_badge: "(shared)",
     },
   };
 
@@ -1465,6 +1479,10 @@
       if (listShareModal && !listShareModal.hidden) { listShareModal.hidden = true; return; }
       if (plantShareModal && !plantShareModal.hidden) { plantShareModal.hidden = true; return; }
       if (newSessionModal && !newSessionModal.hidden) { closeNewSessionModal(); return; }
+      var checklistSessionShareModal = document.getElementById("checklist-session-share-modal");
+      if (checklistSessionShareModal && !checklistSessionShareModal.hidden) { checklistSessionShareModal.hidden = true; return; }
+      var checklistTemplateShareModal = document.getElementById("checklist-template-share-modal");
+      if (checklistTemplateShareModal && !checklistTemplateShareModal.hidden) { checklistTemplateShareModal.hidden = true; return; }
     }
   });
 
@@ -4269,6 +4287,7 @@
     }
     checklistSessionsList.innerHTML = "";
     sessions.forEach(function (sess) {
+      var isOwner = !sess.permission || sess.permission === "owner";
       var checked = sess.items.filter(function (i) { return i.checked; }).length;
       var total = sess.items.length;
       var pct = total ? Math.round((checked / total) * 100) : 0;
@@ -4277,12 +4296,20 @@
       card.dataset.id = sess.id;
       var meta = checked + "/" + total + " · " + pct + "%";
       if (sess.completed_at) meta += " · " + t("checklist_completed_label");
+      var nameBadge = isOwner ? "" : ' <span class="checklist-shared-badge">' + escapeHtml(t("checklist_shared_badge")) + "</span>";
+      var ownerRow = (!isOwner && sess.owner_name)
+        ? '<div class="checklist-owner-label">' + escapeHtml(t("checklist_shared_by")) + " " + escapeHtml(sess.owner_name) + "</div>"
+        : "";
+      var deleteBtn = isOwner
+        ? '<button class="btn btn-danger btn-sm checklist-session-delete" data-id="' + sess.id + '" data-action="delete-session">' + t("delete_btn") + "</button>"
+        : "";
       card.innerHTML =
         '<div class="checklist-session-info">' +
-        '<div class="checklist-session-name">' + escapeHtml(sess.name) + "</div>" +
+        '<div class="checklist-session-name">' + escapeHtml(sess.name) + nameBadge + "</div>" +
+        ownerRow +
         '<div class="checklist-session-meta">' + escapeHtml(meta) + "</div>" +
         "</div>" +
-        '<button class="btn btn-danger btn-sm checklist-session-delete" data-id="' + sess.id + '" data-action="delete-session">' + t("delete_btn") + "</button>";
+        deleteBtn;
       card.addEventListener("click", function (e) {
         if (e.target.closest("[data-action]")) return;
         openChecklistSession(sess);
@@ -4309,6 +4336,9 @@
   }
 
   function renderSessionDetail(sess) {
+    var isOwner = !sess.permission || sess.permission === "owner";
+    var canWrite = isOwner || sess.permission === "write";
+
     sessionDetailTitle.textContent = sess.name;
     var checkedCount = sess.items.filter(function (i) { return i.checked; }).length;
     var total = sess.items.length;
@@ -4317,6 +4347,12 @@
     sessionProgressLabel.textContent = checkedCount + "/" + total + " " + t("checklist_progress");
     sessionCompleteBtn.textContent = sess.completed_at ? t("checklist_reopen_btn") : t("checklist_complete_btn");
     sessionCompleteBtn.className = "btn btn-sm" + (sess.completed_at ? "" : " btn-primary");
+    if (sessionCompleteBtn) sessionCompleteBtn.hidden = !canWrite;
+
+    var sessionShareBtn = document.getElementById("checklist-session-share-btn");
+    if (sessionShareBtn) sessionShareBtn.hidden = !isOwner;
+
+    if (sessionAddItemForm) sessionAddItemForm.hidden = !canWrite;
 
     var groups = {};
     var groupOrder = [];
@@ -4333,35 +4369,38 @@
       heading.textContent = grp;
       sessionItemsList.appendChild(heading);
       groups[grp].forEach(function (item) {
-        sessionItemsList.appendChild(buildSessionItemEl(item, sess));
+        sessionItemsList.appendChild(buildSessionItemEl(item, sess, canWrite));
       });
     });
   }
 
-  function buildSessionItemEl(item, sess) {
+  function buildSessionItemEl(item, sess, canWrite) {
     var row = document.createElement("div");
     row.className = "checklist-item" + (item.checked ? " checked" : "");
     var cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = item.checked;
-    cb.addEventListener("change", async function () {
-      try {
-        var updated = await apiFetch(
-          CHECKLIST_API + "/sessions/" + sess.id + "/items/" + item.id,
-          { method: "PATCH" }
-        );
-        if (updated) {
-          item.checked = updated.checked;
-          row.classList.toggle("checked", updated.checked);
-          cb.checked = updated.checked;
-          var c = sess.items.filter(function (i) { return i.checked; }).length;
-          var tot = sess.items.length;
-          var pct = tot ? Math.round((c / tot) * 100) : 0;
-          sessionProgressBar.style.width = pct + "%";
-          sessionProgressLabel.textContent = c + "/" + tot + " " + t("checklist_progress");
-        }
-      } catch (_) { cb.checked = item.checked; }
-    });
+    cb.disabled = !canWrite;
+    if (canWrite) {
+      cb.addEventListener("change", async function () {
+        try {
+          var updated = await apiFetch(
+            CHECKLIST_API + "/sessions/" + sess.id + "/items/" + item.id,
+            { method: "PATCH" }
+          );
+          if (updated) {
+            item.checked = updated.checked;
+            row.classList.toggle("checked", updated.checked);
+            cb.checked = updated.checked;
+            var c = sess.items.filter(function (i) { return i.checked; }).length;
+            var tot = sess.items.length;
+            var pct = tot ? Math.round((c / tot) * 100) : 0;
+            sessionProgressBar.style.width = pct + "%";
+            sessionProgressLabel.textContent = c + "/" + tot + " " + t("checklist_progress");
+          }
+        } catch (_) { cb.checked = item.checked; }
+      });
+    }
     var span = document.createElement("span");
     span.className = "checklist-item-text";
     span.textContent = item.text;
@@ -4492,14 +4531,20 @@
     }
     checklistTemplatesList.innerHTML = "";
     tmpls.forEach(function (tmpl) {
+      var isOwner = !tmpl.permission || tmpl.permission === "owner";
       var card = document.createElement("div");
       card.className = "checklist-template-card";
       var incNames = tmpl.includes.map(function (i) { return i.child_name; }).join(", ");
       var meta = tmpl.items.length + " kohdetta";
       if (incNames) meta += " · sisältää: " + incNames;
+      var nameBadge = isOwner ? "" : ' <span class="checklist-shared-badge">' + escapeHtml(t("checklist_shared_badge")) + "</span>";
+      var ownerRow = (!isOwner && tmpl.owner_name)
+        ? '<div class="checklist-owner-label">' + escapeHtml(t("checklist_shared_by")) + " " + escapeHtml(tmpl.owner_name) + "</div>"
+        : "";
       card.innerHTML =
         '<div class="checklist-template-info">' +
-        '<div class="checklist-template-name">' + escapeHtml(tmpl.name) + "</div>" +
+        '<div class="checklist-template-name">' + escapeHtml(tmpl.name) + nameBadge + "</div>" +
+        ownerRow +
         '<div class="checklist-template-meta">' + escapeHtml(meta) + "</div>" +
         "</div>" +
         '<span style="color:var(--color-text-muted)">›</span>';
@@ -4516,31 +4561,44 @@
   }
 
   function renderTemplateDetail(tmpl) {
+    var isOwner = !tmpl.permission || tmpl.permission === "owner";
+    var canWrite = isOwner || tmpl.permission === "write";
+
     templateDetailTitle.textContent = tmpl.name;
+    // Only allow editing the title if the user has write access
+    if (templateDetailTitle) templateDetailTitle.contentEditable = canWrite ? "true" : "false";
+
+    if (templateDeleteBtn) templateDeleteBtn.hidden = !isOwner;
+    if (templateAddItemForm) templateAddItemForm.hidden = !canWrite;
+
+    var templateIncludesSection = document.getElementById("template-includes-section");
+    if (templateIncludesSection) templateIncludesSection.hidden = !isOwner;
+
     templateItemsList.innerHTML = "";
     tmpl.items.forEach(function (item) {
-      templateItemsList.appendChild(buildTemplateItemEl(tmpl, item));
+      templateItemsList.appendChild(buildTemplateItemEl(tmpl, item, canWrite));
     });
     templateIncludesList.innerHTML = "";
     tmpl.includes.forEach(function (inc) {
       templateIncludesList.appendChild(buildIncludeRow(tmpl, inc));
     });
-    populateIncludeSelect(tmpl);
+    if (isOwner) populateIncludeSelect(tmpl);
   }
 
-  function buildTemplateItemEl(tmpl, item) {
+  function buildTemplateItemEl(tmpl, item, canWrite) {
     var row = document.createElement("div");
     row.className = "checklist-item";
-    row.innerHTML =
-      '<span class="checklist-item-text">' + escapeHtml(item.text) + "</span>" +
-      '<button class="btn btn-danger btn-sm checklist-item-delete">×</button>';
-    row.querySelector(".checklist-item-delete").addEventListener("click", async function () {
-      try {
-        await apiFetch(CHECKLIST_API + "/templates/" + tmpl.id + "/items/" + item.id, { method: "DELETE" });
-        row.remove();
-        tmpl.items = tmpl.items.filter(function (i) { return i.id !== item.id; });
-      } catch (_) {}
-    });
+    row.innerHTML = '<span class="checklist-item-text">' + escapeHtml(item.text) + "</span>" +
+      (canWrite ? '<button class="btn btn-danger btn-sm checklist-item-delete">×</button>' : "");
+    if (canWrite) {
+      row.querySelector(".checklist-item-delete").addEventListener("click", async function () {
+        try {
+          await apiFetch(CHECKLIST_API + "/templates/" + tmpl.id + "/items/" + item.id, { method: "DELETE" });
+          row.remove();
+          tmpl.items = tmpl.items.filter(function (i) { return i.id !== item.id; });
+        } catch (_) {}
+      });
+    }
     return row;
   }
 
@@ -4662,6 +4720,232 @@
       }
     } catch (_) {}
   });
+
+  // ---------- Session share modal ----------
+
+  var currentChecklistShareSessionId = null;
+  var checklistSessionShareModal = document.getElementById("checklist-session-share-modal");
+  var checklistSessionShareModalClose = document.getElementById("checklist-session-share-modal-close");
+  var checklistSessionShareList = document.getElementById("checklist-session-share-list");
+  var checklistSessionShareForm = document.getElementById("checklist-session-share-form");
+  var checklistSessionShareEmail = document.getElementById("checklist-session-share-email");
+  var checklistSessionSharePermission = document.getElementById("checklist-session-share-permission");
+  var checklistSessionShareBtn = document.getElementById("checklist-session-share-btn");
+
+  function openSessionShareModal(sessId) {
+    currentChecklistShareSessionId = sessId;
+    if (checklistSessionShareEmail) checklistSessionShareEmail.value = "";
+    if (checklistSessionShareModal) checklistSessionShareModal.hidden = false;
+    loadSessionShares();
+  }
+
+  async function loadSessionShares() {
+    if (!currentChecklistShareSessionId || !checklistSessionShareList) return;
+    try {
+      var shares = await apiFetch(CHECKLIST_API + "/sessions/" + currentChecklistShareSessionId + "/shares");
+      if (!shares) return;
+      renderSessionShareList(shares);
+    } catch (_) {}
+  }
+
+  function renderSessionShareList(shares) {
+    if (!checklistSessionShareList) return;
+    if (!shares.length) {
+      checklistSessionShareList.innerHTML = "";
+      return;
+    }
+    checklistSessionShareList.innerHTML = "";
+    shares.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "share-row";
+      var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
+      row.innerHTML =
+        '<span class="share-row-name">' + escapeHtml(s.shared_with_name) + " (" + escapeHtml(s.shared_with_email) + ') <span class="share-row-perm">(' + escapeHtml(permLabel) + ")</span></span>" +
+        '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '">' + t("share_remove_btn") + "</button>";
+      row.querySelector("button").addEventListener("click", async function () {
+        try {
+          await apiFetch(
+            CHECKLIST_API + "/sessions/" + currentChecklistShareSessionId + "/shares/" + s.id,
+            { method: "DELETE" }
+          );
+          loadSessionShares();
+        } catch (_) {}
+      });
+      checklistSessionShareList.appendChild(row);
+    });
+  }
+
+  if (checklistSessionShareBtn) {
+    checklistSessionShareBtn.addEventListener("click", function () {
+      if (checklistCurrentSession) openSessionShareModal(checklistCurrentSession.id);
+    });
+  }
+
+  if (checklistSessionShareModalClose) {
+    checklistSessionShareModalClose.addEventListener("click", function () {
+      if (checklistSessionShareModal) checklistSessionShareModal.hidden = true;
+    });
+  }
+
+  if (checklistSessionShareModal) {
+    checklistSessionShareModal.addEventListener("click", function (e) {
+      if (e.target === checklistSessionShareModal) checklistSessionShareModal.hidden = true;
+    });
+  }
+
+  if (checklistSessionShareForm) {
+    checklistSessionShareForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var email = checklistSessionShareEmail ? checklistSessionShareEmail.value.trim() : "";
+      var permission = checklistSessionSharePermission ? checklistSessionSharePermission.value : "write";
+      if (!email || !currentChecklistShareSessionId) return;
+      try {
+        await apiFetch(
+          CHECKLIST_API + "/sessions/" + currentChecklistShareSessionId + "/shares",
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: email, permission: permission }) }
+        );
+        if (checklistSessionShareEmail) checklistSessionShareEmail.value = "";
+        loadSessionShares();
+      } catch (_) {}
+    });
+  }
+
+  // ---------- Template bulk share modal ----------
+
+  var checklistTemplateShareModal = document.getElementById("checklist-template-share-modal");
+  var checklistTemplateShareModalClose = document.getElementById("checklist-template-share-modal-close");
+  var checklistTemplateShareForm = document.getElementById("checklist-template-share-form");
+  var checklistTemplateShareEmail = document.getElementById("checklist-template-share-email");
+  var checklistTemplateSharePermission = document.getElementById("checklist-template-share-permission");
+  var checklistTemplateSharePicker = document.getElementById("checklist-template-share-picker");
+  var checklistTemplateShareExisting = document.getElementById("checklist-template-share-existing");
+  var checklistTemplatesShareBtn = document.getElementById("checklist-templates-share-btn");
+
+  async function openTemplateShareModal() {
+    if (checklistTemplateShareEmail) checklistTemplateShareEmail.value = "";
+    if (checklistTemplateShareModal) checklistTemplateShareModal.hidden = false;
+    await loadChecklistTemplates();
+    renderTemplatePicker();
+    loadExistingTemplateShares();
+  }
+
+  function renderTemplatePicker() {
+    if (!checklistTemplateSharePicker) return;
+    checklistTemplateSharePicker.innerHTML = "";
+    // Only show owned templates (permission === "owner" or no permission field)
+    var ownedTemplates = checklistTemplates.filter(function (t) {
+      return !t.permission || t.permission === "owner";
+    });
+    ownedTemplates.forEach(function (tmpl) {
+      var label = document.createElement("label");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = tmpl.id;
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(" " + tmpl.name + " (" + tmpl.items.length + " kpl)"));
+      checklistTemplateSharePicker.appendChild(label);
+    });
+    if (!ownedTemplates.length) {
+      checklistTemplateSharePicker.innerHTML = '<p style="font-size:0.85rem;color:var(--color-text-muted);padding:0.3rem 0">' + escapeHtml(t("checklist_empty_templates")) + "</p>";
+    }
+  }
+
+  async function loadExistingTemplateShares() {
+    if (!checklistTemplateShareExisting) return;
+    try {
+      var shares = await apiFetch(CHECKLIST_API + "/templates/shares");
+      if (!shares) return;
+      renderExistingTemplateShares(shares);
+    } catch (_) {
+      checklistTemplateShareExisting.innerHTML = "";
+    }
+  }
+
+  function renderExistingTemplateShares(shares) {
+    if (!checklistTemplateShareExisting) return;
+    if (!shares.length) {
+      checklistTemplateShareExisting.innerHTML = "";
+      return;
+    }
+    // Group by shared_with_user_id
+    var byUser = {};
+    shares.forEach(function (s) {
+      if (!byUser[s.shared_with_user_id]) {
+        byUser[s.shared_with_user_id] = { name: s.shared_with_name, email: s.shared_with_email, shares: [] };
+      }
+      byUser[s.shared_with_user_id].shares.push(s);
+    });
+    checklistTemplateShareExisting.innerHTML = "";
+    Object.keys(byUser).forEach(function (uid) {
+      var group = byUser[uid];
+      var heading = document.createElement("div");
+      heading.style.cssText = "font-size:0.85rem;font-weight:600;margin-bottom:0.25rem;color:var(--color-text-muted)";
+      heading.textContent = group.name + " (" + group.email + ")";
+      checklistTemplateShareExisting.appendChild(heading);
+      group.shares.forEach(function (s) {
+        var row = document.createElement("div");
+        row.className = "share-row";
+        var tmpl = checklistTemplates.find(function (t) { return t.id === s.template_id; });
+        var tmplName = tmpl ? tmpl.name : "#" + s.template_id;
+        var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
+        row.innerHTML =
+          '<span class="share-row-name">' + escapeHtml(tmplName) + ' <span class="share-row-perm">(' + escapeHtml(permLabel) + ")</span></span>" +
+          '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '" data-template-id="' + s.template_id + '">' + t("share_remove_btn") + "</button>";
+        row.querySelector("button").addEventListener("click", async function (e) {
+          var tid = e.currentTarget.dataset.templateId;
+          var sid = e.currentTarget.dataset.shareId;
+          try {
+            await apiFetch(CHECKLIST_API + "/templates/" + tid + "/shares/" + sid, { method: "DELETE" });
+            row.remove();
+          } catch (_) {}
+        });
+        checklistTemplateShareExisting.appendChild(row);
+      });
+    });
+  }
+
+  if (checklistTemplatesShareBtn) {
+    checklistTemplatesShareBtn.addEventListener("click", function () {
+      openTemplateShareModal();
+    });
+  }
+
+  if (checklistTemplateShareModalClose) {
+    checklistTemplateShareModalClose.addEventListener("click", function () {
+      if (checklistTemplateShareModal) checklistTemplateShareModal.hidden = true;
+    });
+  }
+
+  if (checklistTemplateShareModal) {
+    checklistTemplateShareModal.addEventListener("click", function (e) {
+      if (e.target === checklistTemplateShareModal) checklistTemplateShareModal.hidden = true;
+    });
+  }
+
+  if (checklistTemplateShareForm) {
+    checklistTemplateShareForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var email = checklistTemplateShareEmail ? checklistTemplateShareEmail.value.trim() : "";
+      var permission = checklistTemplateSharePermission ? checklistTemplateSharePermission.value : "read";
+      var templateIds = Array.from(
+        checklistTemplateSharePicker ? checklistTemplateSharePicker.querySelectorAll("input[type=checkbox]:checked") : []
+      ).map(function (cb) { return parseInt(cb.value, 10); });
+      if (!email || !templateIds.length) return;
+      try {
+        await apiFetch(CHECKLIST_API + "/templates/shares/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email, permission: permission, template_ids: templateIds }),
+        });
+        if (checklistTemplateShareEmail) checklistTemplateShareEmail.value = "";
+        // Uncheck all
+        if (checklistTemplateSharePicker) {
+          checklistTemplateSharePicker.querySelectorAll("input[type=checkbox]").forEach(function (cb) { cb.checked = false; });
+        }
+        loadExistingTemplateShares();
+      } catch (_) {}
+    });
+  }
 
   // Esc closes new-session modal (handled by global keydown via newSessionModal variable above)
 

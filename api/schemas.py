@@ -582,6 +582,32 @@ class ChecklistTemplateIncludeResponse(BaseModel):
     child_name: str
 
 
+class ChecklistShareCreate(BaseModel):
+    """Schema for sharing a checklist session or template with another user."""
+
+    email: str
+    permission: str = "write"
+
+
+class ChecklistShareResponse(BaseModel):
+    """Schema returned for a single checklist share record."""
+
+    id: int
+    shared_with_user_id: int
+    shared_with_name: str
+    shared_with_email: str
+    permission: str
+    template_id: int | None = None
+
+
+class ChecklistTemplateBatchShareCreate(BaseModel):
+    """Schema for bulk-sharing multiple templates with one user."""
+
+    email: str
+    permission: str = "read"
+    template_ids: list[int]
+
+
 class ChecklistTemplateResponse(BaseModel):
     """Schema returned for a single checklist template."""
 
@@ -592,6 +618,10 @@ class ChecklistTemplateResponse(BaseModel):
     created_at: datetime
     items: list[ChecklistTemplateItemResponse] = []
     includes: list[ChecklistTemplateIncludeResponse] = []
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[ChecklistShareResponse] = []
 
 
 class ChecklistSessionItemResponse(BaseModel):
@@ -631,3 +661,7 @@ class ChecklistSessionResponse(BaseModel):
     created_at: datetime
     completed_at: datetime | None
     items: list[ChecklistSessionItemResponse] = []
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[ChecklistShareResponse] = []

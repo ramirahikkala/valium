@@ -541,6 +541,9 @@ class ChecklistTemplate(Base):
         cascade="all, delete-orphan",
         order_by="ChecklistTemplateInclude.position",
     )
+    shares: Mapped[list["ChecklistTemplateShare"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class ChecklistTemplateItem(Base):
@@ -583,6 +586,9 @@ class ChecklistSession(Base):
     items: Mapped[list["ChecklistSessionItem"]] = relationship(
         cascade="all, delete-orphan", order_by="ChecklistSessionItem.position"
     )
+    shares: Mapped[list["ChecklistSessionShare"]] = relationship(
+        cascade="all, delete-orphan"
+    )
 
 
 class ChecklistSessionItem(Base):
@@ -599,3 +605,47 @@ class ChecklistSessionItem(Base):
     )
     template_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ChecklistSessionShare(Base):
+    """Grants another user access to a checklist session (trip)."""
+
+    __tablename__ = "checklist_session_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(
+        ForeignKey("checklist_sessions.id", ondelete="CASCADE"), nullable=False
+    )
+    shared_with_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="write")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (UniqueConstraint("session_id", "shared_with_user_id"),)
+
+
+class ChecklistTemplateShare(Base):
+    """Grants another user access to a checklist template."""
+
+    __tablename__ = "checklist_template_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    template_id: Mapped[int] = mapped_column(
+        ForeignKey("checklist_templates.id", ondelete="CASCADE"), nullable=False
+    )
+    shared_with_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="read")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (UniqueConstraint("template_id", "shared_with_user_id"),)

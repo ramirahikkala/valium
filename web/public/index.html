@@ -305,6 +305,7 @@
             <div class="checklist-toolbar">
               <button id="session-back-btn" class="btn btn-icon" data-i18n-title="back">←</button>
               <h2 id="session-detail-title" class="view-heading"></h2>
+              <button id="checklist-session-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_session_btn">👥 Jaa</button>
               <button id="session-complete-btn" class="btn btn-sm" data-i18n="checklist_complete_btn">✓ Valmis</button>
             </div>
             <div id="session-progress-bar-wrap" class="checklist-progress-wrap">
@@ -322,6 +323,7 @@
           <div id="checklist-templates-section" hidden>
             <div class="checklist-toolbar">
               <h2 class="view-heading" data-i18n="checklist_templates_heading">Mallipohjat</h2>
+              <button id="checklist-templates-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_templates_btn">👥 Jaa mallipohjia</button>
               <button id="new-template-btn" class="btn btn-primary btn-sm" data-i18n="checklist_new_template_btn">+ Uusi mallipohja</button>
             </div>
             <div id="checklist-templates-list"></div>
@@ -374,6 +376,47 @@
                 <button type="submit" class="btn btn-primary" data-i18n="checklist_create_session_btn">Luo matka</button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Session share modal -->
+        <div id="checklist-session-share-modal" class="modal-overlay" hidden>
+          <div class="modal">
+            <div class="modal-header">
+              <h2 data-i18n="share_session_title">Jaa matka</h2>
+              <button id="checklist-session-share-modal-close" class="modal-close">✕</button>
+            </div>
+            <div id="checklist-session-share-list" class="share-list"></div>
+            <form id="checklist-session-share-form" class="share-add-form">
+              <input type="email" id="checklist-session-share-email" required placeholder="email@example.com">
+              <select id="checklist-session-share-permission">
+                <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+                <option value="read" data-i18n="share_perm_read">Luku</option>
+              </select>
+              <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Template bulk share modal -->
+        <div id="checklist-template-share-modal" class="modal-overlay" hidden>
+          <div class="modal">
+            <div class="modal-header">
+              <h2 data-i18n="share_templates_title">Jaa mallipohjia</h2>
+              <button id="checklist-template-share-modal-close" class="modal-close">✕</button>
+            </div>
+            <form id="checklist-template-share-form" class="share-add-form" style="flex-direction:column">
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+                <input type="email" id="checklist-template-share-email" required placeholder="email@example.com" style="flex:1;min-width:180px">
+                <select id="checklist-template-share-permission">
+                  <option value="read" data-i18n="share_perm_read">Luku</option>
+                  <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+                </select>
+              </div>
+              <div id="checklist-template-share-picker" class="checklist-template-picker" style="margin:0.5rem 0"></div>
+              <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_templates_submit">Jaa valitut</button>
+            </form>
+            <div id="checklist-template-share-existing" class="share-list" style="margin-top:1rem"></div>
           </div>
         </div>
 

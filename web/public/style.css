@@ -2894,3 +2894,18 @@ input[type="datetime-local"]:focus {
   border: none;
   accent-color: var(--color-primary);
 }
+
+/* Checklist sharing */
+.checklist-shared-badge {
+  font-size: 0.7rem;
+  color: var(--color-text-muted);
+  background: var(--color-hover);
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+  margin-left: 0.3rem;
+}
+.checklist-owner-label {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  margin-top: 0.15rem;
+}
