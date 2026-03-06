@@ -3916,8 +3916,13 @@
 
   // Handle browser back/forward within plants navigation
   window.addEventListener("popstate", function (e) {
-    if (plantsView.hidden) return; // not in plants view
     var state = e.state;
+    // Close plant add modal if open
+    if (plantModal && !plantModal.hidden) {
+      closePlantModal();
+      return;
+    }
+    if (plantsView.hidden) return; // not in plants view
     if (state && state.valiumPage === "plant-detail") {
       var plant = plantsData.find(function (p) { return p.id === state.id; });
       if (plant) _renderPlantDetail(plant);
@@ -4155,6 +4160,7 @@
 
     plantModal.hidden = false;
     plantLatinNameInput.focus();
+    history.pushState({ valiumModal: "plant-add" }, "");
   }
 
   function closePlantModal() {
