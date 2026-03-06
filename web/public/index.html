@@ -388,7 +388,7 @@
             </div>
             <div id="checklist-session-share-list" class="share-list"></div>
             <form id="checklist-session-share-form" class="share-add-form">
-              <input type="email" id="checklist-session-share-email" required placeholder="email@example.com">
+              <select id="checklist-session-share-user" required style="flex:1;min-width:150px"></select>
               <select id="checklist-session-share-permission">
                 <option value="write" data-i18n="share_perm_write">Muokkaus</option>
                 <option value="read" data-i18n="share_perm_read">Luku</option>
@@ -407,7 +407,7 @@
             </div>
             <form id="checklist-template-share-form" class="share-add-form" style="flex-direction:column">
               <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
-                <input type="email" id="checklist-template-share-email" required placeholder="email@example.com" style="flex:1;min-width:180px">
+                <select id="checklist-template-share-user" required style="flex:1;min-width:150px"></select>
                 <select id="checklist-template-share-permission">
                   <option value="read" data-i18n="share_perm_read">Luku</option>
                   <option value="write" data-i18n="share_perm_write">Muokkaus</option>

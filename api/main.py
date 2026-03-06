@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, update
@@ -193,6 +194,25 @@ async def google_sign_in(
             features=features,
         ),
     )
+
+
+class UserBasic(BaseModel):
+    """Minimal user info for sharing UI."""
+    id: int
+    name: str
+    email: str
+
+
+@app.get("/users", response_model=list[UserBasic])
+async def list_users(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[UserBasic]:
+    """Return all users except the current user (for sharing UI)."""
+    result = await session.execute(
+        select(User).where(User.id != current_user.id).order_by(User.name)
+    )
+    return [UserBasic(id=u.id, name=u.name, email=u.email) for u in result.scalars().all()]
 
 
 @app.get("/auth/me", response_model=UserResponse)
