@@ -322,6 +322,7 @@
       checklist_add_templates_btn: "+ Mallipohja",
       checklist_add_templates_title: "Lisää mallipohjia matkaan",
       checklist_add_templates_submit: "Lisää valitut",
+      cancel_btn: "Peruuta",
     },
     en: {
       // Navigation
@@ -641,6 +642,7 @@
       checklist_add_templates_btn: "+ Template",
       checklist_add_templates_title: "Add templates to trip",
       checklist_add_templates_submit: "Add selected",
+      cancel_btn: "Cancel",
     },
   };
 
