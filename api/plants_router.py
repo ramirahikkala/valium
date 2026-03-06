@@ -12,10 +12,8 @@ from sqlalchemy.orm import selectinload
 
 from auth import get_current_user
 from database import get_session
-from models import Plant, PlantCollectionShare, PlantImage, PlantLocation, User
+from models import Plant, PlantGroupMember, PlantImage, PlantLocation, User
 from schemas import (
-    PlantCollectionShareCreate,
-    PlantCollectionShareResponse,
     PlantCreate,
     PlantImageCaptionUpdate,
     PlantImageResponse,
@@ -24,7 +22,6 @@ from schemas import (
     PlantLocationUpdate,
     PlantResponse,
     PlantUpdate,
-    SharedCollectionInfo,
 )
 
 router = APIRouter(prefix="/plants", tags=["plants"])
@@ -57,13 +54,26 @@ def _plant_response(plant: Plant) -> PlantResponse:
     )
 
 
+async def _get_group_user_ids(db: AsyncSession, user_id: int) -> list[int]:
+    """Return all user IDs in the same plant group as user_id (including self)."""
+    row = (await db.execute(
+        select(PlantGroupMember.group_id).where(PlantGroupMember.user_id == user_id)
+    )).scalar_one_or_none()
+    if row is None:
+        return [user_id]
+    result = await db.execute(
+        select(PlantGroupMember.user_id).where(PlantGroupMember.group_id == row)
+    )
+    return list(result.scalars().all())
+
+
 async def _load_plant(
     session: AsyncSession,
     plant_id: int,
     user: User,
     require_write: bool = False,
 ) -> tuple[Plant, str]:
-    """Load a plant and verify access. Returns (plant, permission) where permission is 'owner'|'read'|'write'."""
+    """Load a plant and verify group access. All group members are equal owners."""
     result = await session.execute(
         select(Plant)
         .options(selectinload(Plant.location), selectinload(Plant.images))
@@ -72,21 +82,10 @@ async def _load_plant(
     plant = result.scalar_one_or_none()
     if plant is None:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if plant.user_id == user.id:
-        return plant, "owner"
-    # Check collection share
-    share_result = await session.execute(
-        select(PlantCollectionShare).where(
-            PlantCollectionShare.owner_user_id == plant.user_id,
-            PlantCollectionShare.shared_with_user_id == user.id,
-        )
-    )
-    share = share_result.scalar_one_or_none()
-    if share is None:
+    group_ids = await _get_group_user_ids(session, user.id)
+    if plant.user_id not in group_ids:
         raise HTTPException(status_code=404, detail="Plant not found")
-    if require_write and share.permission != "write":
-        raise HTTPException(status_code=403, detail="Write permission required")
-    return plant, share.permission
+    return plant, "owner"
 
 
 # ---------- Locations ----------
@@ -97,10 +96,11 @@ async def list_locations(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[PlantLocation]:
-    """List all plant locations for the current user."""
+    """List all plant locations for the current user's group."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
     result = await session.execute(
         select(PlantLocation)
-        .where(PlantLocation.user_id == current_user.id)
+        .where(PlantLocation.user_id.in_(group_ids))
         .order_by(PlantLocation.name)
     )
     return list(result.scalars().all())
@@ -128,8 +128,9 @@ async def update_location(
     session: AsyncSession = Depends(get_session),
 ) -> PlantLocation:
     """Rename a plant location."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
     loc = await session.get(PlantLocation, location_id)
-    if loc is None or loc.user_id != current_user.id:
+    if loc is None or loc.user_id not in group_ids:
         raise HTTPException(status_code=404, detail="Location not found")
     loc.name = body.name.strip()
     await session.commit()
@@ -144,153 +145,12 @@ async def delete_location(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a plant location. Plants in this location will have location_id set to null."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
     loc = await session.get(PlantLocation, location_id)
-    if loc is None or loc.user_id != current_user.id:
+    if loc is None or loc.user_id not in group_ids:
         raise HTTPException(status_code=404, detail="Location not found")
     await session.delete(loc)
     await session.commit()
-
-
-# ---------- Plant collection shares ----------
-
-
-@router.get("/collection/shares", response_model=list[PlantCollectionShareResponse])
-async def get_collection_shares(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> list[PlantCollectionShareResponse]:
-    """List all shares for the current user's plant collection."""
-    result = await session.execute(
-        select(PlantCollectionShare)
-        .options(
-            selectinload(PlantCollectionShare.shared_with),
-            selectinload(PlantCollectionShare.owner),
-        )
-        .where(PlantCollectionShare.owner_user_id == current_user.id)
-    )
-    shares = result.scalars().all()
-    return [
-        PlantCollectionShareResponse(
-            id=s.id,
-            owner_user_id=s.owner_user_id,
-            owner_name=s.owner.name,
-            shared_with_user_id=s.shared_with_user_id,
-            shared_with_name=s.shared_with.name,
-            shared_with_email=s.shared_with.email,
-            permission=s.permission,
-        )
-        for s in shares
-    ]
-
-
-@router.post("/collection/shares", response_model=PlantCollectionShareResponse, status_code=201)
-async def create_collection_share(
-    body: PlantCollectionShareCreate,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> PlantCollectionShareResponse:
-    """Share the current user's plant collection with another user."""
-    target_result = await session.execute(select(User).where(User.email == body.email))
-    target = target_result.scalar_one_or_none()
-    if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if target.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot share with yourself")
-
-    existing = await session.execute(
-        select(PlantCollectionShare).where(
-            PlantCollectionShare.owner_user_id == current_user.id,
-            PlantCollectionShare.shared_with_user_id == target.id,
-        )
-    )
-    if existing.scalar_one_or_none() is not None:
-        raise HTTPException(status_code=409, detail="Already shared with this user")
-
-    share = PlantCollectionShare(
-        owner_user_id=current_user.id,
-        shared_with_user_id=target.id,
-        permission=body.permission,
-    )
-    session.add(share)
-    await session.commit()
-    await session.refresh(share)
-    return PlantCollectionShareResponse(
-        id=share.id,
-        owner_user_id=current_user.id,
-        owner_name=current_user.name,
-        shared_with_user_id=target.id,
-        shared_with_name=target.name,
-        shared_with_email=target.email,
-        permission=share.permission,
-    )
-
-
-@router.delete("/collection/shares/{share_id}", status_code=204)
-async def delete_collection_share(
-    share_id: int,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> None:
-    """Remove a plant collection share."""
-    share = await session.get(PlantCollectionShare, share_id)
-    if share is None or share.owner_user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Share not found")
-    await session.delete(share)
-    await session.commit()
-
-
-@router.post("/collection/transfer", status_code=204)
-async def transfer_collection_ownership(
-    body: PlantCollectionShareCreate,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> None:
-    """Transfer all plants, locations and images to another user."""
-    target_result = await session.execute(select(User).where(User.email == body.email))
-    target = target_result.scalar_one_or_none()
-    if target is None:
-        raise HTTPException(status_code=404, detail="User not found")
-    if target.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Cannot transfer to yourself")
-
-    # Move plants, locations and images to new owner
-    await session.execute(update(Plant).where(Plant.user_id == current_user.id).values(user_id=target.id))
-    await session.execute(update(PlantLocation).where(PlantLocation.user_id == current_user.id).values(user_id=target.id))
-    await session.execute(update(PlantImage).where(PlantImage.user_id == current_user.id).values(user_id=target.id))
-
-    # Remove any share between the two users (both directions)
-    shares_to_delete = (await session.execute(
-        select(PlantCollectionShare).where(
-            ((PlantCollectionShare.owner_user_id == current_user.id) & (PlantCollectionShare.shared_with_user_id == target.id)) |
-            ((PlantCollectionShare.owner_user_id == target.id) & (PlantCollectionShare.shared_with_user_id == current_user.id))
-        )
-    )).scalars().all()
-    for s in shares_to_delete:
-        await session.delete(s)
-
-    await session.commit()
-
-
-@router.get("/shared-with-me", response_model=list[SharedCollectionInfo])
-async def get_shared_with_me(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-) -> list[SharedCollectionInfo]:
-    """Get all plant collections shared with the current user."""
-    result = await session.execute(
-        select(PlantCollectionShare)
-        .options(selectinload(PlantCollectionShare.owner))
-        .where(PlantCollectionShare.shared_with_user_id == current_user.id)
-    )
-    shares = result.scalars().all()
-    return [
-        SharedCollectionInfo(
-            owner_user_id=s.owner_user_id,
-            owner_name=s.owner.name,
-            permission=s.permission,
-        )
-        for s in shares
-    ]
 
 
 # ---------- Plants ----------
@@ -302,28 +162,15 @@ async def list_plants(
     category: str | None = Query(None),
     location_id: int | None = Query(None),
     search: str | None = Query(None),
-    owner_id: int | None = Query(None),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> list[PlantResponse]:
-    """List plants for the current user (or a shared collection) with optional filters."""
-    if owner_id and owner_id != current_user.id:
-        share_result = await session.execute(
-            select(PlantCollectionShare).where(
-                PlantCollectionShare.owner_user_id == owner_id,
-                PlantCollectionShare.shared_with_user_id == current_user.id,
-            )
-        )
-        if share_result.scalar_one_or_none() is None:
-            raise HTTPException(status_code=404, detail="Shared collection not found")
-        target_user_id = owner_id
-    else:
-        target_user_id = current_user.id
-
+    """List all plants in the current user's group."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
     stmt = (
         select(Plant)
         .options(selectinload(Plant.location), selectinload(Plant.images))
-        .where(Plant.user_id == target_user_id)
+        .where(Plant.user_id.in_(group_ids))
         .order_by(Plant.latin_name)
     )
     if status:
@@ -354,8 +201,9 @@ async def create_plant(
 ) -> PlantResponse:
     """Create a new plant."""
     if body.location_id is not None:
+        group_ids = await _get_group_user_ids(session, current_user.id)
         loc = await session.get(PlantLocation, body.location_id)
-        if loc is None or loc.user_id != current_user.id:
+        if loc is None or loc.user_id not in group_ids:
             raise HTTPException(status_code=400, detail="Invalid location_id")
     plant = Plant(user_id=current_user.id, **body.model_dump())
     session.add(plant)
@@ -386,8 +234,9 @@ async def update_plant(
     plant, _ = await _load_plant(session, plant_id, current_user, require_write=True)
     update_data = body.model_dump(exclude_unset=True)
     if "location_id" in update_data and update_data["location_id"] is not None:
+        group_ids = await _get_group_user_ids(session, current_user.id)
         loc = await session.get(PlantLocation, update_data["location_id"])
-        if loc is None or loc.user_id != plant.user_id:
+        if loc is None or loc.user_id not in group_ids:
             raise HTTPException(status_code=400, detail="Invalid location_id")
     for field, value in update_data.items():
         setattr(plant, field, value)
@@ -403,9 +252,7 @@ async def delete_plant(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a plant."""
-    plant, permission = await _load_plant(session, plant_id, current_user)
-    if permission != "owner":
-        raise HTTPException(status_code=403, detail="Only the owner can delete a plant")
+    plant, _ = await _load_plant(session, plant_id, current_user)
     await session.delete(plant)
     await session.commit()
 

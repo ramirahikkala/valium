@@ -100,8 +100,6 @@
             <div class="sidebar-children" id="sidebar-plants-children" hidden>
               <button class="sidebar-plants-btn active" data-plants-tab="list" data-i18n="plants_list_tab">Kasvit</button>
               <button class="sidebar-plants-btn" data-plants-tab="locations" data-i18n="plants_locations_tab">Sijainnit</button>
-              <button class="sidebar-plants-btn" id="plants-share-btn" data-i18n="share_collection_btn">👥 Jaa kokoelma</button>
-              <div id="sidebar-shared-plants-items"></div>
             </div>
           </div>
 
@@ -201,6 +199,13 @@
             <input type="text" id="ai-model-input" placeholder="claude-sonnet-4-6" required autocomplete="off">
             <input type="password" id="ai-key-input" placeholder="API-avain" required autocomplete="off">
             <input type="text" id="ai-label-input" placeholder="Nimi (valinnainen)" autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+          </form>
+
+          <h2 class="gym-section-heading" data-i18n="admin_plant_groups_heading">Kasvikokoelmat</h2>
+          <div id="admin-plant-groups-list"></div>
+          <form id="admin-plant-group-form" class="inline-form" style="margin-top:0.5rem">
+            <input type="text" id="admin-plant-group-name" placeholder="Ryhmän nimi" required autocomplete="off" style="flex:1">
             <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
           </form>
 

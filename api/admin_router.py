@@ -6,8 +6,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from auth import ADMIN_USER_ID, ALL_APPS, get_current_user, get_user_features
 from database import get_session
-from models import List, User, UserAppAccess, UserInvite
-from schemas import AdminCreateUser, AdminUserResponse, FeatureUpdate, UserInviteResponse
+from models import List, PlantGroup, PlantGroupMember, User, UserAppAccess, UserInvite
+from schemas import (
+    AdminCreateUser,
+    AdminUserResponse,
+    FeatureUpdate,
+    PlantGroupCreate,
+    PlantGroupResponse,
+    PlantGroupMemberResponse,
+    PlantGroupUpdate,
+    UserInviteResponse,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -119,3 +128,109 @@ async def update_user_feature(
         access.enabled = body.enabled
     await session.commit()
     return {"app": body.app, "enabled": body.enabled}
+
+
+# ---------- Plant groups ----------
+
+
+@router.get("/plant-groups", response_model=list[PlantGroupResponse])
+async def list_plant_groups(
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> list[PlantGroupResponse]:
+    """List all plant groups with their members. Admin-only."""
+    from sqlalchemy.orm import selectinload
+    result = await session.execute(
+        select(PlantGroup)
+        .options(selectinload(PlantGroup.members).selectinload(PlantGroupMember.user))
+        .order_by(PlantGroup.id)
+    )
+    groups = result.scalars().all()
+    return [
+        PlantGroupResponse(
+            id=g.id,
+            name=g.name,
+            members=[
+                PlantGroupMemberResponse(user_id=m.user_id, name=m.user.name, email=m.user.email)
+                for m in g.members
+            ],
+        )
+        for g in groups
+    ]
+
+
+@router.post("/plant-groups", response_model=PlantGroupResponse, status_code=201)
+async def create_plant_group(
+    body: PlantGroupCreate,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> PlantGroupResponse:
+    """Create a new plant group and optionally assign users. Admin-only."""
+    group = PlantGroup(name=body.name.strip())
+    session.add(group)
+    await session.flush()
+    members = []
+    for uid in body.user_ids:
+        user = await session.get(User, uid)
+        if user is None:
+            continue
+        # Ensure user is not already in another group
+        existing = (await session.execute(
+            select(PlantGroupMember).where(PlantGroupMember.user_id == uid)
+        )).scalar_one_or_none()
+        if existing is not None:
+            continue
+        m = PlantGroupMember(group_id=group.id, user_id=uid)
+        session.add(m)
+        members.append(PlantGroupMemberResponse(user_id=uid, name=user.name, email=user.email))
+    await session.commit()
+    return PlantGroupResponse(id=group.id, name=group.name, members=members)
+
+
+@router.put("/plant-groups/{group_id}/members", response_model=PlantGroupResponse)
+async def set_plant_group_members(
+    group_id: int,
+    body: PlantGroupUpdate,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> PlantGroupResponse:
+    """Replace plant group members with the given user ID list. Admin-only."""
+    from sqlalchemy.orm import selectinload
+    group = await session.get(PlantGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    # Remove existing members
+    old_members = (await session.execute(
+        select(PlantGroupMember).where(PlantGroupMember.group_id == group_id)
+    )).scalars().all()
+    for m in old_members:
+        await session.delete(m)
+    await session.flush()
+
+    # Add new members
+    members = []
+    for uid in body.user_ids:
+        user = await session.get(User, uid)
+        if user is None:
+            continue
+        m = PlantGroupMember(group_id=group_id, user_id=uid)
+        session.add(m)
+        members.append(PlantGroupMemberResponse(user_id=uid, name=user.name, email=user.email))
+
+    await session.commit()
+    return PlantGroupResponse(id=group_id, name=group.name, members=members)
+
+
+@router.delete("/plant-groups/{group_id}", status_code=204)
+async def delete_plant_group(
+    group_id: int,
+    current_user: User = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a plant group (members become independent). Admin-only."""
+    group = await session.get(PlantGroup, group_id)
+    if group is None:
+        raise HTTPException(status_code=404, detail="Group not found")
+    await session.delete(group)
+    await session.commit()

@@ -323,8 +323,9 @@
       checklist_add_templates_title: "Lisää mallipohjia matkaan",
       checklist_add_templates_submit: "Lisää valitut",
       cancel_btn: "Peruuta",
-      transfer_ownership_btn: "Siirrä omistajuus",
-      transfer_ownership_confirm: "Siirretäänkö kaikki kasvit käyttäjälle {name}? Tätä ei voi peruuttaa.",
+      admin_plant_groups_heading: "Kasvikokoelmat",
+      admin_plant_group_members_label: "Jäsenet:",
+      admin_plant_group_no_members: "Ei jäseniä",
     },
     en: {
       // Navigation
@@ -645,8 +646,9 @@
       checklist_add_templates_title: "Add templates to trip",
       checklist_add_templates_submit: "Add selected",
       cancel_btn: "Cancel",
-      transfer_ownership_btn: "Transfer ownership",
-      transfer_ownership_confirm: "Transfer all plants to {name}? This cannot be undone.",
+      admin_plant_groups_heading: "Plant collections",
+      admin_plant_group_members_label: "Members:",
+      admin_plant_group_no_members: "No members",
     },
   };
 
@@ -814,7 +816,6 @@
     currentListId = null;
     currentListPermission = "owner";
     lists = [];
-    currentPlantsOwner = null;
     localStorage.removeItem("authToken");
     showLogin();
     // Re-render Google button so it's clickable again
@@ -1489,7 +1490,7 @@
       if (plantLightbox && !plantLightbox.hidden) { plantLightbox.hidden = true; return; }
       if (plantModal && !plantModal.hidden) { closePlantModal(); return; }
       if (listShareModal && !listShareModal.hidden) { listShareModal.hidden = true; return; }
-      if (plantShareModal && !plantShareModal.hidden) { plantShareModal.hidden = true; return; }
+
       if (newSessionModal && !newSessionModal.hidden) { closeNewSessionModal(); return; }
       var checklistSessionShareModal = document.getElementById("checklist-session-share-modal");
       if (checklistSessionShareModal && !checklistSessionShareModal.hidden) { checklistSessionShareModal.hidden = true; return; }
@@ -1633,8 +1634,6 @@
     applyFeatureFlags();
     await loadLists();
     await loadTasks();
-    // Load shared collections in background
-    loadSharedCollections();
   }
 
   // ---------- Bootstrap ----------
@@ -2915,6 +2914,7 @@
     }
     await loadAdminInvites();
     await loadAdminAiProviders();
+    await loadAdminPlantGroups();
   }
 
   async function loadAdminAiProviders() {
@@ -3097,6 +3097,121 @@
     }
   }
 
+  // ---------- Admin: plant groups ----------
+
+  async function loadAdminPlantGroups() {
+    var el = document.getElementById("admin-plant-groups-list");
+    if (!el) return;
+    el.innerHTML = "";
+    try {
+      var groups = await apiFetch("/api/admin/plant-groups");
+      if (!groups) return;
+      if (!groups.length) {
+        el.innerHTML = '<p class="library-empty" style="font-size:0.85rem">-</p>';
+        return;
+      }
+      groups.forEach(function (g) { el.appendChild(renderAdminPlantGroup(g)); });
+    } catch (_) {}
+  }
+
+  function renderAdminPlantGroup(g) {
+    var div = document.createElement("div");
+    div.className = "admin-user-item";
+    div.style.cssText = "flex-direction:column;align-items:flex-start;gap:0.4rem";
+
+    var header = document.createElement("div");
+    header.style.cssText = "display:flex;align-items:center;gap:0.5rem;width:100%";
+    var nameEl = document.createElement("strong");
+    nameEl.textContent = g.name;
+    var delBtn = document.createElement("button");
+    delBtn.className = "btn btn-danger btn-sm";
+    delBtn.style.marginLeft = "auto";
+    delBtn.textContent = t("delete_btn");
+    delBtn.addEventListener("click", async function () {
+      if (!confirm(g.name + "?")) return;
+      await apiFetch("/api/admin/plant-groups/" + g.id, { method: "DELETE" });
+      loadAdminPlantGroups();
+    });
+    header.appendChild(nameEl);
+    header.appendChild(delBtn);
+    div.appendChild(header);
+
+    // Member list
+    var memberList = document.createElement("div");
+    memberList.style.cssText = "display:flex;flex-wrap:wrap;gap:0.3rem;font-size:0.82rem";
+    if (!g.members.length) {
+      memberList.textContent = t("admin_plant_group_no_members");
+    } else {
+      g.members.forEach(function (m) {
+        var chip = document.createElement("span");
+        chip.className = "admin-badge-admin";
+        chip.style.cssText = "display:inline-flex;align-items:center;gap:0.3rem;padding:0.15rem 0.4rem";
+        chip.textContent = m.name;
+        var rm = document.createElement("button");
+        rm.style.cssText = "background:none;border:none;cursor:pointer;padding:0;font-size:0.75rem;color:inherit";
+        rm.textContent = "×";
+        rm.addEventListener("click", async function () {
+          var newIds = g.members.filter(function (x) { return x.user_id !== m.user_id; }).map(function (x) { return x.user_id; });
+          await apiFetch("/api/admin/plant-groups/" + g.id + "/members", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_ids: newIds }),
+          });
+          loadAdminPlantGroups();
+        });
+        chip.appendChild(rm);
+        memberList.appendChild(chip);
+      });
+    }
+    div.appendChild(memberList);
+
+    // Add member row
+    var addRow = document.createElement("div");
+    addRow.style.cssText = "display:flex;gap:0.4rem;width:100%";
+    var sel = document.createElement("select");
+    sel.style.cssText = "flex:1;font-size:0.85rem";
+    var existingIds = new Set(g.members.map(function (m) { return m.email; }));
+    populateUserSelect(sel, existingIds);
+    var addBtn = document.createElement("button");
+    addBtn.className = "btn btn-primary btn-sm";
+    addBtn.textContent = t("add_btn");
+    addBtn.addEventListener("click", async function () {
+      if (!sel.value) return;
+      // Find user_id by email
+      var userObj = allUsers.find(function (u) { return u.email === sel.value; });
+      if (!userObj) return;
+      var newIds = g.members.map(function (m) { return m.user_id; }).concat([userObj.id]);
+      await apiFetch("/api/admin/plant-groups/" + g.id + "/members", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_ids: newIds }),
+      });
+      loadAdminPlantGroups();
+    });
+    addRow.appendChild(sel);
+    addRow.appendChild(addBtn);
+    div.appendChild(addRow);
+
+    return div;
+  }
+
+  var adminPlantGroupForm = document.getElementById("admin-plant-group-form");
+  if (adminPlantGroupForm) {
+    adminPlantGroupForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var nameInput = document.getElementById("admin-plant-group-name");
+      var name = nameInput ? nameInput.value.trim() : "";
+      if (!name) return;
+      await apiFetch("/api/admin/plant-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, user_ids: [] }),
+      });
+      if (nameInput) nameInput.value = "";
+      loadAdminPlantGroups();
+    });
+  }
+
   // ========== PLANTS MODULE ==========
 
   var PLANTS_API = "/api/plants";
@@ -3113,8 +3228,7 @@
   var plantsGroupBy = "";        // "" | "category" | "location" | "status"
   var plantsListScrollTop = 0;   // saved scroll position when entering detail/edit
   var plantsCurrentDetail = null;
-  var currentPlantsOwner = null;  // null = own plants, {owner_user_id, owner_name, permission} = shared
-  var sharedCollections = [];     // SharedCollectionInfo[]
+
 
   // Plants DOM elements
   var plantsTabButtons = document.querySelectorAll(".sidebar-plants-btn");
@@ -3281,9 +3395,6 @@
 
   plantsTabButtons.forEach(function (btn) {
     btn.addEventListener("click", function () {
-      // Clicking a plants tab explicitly switches to own plants
-      currentPlantsOwner = null;
-      renderSharedCollectionsSidebar();
       switchPlantsTab(btn.dataset.plantsTab);
       closeSidebarOnMobile();
     });
@@ -3301,7 +3412,7 @@
     plantsEditSection.hidden = true;
     plantsLocationsSection.hidden = tab !== "locations";
     if (tab === "list") loadPlants();
-    else if (tab === "locations") { currentPlantsOwner = null; loadLocations(); }
+    else if (tab === "locations") { loadLocations(); }
   }
 
   // ---------- Locations ----------
@@ -3411,21 +3522,17 @@
 
   async function loadPlants() {
     try {
-      // Refresh locations for own plants only
-      if (!currentPlantsOwner) {
-        var locs = await apiFetch(PLANTS_API + "/locations");
-        if (locs) {
-          plantsLocations = locs;
-          populatePlantLocationSelect();
-          populateLocationFilter();
-        }
+      var locs = await apiFetch(PLANTS_API + "/locations");
+      if (locs) {
+        plantsLocations = locs;
+        populatePlantLocationSelect();
+        populateLocationFilter();
       }
       var params = [];
       if (plantsFilterStatus) params.push("status=" + encodeURIComponent(plantsFilterStatus));
       if (plantsFilterCategory) params.push("category=" + encodeURIComponent(plantsFilterCategory));
       if (plantsFilterLocation) params.push("location_id=" + encodeURIComponent(plantsFilterLocation));
       if (plantsSearchQuery) params.push("search=" + encodeURIComponent(plantsSearchQuery));
-      if (currentPlantsOwner) params.push("owner_id=" + currentPlantsOwner.owner_user_id);
       var url = PLANTS_API + (params.length ? "?" + params.join("&") : "");
       var plants = await apiFetch(url);
       if (!plants) return;
@@ -3436,146 +3543,12 @@
   }
 
   function updatePlantsWriteUI() {
-    var canWrite = !currentPlantsOwner || currentPlantsOwner.permission === "write";
     var addPlantBtn = document.getElementById("add-plant-btn");
-    if (addPlantBtn) addPlantBtn.hidden = !canWrite || !!currentPlantsOwner;
-    // Update edit/delete buttons in detail view
+    if (addPlantBtn) addPlantBtn.hidden = false;
     var detailEditBtn = document.getElementById("plants-detail-edit-btn");
     var editDeleteBtn = document.getElementById("plants-edit-delete-btn");
-    if (detailEditBtn) detailEditBtn.hidden = !canWrite;
-    if (editDeleteBtn) editDeleteBtn.hidden = !canWrite;
-  }
-
-  // ---------- Plant collection share modal ----------
-
-  var plantShareModal = document.getElementById("plant-share-modal");
-  var plantShareModalClose = document.getElementById("plant-share-modal-close");
-  var plantShareList = document.getElementById("plant-share-list");
-  var plantShareForm = document.getElementById("plant-share-form");
-  var plantShareUserSelect = document.getElementById("plant-share-user");
-  var plantSharePermissionInput = document.getElementById("plant-share-permission");
-  var plantsShareBtn = document.getElementById("plants-share-btn");
-
-  if (plantsShareBtn) {
-    plantsShareBtn.addEventListener("click", async function () {
-      plantShareModal.hidden = false;
-      await loadAllUsers();
-      loadPlantCollectionShares();
-    });
-  }
-
-  if (plantShareModalClose) {
-    plantShareModalClose.addEventListener("click", function () {
-      plantShareModal.hidden = true;
-    });
-  }
-
-  if (plantShareModal) {
-    plantShareModal.addEventListener("click", function (e) {
-      if (e.target === plantShareModal) plantShareModal.hidden = true;
-    });
-  }
-
-  async function loadPlantCollectionShares() {
-    try {
-      var shares = await apiFetch(PLANTS_API + "/collection/shares");
-      if (!shares) return;
-      renderPlantCollectionShares(shares);
-      var alreadyShared = new Set(shares.map(function (s) { return s.shared_with_email; }));
-      populateUserSelect(plantShareUserSelect, alreadyShared);
-    } catch (_) {}
-  }
-
-  function renderPlantCollectionShares(shares) {
-    if (!plantShareList) return;
-    plantShareList.innerHTML = "";
-    if (shares.length === 0) {
-      plantShareList.innerHTML = '<p class="library-empty" style="font-size:0.85rem;color:var(--color-text-muted)">-</p>';
-      return;
-    }
-    shares.forEach(function (s) {
-      var row = document.createElement("div");
-      row.className = "share-row";
-      var permLabel = s.permission === "write" ? t("share_perm_write") : t("share_perm_read");
-      row.innerHTML =
-        '<span class="share-row-name">' + escapeHtml(s.shared_with_name) + ' <span class="share-row-perm">(' + permLabel + ')</span></span>' +
-        '<button class="btn btn-sm" data-transfer-email="' + escapeHtml(s.shared_with_email) + '" data-transfer-name="' + escapeHtml(s.shared_with_name) + '">' + t("transfer_ownership_btn") + '</button>' +
-        '<button class="btn btn-danger btn-sm" data-share-id="' + s.id + '">' + t("share_remove_btn") + '</button>';
-      row.querySelector("[data-share-id]").addEventListener("click", function () {
-        removePlantCollectionShare(s.id);
-      });
-      row.querySelector("[data-transfer-email]").addEventListener("click", async function (e) {
-        var email = e.currentTarget.dataset.transferEmail;
-        var name = e.currentTarget.dataset.transferName;
-        if (!confirm(t("transfer_ownership_confirm").replace("{name}", name))) return;
-        try {
-          await apiFetch(PLANTS_API + "/collection/transfer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email: email, permission: "write" }),
-          });
-          if (plantShareModal) plantShareModal.hidden = true;
-          currentPlantsOwner = null;
-          loadPlants();
-          loadSharedCollections();
-        } catch (_) {}
-      });
-      plantShareList.appendChild(row);
-    });
-  }
-
-  async function removePlantCollectionShare(shareId) {
-    try {
-      await apiFetch(PLANTS_API + "/collection/shares/" + shareId, { method: "DELETE" });
-      loadPlantCollectionShares();
-    } catch (_) {}
-  }
-
-  if (plantShareForm) {
-    plantShareForm.addEventListener("submit", async function (e) {
-      e.preventDefault();
-      var email = plantShareUserSelect ? plantShareUserSelect.value : "";
-      var permission = plantSharePermissionInput.value;
-      if (!email) return;
-      try {
-        await apiFetch(PLANTS_API + "/collection/shares", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email, permission: permission }),
-        });
-        loadPlantCollectionShares();
-      } catch (_) {}
-    });
-  }
-
-  // ---------- Shared collections sidebar ----------
-
-  async function loadSharedCollections() {
-    try {
-      var collections = await apiFetch(PLANTS_API + "/shared-with-me");
-      if (!collections) return;
-      sharedCollections = collections;
-      renderSharedCollectionsSidebar();
-    } catch (_) {}
-  }
-
-  function renderSharedCollectionsSidebar() {
-    var itemsEl = document.getElementById("sidebar-shared-plants-items");
-    if (!itemsEl) return;
-    itemsEl.innerHTML = "";
-    sharedCollections.forEach(function (col) {
-      var isActive = currentPlantsOwner && currentPlantsOwner.owner_user_id === col.owner_user_id;
-      var btn = document.createElement("button");
-      btn.className = "sidebar-plants-btn" + (isActive ? " active" : "");
-      btn.textContent = col.owner_name;
-      btn.addEventListener("click", function () {
-        currentPlantsOwner = col;
-        renderSharedCollectionsSidebar();
-        switchToView("plants");
-        switchPlantsTab("list");
-      });
-      itemsEl.appendChild(btn);
-    });
+    if (detailEditBtn) detailEditBtn.hidden = false;
+    if (editDeleteBtn) editDeleteBtn.hidden = false;
   }
 
   function plantCategoryLabel(cat) {

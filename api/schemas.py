@@ -499,6 +499,38 @@ class PlantResponse(BaseModel):
     primary_image_url: str | None = None
 
 
+# ---------- Plant groups ----------
+
+
+class PlantGroupMemberResponse(BaseModel):
+    """Schema returned for a single plant group member."""
+
+    user_id: int
+    name: str
+    email: str
+
+
+class PlantGroupCreate(BaseModel):
+    """Schema for creating a plant group."""
+
+    name: str
+    user_ids: list[int] = []
+
+
+class PlantGroupUpdate(BaseModel):
+    """Schema for updating a plant group's members."""
+
+    user_ids: list[int]
+
+
+class PlantGroupResponse(BaseModel):
+    """Schema returned for a single plant group."""
+
+    id: int
+    name: str
+    members: list[PlantGroupMemberResponse] = []
+
+
 # ---------- AI providers ----------
 
 

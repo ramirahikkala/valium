@@ -501,6 +501,43 @@ class PlantCollectionShare(Base):
     )
 
 
+# ---------- Plant groups ----------
+
+
+class PlantGroup(Base):
+    """A group that allows multiple users to share one plant collection."""
+
+    __tablename__ = "plant_groups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    members: Mapped[list["PlantGroupMember"]] = relationship(
+        "PlantGroupMember", cascade="all, delete-orphan", back_populates="group"
+    )
+
+
+class PlantGroupMember(Base):
+    """Membership record linking a user to a plant group (one group per user max)."""
+
+    __tablename__ = "plant_group_members"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    group_id: Mapped[int] = mapped_column(ForeignKey("plant_groups.id", ondelete="CASCADE"))
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+
+    group: Mapped["PlantGroup"] = relationship("PlantGroup", back_populates="members")
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    __table_args__ = (UniqueConstraint("user_id"),)
+
+
 # ---------- AI providers ----------
 
 
