@@ -682,7 +682,7 @@ async def create_session(
 
 
 @router.get("/sessions/{session_id}", response_model=ChecklistSessionResponse)
-async def get_session(
+async def get_checklist_session(
     session_id: int,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -910,6 +910,7 @@ async def add_templates_to_session(
             position += 1
 
     await session.commit()
+    session.expire(sess)  # Expire so selectinload re-fetches the new items
     sess = await _load_session(session, session_id, with_shares=(permission == "owner"))
     if permission == "owner":
         return _session_response(sess, permission="owner", shares=[_share_response(s) for s in sess.shares])
