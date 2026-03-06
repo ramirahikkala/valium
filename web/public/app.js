@@ -252,6 +252,7 @@
 
       // Kasvit — kuvat
       plant_image_upload_btn: "+ Lisää kuva",
+      plant_image_camera_btn: "📷 Kamera",
       plant_image_set_primary: "Aseta pääkuvaksi",
       plant_image_delete_confirm: "Poistetaanko kuva?",
       plant_image_caption_ph: "Kuvateksti...",
@@ -582,6 +583,7 @@
 
       // Plants — images
       plant_image_upload_btn: "+ Add photo",
+      plant_image_camera_btn: "📷 Camera",
       plant_image_set_primary: "Set as primary",
       plant_image_delete_confirm: "Delete photo?",
       plant_image_caption_ph: "Caption...",
@@ -3325,6 +3327,7 @@
   var plantEditCancelBtn = document.getElementById("plant-edit-cancel-btn");
   var plantsEditGallery = document.getElementById("plants-edit-gallery");
   var plantsEditImageUpload = document.getElementById("plants-edit-image-upload");
+  var plantsEditImageCamera = document.getElementById("plants-edit-image-camera");
   var plantsEditWikiImageBtn = document.getElementById("plants-edit-wiki-image-btn");
   var plantsEditAiSummarySection = document.getElementById("plants-edit-ai-summary-section");
   var plantsEditAiSummaryEl = document.getElementById("plants-edit-ai-summary");
@@ -4083,16 +4086,26 @@
 
   // ---------- Image upload (edit section) ----------
 
-  plantsEditImageUpload.addEventListener("change", async function () {
-    var file = this.files[0];
+  async function uploadPlantImage(file) {
     if (!file || !plantsCurrentDetail) return;
-    this.value = "";
     var fd = new FormData();
     fd.append("file", file);
     try {
       await apiFetch(PLANTS_API + "/" + plantsCurrentDetail.id + "/images", { method: "POST", body: fd });
       await reloadCurrentEdit();
     } catch (_) {}
+  }
+
+  plantsEditImageUpload.addEventListener("change", async function () {
+    var file = this.files[0];
+    this.value = "";
+    await uploadPlantImage(file);
+  });
+
+  plantsEditImageCamera.addEventListener("change", async function () {
+    var file = this.files[0];
+    this.value = "";
+    await uploadPlantImage(file);
   });
 
   plantsEditGallery.addEventListener("click", async function (e) {
