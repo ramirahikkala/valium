@@ -305,6 +305,7 @@
             <div class="checklist-toolbar">
               <button id="session-back-btn" class="btn btn-icon" data-i18n-title="back">←</button>
               <h2 id="session-detail-title" class="view-heading"></h2>
+              <button id="session-add-templates-btn" class="btn btn-secondary btn-sm" data-i18n="checklist_add_templates_btn">+ Mallipohja</button>
               <button id="checklist-session-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_session_btn">👥 Jaa</button>
               <button id="session-complete-btn" class="btn btn-sm" data-i18n="checklist_complete_btn">✓ Valmis</button>
             </div>
@@ -376,6 +377,21 @@
                 <button type="submit" class="btn btn-primary" data-i18n="checklist_create_session_btn">Luo matka</button>
               </div>
             </form>
+          </div>
+        </div>
+
+        <!-- Add templates to session modal -->
+        <div id="session-add-templates-modal" class="modal-overlay" hidden>
+          <div class="modal">
+            <div class="modal-header">
+              <h2 data-i18n="checklist_add_templates_title">Lisää mallipohjia</h2>
+              <button id="session-add-templates-close" class="modal-close">✕</button>
+            </div>
+            <div id="session-add-templates-picker" class="checklist-template-picker"></div>
+            <div class="modal-actions">
+              <button type="button" id="session-add-templates-cancel" class="btn" data-i18n="cancel_btn">Peruuta</button>
+              <button type="button" id="session-add-templates-submit" class="btn btn-primary" data-i18n="checklist_add_templates_submit">Lisää valitut</button>
+            </div>
           </div>
         </div>
 

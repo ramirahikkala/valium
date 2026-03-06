@@ -18,6 +18,7 @@ from models import (
     User,
 )
 from schemas import (
+    ChecklistSessionAddTemplates,
     ChecklistSessionCreate,
     ChecklistSessionItemAdd,
     ChecklistSessionItemResponse,
@@ -110,69 +111,87 @@ async def _load_template(session: AsyncSession, template_id: int, user: User) ->
     return tmpl
 
 
-async def _load_session_access(
+async def _check_session_access(
     db: AsyncSession, session_id: int, user: User, require_write: bool = False
-) -> tuple[ChecklistSession, str]:
-    """Load a session and return (session, permission). Handles owner and shared access."""
-    result = await db.execute(
-        select(ChecklistSession)
-        .options(
-            selectinload(ChecklistSession.items),
-            selectinload(ChecklistSession.shares).selectinload(ChecklistSessionShare.shared_with),
+) -> str:
+    """Lightweight access check. Returns permission string or raises 404/403. Does NOT load items."""
+    row = (await db.execute(
+        select(ChecklistSession.user_id).where(ChecklistSession.id == session_id)
+    )).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if row[0] == user.id:
+        return "owner"
+    perm = (await db.execute(
+        select(ChecklistSessionShare.permission).where(
+            ChecklistSessionShare.session_id == session_id,
+            ChecklistSessionShare.shared_with_user_id == user.id,
         )
-        .where(ChecklistSession.id == session_id)
+    )).scalar_one_or_none()
+    if perm is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if require_write and perm != "write":
+        raise HTTPException(status_code=403, detail="Write permission required")
+    return perm
+
+
+async def _load_session(
+    db: AsyncSession, session_id: int, with_shares: bool = False
+) -> ChecklistSession:
+    """Load a session with items (and optionally shares). Raises 404 if not found."""
+    options = [selectinload(ChecklistSession.items)]
+    if with_shares:
+        options.append(selectinload(ChecklistSession.shares).selectinload(ChecklistSessionShare.shared_with))
+    result = await db.execute(
+        select(ChecklistSession).options(*options).where(ChecklistSession.id == session_id)
     )
     sess = result.scalar_one_or_none()
     if sess is None:
         raise HTTPException(status_code=404, detail="Session not found")
-    if sess.user_id == user.id:
-        return sess, "owner"
-    # Check share
-    share_result = await db.execute(
-        select(ChecklistSessionShare).where(
-            ChecklistSessionShare.session_id == session_id,
-            ChecklistSessionShare.shared_with_user_id == user.id,
-        )
-    )
-    share = share_result.scalar_one_or_none()
-    if share is None:
-        raise HTTPException(status_code=404, detail="Session not found")
-    if require_write and share.permission != "write":
-        raise HTTPException(status_code=403, detail="Write permission required")
-    return sess, share.permission
+    return sess
 
 
-async def _load_template_access(
+async def _check_template_access(
     db: AsyncSession, template_id: int, user: User, require_write: bool = False
-) -> tuple[ChecklistTemplate, str]:
-    """Load a template and return (template, permission). Handles owner and shared access."""
-    result = await db.execute(
-        select(ChecklistTemplate)
-        .options(
-            selectinload(ChecklistTemplate.items),
-            selectinload(ChecklistTemplate.includes).selectinload(ChecklistTemplateInclude.child),
-            selectinload(ChecklistTemplate.shares).selectinload(ChecklistTemplateShare.shared_with),
+) -> str:
+    """Lightweight template access check. Returns permission or raises 404/403."""
+    row = (await db.execute(
+        select(ChecklistTemplate.user_id).where(ChecklistTemplate.id == template_id)
+    )).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if row[0] == user.id:
+        return "owner"
+    perm = (await db.execute(
+        select(ChecklistTemplateShare.permission).where(
+            ChecklistTemplateShare.template_id == template_id,
+            ChecklistTemplateShare.shared_with_user_id == user.id,
         )
-        .where(ChecklistTemplate.id == template_id)
+    )).scalar_one_or_none()
+    if perm is None:
+        raise HTTPException(status_code=404, detail="Template not found")
+    if require_write and perm != "write":
+        raise HTTPException(status_code=403, detail="Write permission required")
+    return perm
+
+
+async def _load_template_full(
+    db: AsyncSession, template_id: int, with_shares: bool = False
+) -> ChecklistTemplate:
+    """Load a template with items and includes (and optionally shares)."""
+    options = [
+        selectinload(ChecklistTemplate.items),
+        selectinload(ChecklistTemplate.includes).selectinload(ChecklistTemplateInclude.child),
+    ]
+    if with_shares:
+        options.append(selectinload(ChecklistTemplate.shares).selectinload(ChecklistTemplateShare.shared_with))
+    result = await db.execute(
+        select(ChecklistTemplate).options(*options).where(ChecklistTemplate.id == template_id)
     )
     tmpl = result.scalar_one_or_none()
     if tmpl is None:
         raise HTTPException(status_code=404, detail="Template not found")
-    if tmpl.user_id == user.id:
-        return tmpl, "owner"
-    # Check share
-    share_result = await db.execute(
-        select(ChecklistTemplateShare).where(
-            ChecklistTemplateShare.template_id == template_id,
-            ChecklistTemplateShare.shared_with_user_id == user.id,
-        )
-    )
-    share = share_result.scalar_one_or_none()
-    if share is None:
-        raise HTTPException(status_code=404, detail="Template not found")
-    if require_write and share.permission != "write":
-        raise HTTPException(status_code=403, detail="Write permission required")
-    return tmpl, share.permission
+    return tmpl
 
 
 async def _flatten_template(
@@ -409,12 +428,12 @@ async def update_template(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistTemplateResponse:
     """Rename a checklist template (owner only)."""
-    tmpl, permission = await _load_template_access(session, template_id, current_user, require_write=True)
+    permission = await _check_template_access(session, template_id, current_user, require_write=True)
     if permission != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can rename this template")
+    tmpl = await _load_template_full(session, template_id)
     tmpl.name = body.name.strip()
     await session.commit()
-    tmpl, _ = await _load_template_access(session, template_id, current_user)
     return _template_response(tmpl)
 
 
@@ -441,7 +460,8 @@ async def add_template_item(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistTemplateItemResponse:
     """Add an item to a template (write access required)."""
-    tmpl, _ = await _load_template_access(session, template_id, current_user, require_write=True)
+    await _check_template_access(session, template_id, current_user, require_write=True)
+    tmpl = await _load_template_full(session, template_id)
     position = len(tmpl.items)
     item = ChecklistTemplateItem(template_id=template_id, text=body.text.strip(), position=position)
     session.add(item)
@@ -458,7 +478,7 @@ async def delete_template_item(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete an item from a template (write access required)."""
-    await _load_template_access(session, template_id, current_user, require_write=True)
+    await _check_template_access(session, template_id, current_user, require_write=True)
     item = await session.get(ChecklistTemplateItem, item_id)
     if item is None or item.template_id != template_id:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -528,11 +548,13 @@ async def get_template_shares(
     session: AsyncSession = Depends(get_session),
 ) -> list[ChecklistShareResponse]:
     """List shares for a template (owner only)."""
-    tmpl = await _load_template(session, template_id, current_user)
+    perm = await _check_template_access(session, template_id, current_user)
+    if perm != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can view shares")
     result = await session.execute(
         select(ChecklistTemplateShare)
         .options(selectinload(ChecklistTemplateShare.shared_with))
-        .where(ChecklistTemplateShare.template_id == tmpl.id)
+        .where(ChecklistTemplateShare.template_id == template_id)
     )
     return [_share_response(s) for s in result.scalars().all()]
 
@@ -545,7 +567,9 @@ async def delete_template_share(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Remove a template share (owner only)."""
-    await _load_template(session, template_id, current_user)
+    perm = await _check_template_access(session, template_id, current_user)
+    if perm != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can remove shares")
     share = await session.get(ChecklistTemplateShare, share_id)
     if share is None or share.template_id != template_id:
         raise HTTPException(status_code=404, detail="Share not found")
@@ -664,9 +688,11 @@ async def get_session(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistSessionResponse:
     """Get a single packing session with all items."""
-    sess, permission = await _load_session_access(session, session_id, current_user)
+    permission = await _check_session_access(session, session_id, current_user)
     if permission == "owner":
+        sess = await _load_session(session, session_id, with_shares=True)
         return _session_response(sess, permission="owner", shares=[_share_response(s) for s in sess.shares])
+    sess = await _load_session(session, session_id)
     owner = await session.get(User, sess.user_id)
     return _session_response(
         sess,
@@ -683,14 +709,13 @@ async def delete_session(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Delete a packing session (owner only)."""
+    perm = await _check_session_access(session, session_id, current_user)
+    if perm != "owner":
+        raise HTTPException(status_code=403, detail="Only the owner can delete this session")
     result = await session.execute(
-        select(ChecklistSession).where(
-            ChecklistSession.id == session_id, ChecklistSession.user_id == current_user.id
-        )
+        select(ChecklistSession).where(ChecklistSession.id == session_id)
     )
-    sess = result.scalar_one_or_none()
-    if sess is None:
-        raise HTTPException(status_code=404, detail="Session not found")
+    sess = result.scalar_one()
     await session.delete(sess)
     await session.commit()
 
@@ -704,10 +729,15 @@ async def complete_session(
     """Mark a session as completed or reopen it (write access required)."""
     from datetime import datetime, timezone
 
-    sess, permission = await _load_session_access(session, session_id, current_user, require_write=True)
+    permission = await _check_session_access(session, session_id, current_user, require_write=True)
+    result = await session.execute(
+        select(ChecklistSession).where(ChecklistSession.id == session_id)
+    )
+    sess = result.scalar_one()
     sess.completed_at = None if sess.completed_at else datetime.now(timezone.utc)
     await session.commit()
-    await session.refresh(sess)
+    # Reload with items (and shares if owner)
+    sess = await _load_session(session, session_id, with_shares=(permission == "owner"))
     if permission == "owner":
         return _session_response(sess, permission="owner", shares=[_share_response(s) for s in sess.shares])
     owner = await session.get(User, sess.user_id)
@@ -727,7 +757,7 @@ async def toggle_session_item(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistSessionItemResponse:
     """Toggle a session item checked/unchecked (write access required)."""
-    await _load_session_access(session, session_id, current_user, require_write=True)
+    await _check_session_access(session, session_id, current_user, require_write=True)
     item = await session.get(ChecklistSessionItem, item_id)
     if item is None or item.session_id != session_id:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -745,12 +775,17 @@ async def add_session_item(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistSessionItemResponse:
     """Add an ad-hoc item to an active session (write access required)."""
-    sess, _ = await _load_session_access(session, session_id, current_user, require_write=True)
+    await _check_session_access(session, session_id, current_user, require_write=True)
+    # Count existing items for position
+    count_result = await session.execute(
+        select(ChecklistSessionItem).where(ChecklistSessionItem.session_id == session_id)
+    )
+    position = len(count_result.scalars().all())
     item = ChecklistSessionItem(
         session_id=session_id,
         text=body.text.strip(),
         template_name=body.template_name,
-        position=len(sess.items),
+        position=position,
     )
     session.add(item)
     await session.commit()
@@ -768,13 +803,13 @@ async def get_session_shares(
     session: AsyncSession = Depends(get_session),
 ) -> list[ChecklistShareResponse]:
     """List shares for a session (owner only)."""
-    sess, permission = await _load_session_access(session, session_id, current_user)
-    if permission != "owner":
+    perm = await _check_session_access(session, session_id, current_user)
+    if perm != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can view shares")
     result = await session.execute(
         select(ChecklistSessionShare)
         .options(selectinload(ChecklistSessionShare.shared_with))
-        .where(ChecklistSessionShare.session_id == sess.id)
+        .where(ChecklistSessionShare.session_id == session_id)
     )
     return [_share_response(s) for s in result.scalars().all()]
 
@@ -787,8 +822,8 @@ async def create_session_share(
     session: AsyncSession = Depends(get_session),
 ) -> ChecklistShareResponse:
     """Share a session with another user by email (owner only)."""
-    sess, permission = await _load_session_access(session, session_id, current_user)
-    if permission != "owner":
+    perm = await _check_session_access(session, session_id, current_user)
+    if perm != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can share this session")
 
     target_result = await session.execute(select(User).where(User.email == body.email))
@@ -832,11 +867,56 @@ async def delete_session_share(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     """Remove a session share (owner only)."""
-    _, permission = await _load_session_access(session, session_id, current_user)
-    if permission != "owner":
+    perm = await _check_session_access(session, session_id, current_user)
+    if perm != "owner":
         raise HTTPException(status_code=403, detail="Only the owner can remove shares")
     share = await session.get(ChecklistSessionShare, share_id)
     if share is None or share.session_id != session_id:
         raise HTTPException(status_code=404, detail="Share not found")
     await session.delete(share)
     await session.commit()
+
+
+@router.post("/sessions/{session_id}/templates", response_model=ChecklistSessionResponse)
+async def add_templates_to_session(
+    session_id: int,
+    body: ChecklistSessionAddTemplates,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ChecklistSessionResponse:
+    """Append items from templates to an existing session (write access required)."""
+    permission = await _check_session_access(session, session_id, current_user, require_write=True)
+    sess = await _load_session(session, session_id)
+
+    existing_keys: set[str] = set(
+        f"{i.template_id}:{i.text.lower()}" for i in sess.items
+    )
+    position = len(sess.items)
+
+    for tmpl_id in body.template_ids:
+        rows = await _flatten_template(session, tmpl_id, current_user.id)
+        for (src_tmpl_id, src_tmpl_name, text) in rows:
+            key = f"{src_tmpl_id}:{text.lower()}"
+            if key in existing_keys:
+                continue
+            existing_keys.add(key)
+            session.add(ChecklistSessionItem(
+                session_id=session_id,
+                text=text,
+                template_id=src_tmpl_id,
+                template_name=src_tmpl_name,
+                position=position,
+            ))
+            position += 1
+
+    await session.commit()
+    sess = await _load_session(session, session_id, with_shares=(permission == "owner"))
+    if permission == "owner":
+        return _session_response(sess, permission="owner", shares=[_share_response(s) for s in sess.shares])
+    owner = await session.get(User, sess.user_id)
+    return _session_response(
+        sess,
+        permission=permission,
+        owner_id=sess.user_id,
+        owner_name=owner.name if owner else None,
+    )

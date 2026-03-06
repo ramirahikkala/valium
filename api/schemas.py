@@ -644,6 +644,12 @@ class ChecklistSessionCreate(BaseModel):
     template_ids: list[int]
 
 
+class ChecklistSessionAddTemplates(BaseModel):
+    """Schema for adding templates to an existing session."""
+
+    template_ids: list[int]
+
+
 class ChecklistSessionItemAdd(BaseModel):
     """Schema for adding an ad-hoc item to a session."""
 
