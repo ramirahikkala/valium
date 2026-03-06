@@ -3104,6 +3104,7 @@
     if (!el) return;
     el.innerHTML = "";
     try {
+      await loadAllUsers();
       var groups = await apiFetch("/api/admin/plant-groups");
       if (!groups) return;
       if (!groups.length) {
