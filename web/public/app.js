@@ -3448,13 +3448,14 @@
   var plantShareModalClose = document.getElementById("plant-share-modal-close");
   var plantShareList = document.getElementById("plant-share-list");
   var plantShareForm = document.getElementById("plant-share-form");
-  var plantShareEmailInput = document.getElementById("plant-share-email");
+  var plantShareUserSelect = document.getElementById("plant-share-user");
   var plantSharePermissionInput = document.getElementById("plant-share-permission");
   var plantsShareBtn = document.getElementById("plants-share-btn");
 
   if (plantsShareBtn) {
-    plantsShareBtn.addEventListener("click", function () {
+    plantsShareBtn.addEventListener("click", async function () {
       plantShareModal.hidden = false;
+      await loadAllUsers();
       loadPlantCollectionShares();
     });
   }
@@ -3476,6 +3477,8 @@
       var shares = await apiFetch(PLANTS_API + "/collection/shares");
       if (!shares) return;
       renderPlantCollectionShares(shares);
+      var alreadyShared = new Set(shares.map(function (s) { return s.shared_with_email; }));
+      populateUserSelect(plantShareUserSelect, alreadyShared);
     } catch (_) {}
   }
 
@@ -3510,7 +3513,7 @@
   if (plantShareForm) {
     plantShareForm.addEventListener("submit", async function (e) {
       e.preventDefault();
-      var email = plantShareEmailInput.value.trim();
+      var email = plantShareUserSelect ? plantShareUserSelect.value : "";
       var permission = plantSharePermissionInput.value;
       if (!email) return;
       try {
@@ -3519,7 +3522,6 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email, permission: permission }),
         });
-        plantShareEmailInput.value = "";
         loadPlantCollectionShares();
       } catch (_) {}
     });
