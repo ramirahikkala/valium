@@ -3099,12 +3099,15 @@
 
   // ---------- Admin: plant groups ----------
 
+  var allUsersAdmin = [];
+
   async function loadAdminPlantGroups() {
     var el = document.getElementById("admin-plant-groups-list");
     if (!el) return;
     el.innerHTML = "";
     try {
-      await loadAllUsers();
+      var users = await apiFetch("/api/admin/users");
+      if (users) allUsersAdmin = users;
       var groups = await apiFetch("/api/admin/plant-groups");
       if (!groups) return;
       if (!groups.length) {
@@ -3113,6 +3116,24 @@
       }
       groups.forEach(function (g) { el.appendChild(renderAdminPlantGroup(g)); });
     } catch (_) {}
+  }
+
+  function populateAdminUserSelect(selectEl, excludeEmails) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    var placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = t("select_user_placeholder");
+    placeholder.disabled = true;
+    placeholder.selected = true;
+    selectEl.appendChild(placeholder);
+    allUsersAdmin.forEach(function (u) {
+      if (excludeEmails && excludeEmails.has(u.email)) return;
+      var opt = document.createElement("option");
+      opt.value = u.email;
+      opt.textContent = u.name + " (" + u.email + ")";
+      selectEl.appendChild(opt);
+    });
   }
 
   function renderAdminPlantGroup(g) {
@@ -3172,14 +3193,14 @@
     var sel = document.createElement("select");
     sel.style.cssText = "flex:1;font-size:0.85rem";
     var existingIds = new Set(g.members.map(function (m) { return m.email; }));
-    populateUserSelect(sel, existingIds);
+    populateAdminUserSelect(sel, existingIds);
     var addBtn = document.createElement("button");
     addBtn.className = "btn btn-primary btn-sm";
     addBtn.textContent = t("add_btn");
     addBtn.addEventListener("click", async function () {
       if (!sel.value) return;
       // Find user_id by email
-      var userObj = allUsers.find(function (u) { return u.email === sel.value; });
+      var userObj = allUsersAdmin.find(function (u) { return u.email === sel.value; });
       if (!userObj) return;
       var newIds = g.members.map(function (m) { return m.user_id; }).concat([userObj.id]);
       await apiFetch("/api/admin/plant-groups/" + g.id + "/members", {
