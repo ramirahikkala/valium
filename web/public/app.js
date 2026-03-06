@@ -86,6 +86,7 @@
       create_btn: "Luo",
       no_exercises_library: "Ei liikkeitä. Lisää liike yllä.",
       rename_btn: "Nimeä",
+      edit_btn: "Muokkaa",
       delete_btn: "Poista",
       rename_prompt: "Uusi nimi:",
       delete_exercise_confirm: "Poistetaanko liike? Se poistetaan myös kaikista ohjelmista.",
@@ -415,6 +416,7 @@
       create_btn: "Create",
       no_exercises_library: "No exercises. Add one above.",
       rename_btn: "Rename",
+      edit_btn: "Edit",
       delete_btn: "Delete",
       rename_prompt: "New name:",
       delete_exercise_confirm: "Delete exercise? It will also be removed from all programs.",
@@ -3587,7 +3589,7 @@
           '<h3 class="plant-note-title">' + escapeHtml(note.title) + "</h3>" +
           '<p class="plant-note-text">' + escapeHtml(note.text) + "</p>" +
           '<div class="plant-note-actions">' +
-            '<button class="btn btn-secondary btn-sm" data-action="edit">' + t("rename_btn") + "</button>" +
+            '<button class="btn btn-secondary btn-sm" data-action="edit">' + t("edit_btn") + "</button>" +
             '<button class="btn btn-danger btn-sm" data-action="delete">' + t("delete_btn") + "</button>" +
           "</div>" +
         "</div>" +
