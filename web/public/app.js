@@ -186,6 +186,7 @@
       plants_notes_heading: "Muistiinpanot",
       new_note_placeholder: "Otsikko...",
       no_notes: "Ei muistiinpanoja",
+      new_note_text_placeholder: "Muistiinpano...",
       save_btn: "Tallenna",
 
       // Kasvit — suodattimet
@@ -514,6 +515,7 @@
       plants_notes_heading: "Notes",
       new_note_placeholder: "Title...",
       no_notes: "No notes",
+      new_note_text_placeholder: "Note...",
       save_btn: "Save",
 
       // Plants — filters
@@ -3270,6 +3272,7 @@
   var plantsNotesListEl = document.getElementById("plants-notes-list");
   var addNoteForm = document.getElementById("add-note-form");
   var newNoteTitleInput = document.getElementById("new-note-title");
+  var newNoteTextInput = document.getElementById("new-note-text");
   var plantsDetailSection = document.getElementById("plants-detail-section");
   var plantsEditSection = document.getElementById("plants-edit-section");
   var addPlantBtn = document.getElementById("add-plant-btn");
@@ -3647,9 +3650,10 @@
         await apiFetch(PLANTS_API + "/notes", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ title: title, text: "" }),
+          body: JSON.stringify({ title: title, text: newNoteTextInput ? newNoteTextInput.value : "" }),
         });
         newNoteTitleInput.value = "";
+        if (newNoteTextInput) newNoteTextInput.value = "";
         loadPlantNotes();
       } catch (_) {}
     });

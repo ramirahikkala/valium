@@ -2929,3 +2929,21 @@ input[type="datetime-local"]:focus {
   display: flex;
   gap: 0.4rem;
 }
+
+.plant-note-add-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.plant-note-add-form input,
+.plant-note-add-form textarea {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: inherit;
+  resize: vertical;
+}

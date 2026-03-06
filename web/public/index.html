@@ -629,8 +629,9 @@
           <!-- Notes sub-view -->
           <div id="plants-notes-section" class="plants-section" hidden>
             <h2 class="gym-section-heading" data-i18n="plants_notes_heading">Muistiinpanot</h2>
-            <form id="add-note-form" class="inline-form">
+            <form id="add-note-form" class="plant-note-add-form">
               <input type="text" id="new-note-title" data-i18n-placeholder="new_note_placeholder" placeholder="Otsikko..." required autocomplete="off">
+              <textarea id="new-note-text" rows="4" data-i18n-placeholder="new_note_text_placeholder" placeholder="Muistiinpano..."></textarea>
               <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
             </form>
             <div id="plants-notes-list"></div>
