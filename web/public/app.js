@@ -3327,6 +3327,7 @@
   var plantEditCancelBtn = document.getElementById("plant-edit-cancel-btn");
   var plantsEditGallery = document.getElementById("plants-edit-gallery");
   var plantsEditImageUpload = document.getElementById("plants-edit-image-upload");
+  var plantsEditImageCamera = document.getElementById("plants-edit-image-camera");
   var plantsEditWikiImageBtn = document.getElementById("plants-edit-wiki-image-btn");
   var plantsEditAiSummarySection = document.getElementById("plants-edit-ai-summary-section");
   var plantsEditAiSummaryEl = document.getElementById("plants-edit-ai-summary");
@@ -4097,6 +4098,12 @@
   }
 
   plantsEditImageUpload.addEventListener("change", async function () {
+    var file = this.files[0];
+    this.value = "";
+    await uploadPlantImage(file);
+  });
+
+  plantsEditImageCamera.addEventListener("change", async function () {
     var file = this.files[0];
     this.value = "";
     await uploadPlantImage(file);
