@@ -319,6 +319,9 @@
       share_templates_submit: "Jaa valitut",
       checklist_shared_by: "Omistaja:",
       checklist_shared_badge: "(jaettu)",
+      checklist_add_templates_btn: "+ Mallipohja",
+      checklist_add_templates_title: "Lisää mallipohjia matkaan",
+      checklist_add_templates_submit: "Lisää valitut",
     },
     en: {
       // Navigation
@@ -635,6 +638,9 @@
       share_templates_submit: "Share selected",
       checklist_shared_by: "Owner:",
       checklist_shared_badge: "(shared)",
+      checklist_add_templates_btn: "+ Template",
+      checklist_add_templates_title: "Add templates to trip",
+      checklist_add_templates_submit: "Add selected",
     },
   };
 
@@ -1483,6 +1489,8 @@
       if (checklistSessionShareModal && !checklistSessionShareModal.hidden) { checklistSessionShareModal.hidden = true; return; }
       var checklistTemplateShareModal = document.getElementById("checklist-template-share-modal");
       if (checklistTemplateShareModal && !checklistTemplateShareModal.hidden) { checklistTemplateShareModal.hidden = true; return; }
+      var sessionAddTemplatesModal = document.getElementById("session-add-templates-modal");
+      if (sessionAddTemplatesModal && !sessionAddTemplatesModal.hidden) { sessionAddTemplatesModal.hidden = true; return; }
     }
   });
 
@@ -4352,6 +4360,9 @@
     var sessionShareBtn = document.getElementById("checklist-session-share-btn");
     if (sessionShareBtn) sessionShareBtn.hidden = !isOwner;
 
+    var sessionAddTemplatesBtn = document.getElementById("session-add-templates-btn");
+    if (sessionAddTemplatesBtn) sessionAddTemplatesBtn.hidden = !canWrite;
+
     if (sessionAddItemForm) sessionAddItemForm.hidden = !canWrite;
 
     var groups = {};
@@ -4450,7 +4461,7 @@
           grpHeading.textContent = "—";
           sessionItemsList.appendChild(grpHeading);
         }
-        sessionItemsList.appendChild(buildSessionItemEl(item, checklistCurrentSession));
+        sessionItemsList.appendChild(buildSessionItemEl(item, checklistCurrentSession, true));
         sessionAddItemInput.value = "";
         var tot = checklistCurrentSession.items.length;
         var c = checklistCurrentSession.items.filter(function (i) { return i.checked; }).length;
@@ -4977,6 +4988,85 @@
           checklistTemplateSharePicker.querySelectorAll("input[type=checkbox]").forEach(function (cb) { cb.checked = false; });
         }
         loadExistingTemplateShares();
+      } catch (_) {}
+    });
+  }
+
+  // ---------- Add templates to existing session modal ----------
+
+  var sessionAddTemplatesModal = document.getElementById("session-add-templates-modal");
+  var sessionAddTemplatesClose = document.getElementById("session-add-templates-close");
+  var sessionAddTemplatesCancel = document.getElementById("session-add-templates-cancel");
+  var sessionAddTemplatesPicker = document.getElementById("session-add-templates-picker");
+  var sessionAddTemplatesSubmit = document.getElementById("session-add-templates-submit");
+  var sessionAddTemplatesBtn = document.getElementById("session-add-templates-btn");
+
+  async function openAddTemplatesModal() {
+    if (!sessionAddTemplatesModal || !checklistCurrentSession) return;
+    sessionAddTemplatesModal.hidden = false;
+    await loadChecklistTemplates();
+    renderAddTemplatesPicker();
+  }
+
+  function renderAddTemplatesPicker() {
+    if (!sessionAddTemplatesPicker) return;
+    sessionAddTemplatesPicker.innerHTML = "";
+    if (!checklistTemplates.length) {
+      sessionAddTemplatesPicker.innerHTML = '<p style="font-size:0.85rem;color:var(--color-text-muted)">' + escapeHtml(t("checklist_empty_templates")) + "</p>";
+      return;
+    }
+    checklistTemplates.forEach(function (tmpl) {
+      var label = document.createElement("label");
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.value = tmpl.id;
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(" " + tmpl.name + " (" + (tmpl.items ? tmpl.items.length : 0) + " kpl)"));
+      sessionAddTemplatesPicker.appendChild(label);
+    });
+  }
+
+  if (sessionAddTemplatesBtn) {
+    sessionAddTemplatesBtn.addEventListener("click", function () {
+      openAddTemplatesModal();
+    });
+  }
+
+  if (sessionAddTemplatesClose) {
+    sessionAddTemplatesClose.addEventListener("click", function () {
+      if (sessionAddTemplatesModal) sessionAddTemplatesModal.hidden = true;
+    });
+  }
+
+  if (sessionAddTemplatesCancel) {
+    sessionAddTemplatesCancel.addEventListener("click", function () {
+      if (sessionAddTemplatesModal) sessionAddTemplatesModal.hidden = true;
+    });
+  }
+
+  if (sessionAddTemplatesModal) {
+    sessionAddTemplatesModal.addEventListener("click", function (e) {
+      if (e.target === sessionAddTemplatesModal) sessionAddTemplatesModal.hidden = true;
+    });
+  }
+
+  if (sessionAddTemplatesSubmit) {
+    sessionAddTemplatesSubmit.addEventListener("click", async function () {
+      if (!checklistCurrentSession || !sessionAddTemplatesPicker) return;
+      var templateIds = Array.from(
+        sessionAddTemplatesPicker.querySelectorAll("input[type=checkbox]:checked")
+      ).map(function (cb) { return parseInt(cb.value, 10); });
+      if (!templateIds.length) return;
+      try {
+        var updatedSession = await apiFetch(
+          CHECKLIST_API + "/sessions/" + checklistCurrentSession.id + "/templates",
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ template_ids: templateIds }) }
+        );
+        if (updatedSession) {
+          checklistCurrentSession = updatedSession;
+          renderSessionDetail(checklistCurrentSession);
+        }
+        sessionAddTemplatesModal.hidden = true;
       } catch (_) {}
     });
   }
