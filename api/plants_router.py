@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 
 from auth import get_current_user
 from database import get_session
-from models import Plant, PlantGroupMember, PlantImage, PlantLocation, User
+from models import Plant, PlantGroupMember, PlantImage, PlantLocation, PlantNote, User
 from schemas import (
     PlantCreate,
     PlantImageCaptionUpdate,
@@ -20,6 +20,9 @@ from schemas import (
     PlantLocationCreate,
     PlantLocationResponse,
     PlantLocationUpdate,
+    PlantNoteCreate,
+    PlantNoteResponse,
+    PlantNoteUpdate,
     PlantResponse,
     PlantUpdate,
 )
@@ -363,3 +366,69 @@ async def set_primary_image(
     await session.commit()
     await session.refresh(target)
     return PlantImageResponse.model_validate(target)
+
+
+# ---------- Plant notes ----------
+
+
+@router.get("/notes", response_model=list[PlantNoteResponse])
+async def list_plant_notes(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[PlantNote]:
+    """List all plant notes for the current user's group, newest first."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    result = await session.execute(
+        select(PlantNote)
+        .where(PlantNote.user_id.in_(group_ids))
+        .order_by(PlantNote.updated_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post("/notes", response_model=PlantNoteResponse, status_code=201)
+async def create_plant_note(
+    body: PlantNoteCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantNote:
+    """Create a new plant note."""
+    note = PlantNote(user_id=current_user.id, title=body.title.strip(), text=body.text)
+    session.add(note)
+    await session.commit()
+    await session.refresh(note)
+    return note
+
+
+@router.put("/notes/{note_id}", response_model=PlantNoteResponse)
+async def update_plant_note(
+    note_id: int,
+    body: PlantNoteUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantNote:
+    """Update a plant note title and/or text."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    note = await session.get(PlantNote, note_id)
+    if note is None or note.user_id not in group_ids:
+        raise HTTPException(status_code=404, detail="Note not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(note, field, value)
+    await session.commit()
+    await session.refresh(note)
+    return note
+
+
+@router.delete("/notes/{note_id}", status_code=204)
+async def delete_plant_note(
+    note_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a plant note."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    note = await session.get(PlantNote, note_id)
+    if note is None or note.user_id not in group_ids:
+        raise HTTPException(status_code=404, detail="Note not found")
+    await session.delete(note)
+    await session.commit()

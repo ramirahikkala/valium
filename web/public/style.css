@@ -2878,3 +2878,54 @@ input[type="datetime-local"]:focus {
   color: var(--color-text-muted);
   margin-top: 0.15rem;
 }
+
+/* Plant notes */
+.plant-note-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.plant-note-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem 0;
+}
+.plant-note-text {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  margin: 0 0 0.6rem 0;
+}
+.plant-note-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+.plant-note-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.plant-note-edit-title {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+.plant-note-edit-text {
+  font-size: 0.875rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  resize: vertical;
+  font-family: inherit;
+}
+.plant-note-edit-actions {
+  display: flex;
+  gap: 0.4rem;
+}

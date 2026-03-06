@@ -531,6 +531,33 @@ class PlantGroupResponse(BaseModel):
     members: list[PlantGroupMemberResponse] = []
 
 
+class PlantNoteCreate(BaseModel):
+    """Schema for creating a plant note."""
+
+    title: str
+    text: str = ""
+
+
+class PlantNoteUpdate(BaseModel):
+    """Schema for updating a plant note. All fields optional."""
+
+    title: str | None = None
+    text: str | None = None
+
+
+class PlantNoteResponse(BaseModel):
+    """Schema returned for a single plant note."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    title: str
+    text: str
+    created_at: datetime
+    updated_at: datetime
+
+
 # ---------- AI providers ----------
 
 

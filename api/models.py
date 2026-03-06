@@ -538,6 +538,28 @@ class PlantGroupMember(Base):
     __table_args__ = (UniqueConstraint("user_id"),)
 
 
+class PlantNote(Base):
+    """A free-text note shared within a plant group."""
+
+    __tablename__ = "plant_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
+    text: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 # ---------- AI providers ----------
 
 

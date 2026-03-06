@@ -100,6 +100,7 @@
             <div class="sidebar-children" id="sidebar-plants-children" hidden>
               <button class="sidebar-plants-btn active" data-plants-tab="list" data-i18n="plants_list_tab">Kasvit</button>
               <button class="sidebar-plants-btn" data-plants-tab="locations" data-i18n="plants_locations_tab">Sijainnit</button>
+              <button class="sidebar-plants-btn" data-plants-tab="notes" data-i18n="plants_notes_tab">Muistiinpanot</button>
             </div>
           </div>
 
@@ -623,6 +624,16 @@
               <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
             </form>
             <div id="locations-list"></div>
+          <!-- Notes sub-view -->
+          <div id="plants-notes-section" class="plants-section" hidden>
+            <h2 class="gym-section-heading" data-i18n="plants_notes_heading">Muistiinpanot</h2>
+            <form id="add-note-form" class="inline-form">
+              <input type="text" id="new-note-title" data-i18n-placeholder="new_note_placeholder" placeholder="Otsikko..." required autocomplete="off">
+              <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+            </form>
+            <div id="plants-notes-list"></div>
+          </div>
+
           </div>
 
         </div>

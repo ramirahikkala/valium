@@ -182,6 +182,11 @@
       plants_tab: "Kasvit",
       plants_list_tab: "Kasvit",
       plants_locations_tab: "Sijainnit",
+      plants_notes_tab: "Muistiinpanot",
+      plants_notes_heading: "Muistiinpanot",
+      new_note_placeholder: "Otsikko...",
+      no_notes: "Ei muistiinpanoja",
+      save_btn: "Tallenna",
 
       // Kasvit — suodattimet
       plants_search_placeholder: "Hae...",
@@ -505,6 +510,11 @@
       plants_tab: "Plants",
       plants_list_tab: "Plants",
       plants_locations_tab: "Locations",
+      plants_notes_tab: "Notes",
+      plants_notes_heading: "Notes",
+      new_note_placeholder: "Title...",
+      no_notes: "No notes",
+      save_btn: "Save",
 
       // Plants — filters
       plants_search_placeholder: "Search...",
@@ -3256,6 +3266,10 @@
   var plantsTabButtons = document.querySelectorAll(".sidebar-plants-btn");
   var plantsListSection = document.getElementById("plants-list-section");
   var plantsLocationsSection = document.getElementById("plants-locations-section");
+  var plantsNotesSection = document.getElementById("plants-notes-section");
+  var plantsNotesListEl = document.getElementById("plants-notes-list");
+  var addNoteForm = document.getElementById("add-note-form");
+  var newNoteTitleInput = document.getElementById("new-note-title");
   var plantsDetailSection = document.getElementById("plants-detail-section");
   var plantsEditSection = document.getElementById("plants-edit-section");
   var addPlantBtn = document.getElementById("add-plant-btn");
@@ -3433,8 +3447,10 @@
     plantsDetailSection.hidden = true;
     plantsEditSection.hidden = true;
     plantsLocationsSection.hidden = tab !== "locations";
+    plantsNotesSection.hidden = tab !== "notes";
     if (tab === "list") loadPlants();
     else if (tab === "locations") { loadLocations(); }
+    else if (tab === "notes") { loadPlantNotes(); }
   }
 
   // ---------- Locations ----------
@@ -3539,6 +3555,105 @@
       } catch (_) {}
     }
   });
+
+  // ---------- Plant notes ----------
+
+  var plantsNotesData = [];
+
+  async function loadPlantNotes() {
+    try {
+      var notes = await apiFetch(PLANTS_API + "/notes");
+      if (!notes) return;
+      plantsNotesData = notes;
+      renderPlantNotes();
+    } catch (_) {}
+  }
+
+  function renderPlantNotes() {
+    if (!plantsNotesListEl) return;
+    plantsNotesListEl.innerHTML = "";
+    if (!plantsNotesData.length) {
+      plantsNotesListEl.innerHTML = '<p class="library-empty">' + t("no_notes") + "</p>";
+      return;
+    }
+    plantsNotesData.forEach(function (note) {
+      var card = document.createElement("div");
+      card.className = "plant-note-card";
+      card.innerHTML =
+        '<div class="plant-note-view">' +
+          '<h3 class="plant-note-title">' + escapeHtml(note.title) + "</h3>" +
+          '<p class="plant-note-text">' + escapeHtml(note.text) + "</p>" +
+          '<div class="plant-note-actions">' +
+            '<button class="btn btn-secondary btn-sm" data-action="edit">' + t("rename_btn") + "</button>" +
+            '<button class="btn btn-danger btn-sm" data-action="delete">' + t("delete_btn") + "</button>" +
+          "</div>" +
+        "</div>" +
+        '<form class="plant-note-edit-form" hidden>' +
+          '<input type="text" class="plant-note-edit-title" value="' + escapeHtml(note.title) + '">' +
+          '<textarea class="plant-note-edit-text" rows="6">' + escapeHtml(note.text) + "</textarea>" +
+          '<div class="plant-note-edit-actions">' +
+            '<button type="submit" class="btn btn-primary btn-sm">' + t("save_btn") + "</button>" +
+            '<button type="button" class="btn btn-secondary btn-sm" data-action="cancel">' + t("cancel_btn") + "</button>" +
+          "</div>" +
+        "</form>";
+
+      var view = card.querySelector(".plant-note-view");
+      var editForm = card.querySelector(".plant-note-edit-form");
+
+      card.querySelector('[data-action="edit"]').addEventListener("click", function () {
+        view.hidden = true;
+        editForm.hidden = false;
+        editForm.querySelector(".plant-note-edit-title").focus();
+      });
+
+      card.querySelector('[data-action="cancel"]').addEventListener("click", function () {
+        view.hidden = false;
+        editForm.hidden = true;
+      });
+
+      editForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var title = editForm.querySelector(".plant-note-edit-title").value.trim();
+        var text = editForm.querySelector(".plant-note-edit-text").value;
+        if (!title) return;
+        try {
+          await apiFetch(PLANTS_API + "/notes/" + note.id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ title: title, text: text }),
+          });
+          loadPlantNotes();
+        } catch (_) {}
+      });
+
+      card.querySelector('[data-action="delete"]').addEventListener("click", async function () {
+        if (!confirm(t("confirm_delete"))) return;
+        try {
+          await apiFetch(PLANTS_API + "/notes/" + note.id, { method: "DELETE" });
+          loadPlantNotes();
+        } catch (_) {}
+      });
+
+      plantsNotesListEl.appendChild(card);
+    });
+  }
+
+  if (addNoteForm) {
+    addNoteForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var title = newNoteTitleInput.value.trim();
+      if (!title) return;
+      try {
+        await apiFetch(PLANTS_API + "/notes", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: title, text: "" }),
+        });
+        newNoteTitleInput.value = "";
+        loadPlantNotes();
+      } catch (_) {}
+    });
+  }
 
   // ---------- Plants list ----------
 
