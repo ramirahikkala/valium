@@ -3948,7 +3948,11 @@
   });
 
   plantEditStatusInput.addEventListener("change", function () {
-    plantEditLostYearGroup.hidden = this.value !== "lost";
+    var isLost = this.value === "lost";
+    plantEditLostYearGroup.hidden = !isLost;
+    if (isLost && !plantEditLostYearInput.value) {
+      plantEditLostYearInput.value = new Date().getFullYear();
+    }
   });
 
   // ---------- Image upload (edit section) ----------
@@ -4118,7 +4122,11 @@
   // ---------- Plant modal ----------
 
   plantStatusInput.addEventListener("change", function () {
-    plantLostYearGroup.hidden = this.value !== "lost";
+    var isLost = this.value === "lost";
+    plantLostYearGroup.hidden = !isLost;
+    if (isLost && !plantLostYearInput.value) {
+      plantLostYearInput.value = new Date().getFullYear();
+    }
   });
 
   plantModalCancelBtn.addEventListener("click", closePlantModal);
