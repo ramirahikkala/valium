@@ -4012,7 +4012,6 @@
 
     plantsEditAiSummaryBtn.textContent = summaryBtnLabel();
     plantsEditSection.scrollTop = 0;
-    plantEditLatinNameInput.focus();
   }
 
   function openPlantEdit(plant) {
