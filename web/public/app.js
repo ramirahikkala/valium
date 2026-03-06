@@ -3977,6 +3977,8 @@
     plantsListScrollTop = window.scrollY;
     history.pushState({ valiumPage: "plant-detail", id: plant.id }, "");
     _renderPlantDetail(plant);
+    plantsDetailSection.scrollTop = 0;
+    window.scrollTo(0, 0);
   }
 
   function _renderPlantEdit(plant) {
