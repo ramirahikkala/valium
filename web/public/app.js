@@ -6447,9 +6447,9 @@
     },
   };
 
-  // Merge meals i18n and re-apply translations to pick up meals_tab etc.
+  // Merge meals i18n into STRINGS and re-apply translations
   Object.keys(MEALS_I18N).forEach(function (lang) {
-    if (translations[lang]) Object.assign(translations[lang], MEALS_I18N[lang]);
+    if (STRINGS[lang]) Object.assign(STRINGS[lang], MEALS_I18N[lang]);
   });
   applyTranslations();
 
