@@ -3399,7 +3399,6 @@
   var plantOwnSeedsInput = document.getElementById("plant-own-seeds");
   var plantNotesInput = document.getElementById("plant-notes");
   var plantModalCancelBtn = document.getElementById("plant-modal-cancel");
-  var plantAiQueryInput = document.getElementById("plant-ai-query");
   var plantAiSearchBtn = document.getElementById("plant-ai-search-btn");
   var adminAiProvidersList = document.getElementById("admin-ai-providers-list");
   var adminAiForm = document.getElementById("admin-ai-form");
@@ -3788,7 +3787,6 @@
     document.getElementById("guide-edit-plant-name").value = guide ? guide.plant_name : "";
     document.getElementById("guide-edit-latin-name").value = guide ? guide.latin_name : "";
     document.getElementById("guide-edit-text").value = guide ? guide.guide_text : "";
-    document.getElementById("guide-ai-query").value = "";
     var errEl = document.getElementById("guide-ai-error");
     if (errEl) errEl.hidden = true;
     window.scrollTo(0, 0);
@@ -3859,7 +3857,8 @@
 
   // AI fill for guide
   document.getElementById("guide-ai-fill-btn").addEventListener("click", async function () {
-    var query = document.getElementById("guide-ai-query").value.trim();
+    var query = document.getElementById("guide-edit-latin-name").value.trim() ||
+                document.getElementById("guide-edit-plant-name").value.trim();
     var errEl = document.getElementById("guide-ai-error");
     if (!query) return;
     var btn = document.getElementById("guide-ai-fill-btn");
@@ -4349,7 +4348,7 @@
   var plantAiErrorEl = document.getElementById("plant-ai-error");
 
   plantAiSearchBtn.addEventListener("click", async function () {
-    var q = plantAiQueryInput.value.trim();
+    var q = plantLatinNameInput.value.trim() || plantCommonNameInput.value.trim();
     if (!q) return;
     plantAiErrorEl.hidden = true;
     plantAiSearchBtn.disabled = true;
@@ -4357,8 +4356,8 @@
     try {
       var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(q), { method: "POST" });
       if (res) {
-        if (res.latin_name) plantLatinNameInput.value = res.latin_name;
-        if (res.common_name) plantCommonNameInput.value = res.common_name;
+        if (!plantLatinNameInput.value.trim() && res.latin_name) plantLatinNameInput.value = res.latin_name;
+        if (!plantCommonNameInput.value.trim() && res.common_name) plantCommonNameInput.value = res.common_name;
         if (res.category) plantCategoryInput.value = res.category;
       }
     } catch (err) {
@@ -4366,7 +4365,7 @@
       plantAiErrorEl.hidden = false;
     }
     plantAiSearchBtn.disabled = false;
-    plantAiSearchBtn.textContent = t("plant_ai_search_btn");
+    plantAiSearchBtn.textContent = t("plant_ai_fill_btn");
   });
 
   // ---------- AI: fill missing fields (edit section) ----------
@@ -4506,7 +4505,6 @@
     plantSourceInput.value = "";
     plantOwnSeedsInput.checked = false;
     plantNotesInput.value = "";
-    plantAiQueryInput.value = "";
     plantAiErrorEl.hidden = true;
 
     plantModal.hidden = false;
