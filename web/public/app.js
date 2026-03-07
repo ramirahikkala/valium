@@ -1663,13 +1663,6 @@
 
   // ---------- Bootstrap ----------
 
-  // Merge meals i18n into main translations before applying
-  Object.keys(MEALS_I18N).forEach(function (lang) {
-    if (translations[lang]) {
-      Object.assign(translations[lang], MEALS_I18N[lang]);
-    }
-  });
-
   // Apply language from localStorage immediately so the login screen is also translated
   applyTranslations();
   initGoogleSignIn();
@@ -6454,5 +6447,10 @@
     },
   };
 
+  // Merge meals i18n and re-apply translations to pick up meals_tab etc.
+  Object.keys(MEALS_I18N).forEach(function (lang) {
+    if (translations[lang]) Object.assign(translations[lang], MEALS_I18N[lang]);
+  });
+  applyTranslations();
 
 })();
