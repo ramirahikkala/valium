@@ -296,39 +296,39 @@
       // Pakkauslista
       checklist_tab: "Pakkauslista",
       checklist_sessions_tab: "Matkat",
-      checklist_templates_tab: "Mallipohjat",
+      checklist_templates_tab: "Listat",
       checklist_sessions_heading: "Matkat",
-      checklist_templates_heading: "Mallipohjat",
+      checklist_templates_heading: "Listat",
       checklist_new_session_btn: "+ Uusi matka",
-      checklist_new_template_btn: "+ Uusi mallipohja",
+      checklist_new_template_btn: "+ Uusi lista",
       checklist_new_session_title: "Uusi matka",
       checklist_session_name_label: "Matkan nimi",
       checklist_session_name_ph: "esim. Talviloma Levillä",
-      checklist_select_templates_label: "Valitse mallipohjat",
+      checklist_select_templates_label: "Valitse listat",
       checklist_create_session_btn: "Luo matka",
       checklist_complete_btn: "✓ Valmis",
       checklist_reopen_btn: "↩ Avaa uudelleen",
-      checklist_add_item_ph: "Lisää kohde...",
+      checklist_add_item_ph: "Lisää kohta...",
       checklist_add_item_btn: "Lisää",
-      checklist_includes_heading: "Sisältää mallipohjat",
+      checklist_includes_heading: "Sisältää listat",
       checklist_add_include_btn: "Lisää",
-      checklist_include_placeholder: "Lisää mallipohja...",
+      checklist_include_placeholder: "Lisää lista...",
       checklist_progress: "pakattu",
       checklist_empty_sessions: "Ei matkoja. Luo uusi matka yllä olevalla napilla.",
-      checklist_empty_templates: "Ei mallipohjia. Luo uusi mallipohja yllä olevalla napilla.",
+      checklist_empty_templates: "Ei listoja. Luo uusi lista yllä olevalla napilla.",
       checklist_delete_session_confirm: "Poistetaanko matka?",
-      checklist_delete_template_confirm: "Poistetaanko mallipohja?",
+      checklist_delete_template_confirm: "Poistetaanko lista?",
       checklist_completed_label: "Valmis",
-      checklist_new_template_ph: "Mallipohjan nimi...",
+      checklist_new_template_ph: "Listan nimi...",
       share_session_title: "Jaa matka",
       share_session_btn: "👥 Jaa",
-      share_templates_title: "Jaa mallipohjia",
-      share_templates_btn: "👥 Jaa mallipohjia",
+      share_templates_title: "Jaa listoja",
+      share_templates_btn: "👥 Jaa listoja",
       share_templates_submit: "Jaa valitut",
       checklist_shared_by: "Omistaja:",
       checklist_shared_badge: "(jaettu)",
-      checklist_add_templates_btn: "+ Mallipohja",
-      checklist_add_templates_title: "Lisää mallipohjia matkaan",
+      checklist_add_templates_btn: "+ Lista",
+      checklist_add_templates_title: "Lisää listoja matkaan",
       checklist_add_templates_submit: "Lisää valitut",
       cancel_btn: "Peruuta",
       admin_plant_groups_heading: "Kasvikokoelmat",
@@ -627,39 +627,39 @@
       // Checklist
       checklist_tab: "Packing list",
       checklist_sessions_tab: "Trips",
-      checklist_templates_tab: "Templates",
+      checklist_templates_tab: "Lists",
       checklist_sessions_heading: "Trips",
-      checklist_templates_heading: "Templates",
+      checklist_templates_heading: "Lists",
       checklist_new_session_btn: "+ New trip",
-      checklist_new_template_btn: "+ New template",
+      checklist_new_template_btn: "+ New list",
       checklist_new_session_title: "New trip",
       checklist_session_name_label: "Trip name",
       checklist_session_name_ph: "e.g. Winter holiday",
-      checklist_select_templates_label: "Select templates",
+      checklist_select_templates_label: "Select lists",
       checklist_create_session_btn: "Create trip",
       checklist_complete_btn: "✓ Done",
       checklist_reopen_btn: "↩ Reopen",
       checklist_add_item_ph: "Add item...",
       checklist_add_item_btn: "Add",
-      checklist_includes_heading: "Included templates",
+      checklist_includes_heading: "Included lists",
       checklist_add_include_btn: "Add",
-      checklist_include_placeholder: "Add template...",
+      checklist_include_placeholder: "Add list...",
       checklist_progress: "packed",
       checklist_empty_sessions: "No trips yet. Create one with the button above.",
-      checklist_empty_templates: "No templates yet. Create one with the button above.",
+      checklist_empty_templates: "No lists yet. Create one with the button above.",
       checklist_delete_session_confirm: "Delete this trip?",
-      checklist_delete_template_confirm: "Delete this template?",
+      checklist_delete_template_confirm: "Delete this list?",
       checklist_completed_label: "Done",
-      checklist_new_template_ph: "Template name...",
+      checklist_new_template_ph: "List name...",
       share_session_title: "Share trip",
       share_session_btn: "👥 Share",
-      share_templates_title: "Share templates",
-      share_templates_btn: "👥 Share templates",
+      share_templates_title: "Share lists",
+      share_templates_btn: "👥 Share lists",
       share_templates_submit: "Share selected",
       checklist_shared_by: "Owner:",
       checklist_shared_badge: "(shared)",
-      checklist_add_templates_btn: "+ Template",
-      checklist_add_templates_title: "Add templates to trip",
+      checklist_add_templates_btn: "+ List",
+      checklist_add_templates_title: "Add lists to trip",
       checklist_add_templates_submit: "Add selected",
       cancel_btn: "Cancel",
       admin_plant_groups_heading: "Plant collections",
@@ -4597,6 +4597,43 @@
     span.textContent = item.text;
     row.appendChild(cb);
     row.appendChild(span);
+    if (canWrite) {
+      var editBtn = document.createElement("button");
+      editBtn.className = "checklist-item-edit-btn btn-icon";
+      editBtn.title = "Muokkaa";
+      editBtn.textContent = "✎";
+      editBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var input = document.createElement("input");
+        input.type = "text";
+        input.value = item.text;
+        input.className = "checklist-item-edit-input";
+        span.replaceWith(input);
+        editBtn.hidden = true;
+        input.focus();
+        input.select();
+        async function saveEdit() {
+          var newText = input.value.trim();
+          if (newText && newText !== item.text) {
+            try {
+              var updated = await apiFetch(
+                CHECKLIST_API + "/sessions/" + sess.id + "/items/" + item.id,
+                { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: newText }) }
+              );
+              if (updated) { item.text = updated.text; span.textContent = updated.text; }
+            } catch (_) {}
+          }
+          input.replaceWith(span);
+          editBtn.hidden = false;
+        }
+        input.addEventListener("blur", saveEdit);
+        input.addEventListener("keydown", function (ev) {
+          if (ev.key === "Enter") { ev.preventDefault(); input.blur(); }
+          if (ev.key === "Escape") { input.value = item.text; input.blur(); }
+        });
+      });
+      row.appendChild(editBtn);
+    }
     return row;
   }
 
@@ -4726,7 +4763,7 @@
       var card = document.createElement("div");
       card.className = "checklist-template-card";
       var incNames = tmpl.includes.map(function (i) { return i.child_name; }).join(", ");
-      var meta = tmpl.items.length + " kohdetta";
+      var meta = tmpl.items.length + " kohtaa";
       if (incNames) meta += " · sisältää: " + incNames;
       var nameBadge = isOwner ? "" : ' <span class="checklist-shared-badge">' + escapeHtml(t("checklist_shared_badge")) + "</span>";
       var ownerRow = (!isOwner && tmpl.owner_name)

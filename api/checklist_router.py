@@ -767,6 +767,25 @@ async def toggle_session_item(
     return ChecklistSessionItemResponse.model_validate(item)
 
 
+@router.put("/sessions/{session_id}/items/{item_id}", response_model=ChecklistSessionItemResponse)
+async def rename_session_item(
+    session_id: int,
+    item_id: int,
+    body: ChecklistSessionItemAdd,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> ChecklistSessionItemResponse:
+    """Rename a session item text (write access required)."""
+    await _check_session_access(session, session_id, current_user, require_write=True)
+    item = await session.get(ChecklistSessionItem, item_id)
+    if item is None or item.session_id != session_id:
+        raise HTTPException(status_code=404, detail="Item not found")
+    item.text = body.text.strip()
+    await session.commit()
+    await session.refresh(item)
+    return ChecklistSessionItemResponse.model_validate(item)
+
+
 @router.post("/sessions/{session_id}/items", response_model=ChecklistSessionItemResponse, status_code=201)
 async def add_session_item(
     session_id: int,

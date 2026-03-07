@@ -88,7 +88,7 @@
             </button>
             <div class="sidebar-children" id="sidebar-checklist-children" hidden>
               <button class="sidebar-checklist-btn active" data-checklist-tab="sessions" data-i18n="checklist_sessions_tab">Matkat</button>
-              <button class="sidebar-checklist-btn" data-checklist-tab="templates" data-i18n="checklist_templates_tab">Mallipohjat</button>
+              <button class="sidebar-checklist-btn" data-checklist-tab="templates" data-i18n="checklist_templates_tab">Listat</button>
             </div>
           </div>
 
@@ -321,7 +321,7 @@
             <div class="checklist-toolbar">
               <button id="session-back-btn" class="btn btn-icon" data-i18n-title="back">←</button>
               <h2 id="session-detail-title" class="view-heading"></h2>
-              <button id="session-add-templates-btn" class="btn btn-secondary btn-sm" data-i18n="checklist_add_templates_btn">+ Mallipohja</button>
+              <button id="session-add-templates-btn" class="btn btn-secondary btn-sm" data-i18n="checklist_add_templates_btn">+ Lista</button>
               <button id="checklist-session-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_session_btn">👥 Jaa</button>
               <button id="session-complete-btn" class="btn btn-sm" data-i18n="checklist_complete_btn">✓ Valmis</button>
             </div>
@@ -339,9 +339,9 @@
           <!-- Templates sub-view -->
           <div id="checklist-templates-section" hidden>
             <div class="checklist-toolbar">
-              <h2 class="view-heading" data-i18n="checklist_templates_heading">Mallipohjat</h2>
-              <button id="checklist-templates-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_templates_btn">👥 Jaa mallipohjia</button>
-              <button id="new-template-btn" class="btn btn-primary btn-sm" data-i18n="checklist_new_template_btn">+ Uusi mallipohja</button>
+              <h2 class="view-heading" data-i18n="checklist_templates_heading">Listat</h2>
+              <button id="checklist-templates-share-btn" class="btn btn-secondary btn-sm" data-i18n="share_templates_btn">👥 Jaa listoja</button>
+              <button id="new-template-btn" class="btn btn-primary btn-sm" data-i18n="checklist_new_template_btn">+ Uusi lista</button>
             </div>
             <div id="checklist-templates-list"></div>
           </div>
@@ -400,7 +400,7 @@
         <div id="session-add-templates-modal" class="modal-overlay" hidden>
           <div class="modal">
             <div class="modal-header">
-              <h2 data-i18n="checklist_add_templates_title">Lisää mallipohjia</h2>
+              <h2 data-i18n="checklist_add_templates_title">Lisää listoja</h2>
               <button id="session-add-templates-close" class="modal-close">✕</button>
             </div>
             <div id="session-add-templates-picker" class="checklist-template-picker"></div>
@@ -434,7 +434,7 @@
         <div id="checklist-template-share-modal" class="modal-overlay" hidden>
           <div class="modal">
             <div class="modal-header">
-              <h2 data-i18n="share_templates_title">Jaa mallipohjia</h2>
+              <h2 data-i18n="share_templates_title">Jaa listoja</h2>
               <button id="checklist-template-share-modal-close" class="modal-close">✕</button>
             </div>
             <form id="checklist-template-share-form" class="share-add-form" style="flex-direction:column">
