@@ -4248,9 +4248,11 @@
     plantEditLatinNameInput.focus();
   }
 
-  function openPlantEdit(plant) {
+  function openPlantEdit(plant, replace) {
     plantsEditIsNew = false;
-    history.pushState({ valiumPage: "plant-edit", id: plant.id }, "");
+    var state = { valiumPage: "plant-edit", id: plant.id };
+    if (replace) history.replaceState(state, "");
+    else history.pushState(state, "");
     _renderPlantEdit(plant);
     window.scrollTo(0, 0);
   }
@@ -4494,7 +4496,7 @@
         await loadPlants();
         if (created) {
           var fresh = plantsData.find(function (p) { return p.id === created.id; });
-          if (fresh) openPlantEdit(fresh);
+          if (fresh) openPlantEdit(fresh, true);
         }
       } catch (_) {}
     } else {
