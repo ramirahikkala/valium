@@ -358,7 +358,8 @@ header {
 /* Gym, Plants and Checklist sub-buttons inside sidebar */
 .sidebar-gym-btn,
 .sidebar-plants-btn,
-.sidebar-checklist-btn {
+.sidebar-checklist-btn,
+.sidebar-meals-btn {
   display: flex;
   align-items: center;
   width: 100%;
@@ -378,13 +379,17 @@ header {
 }
 
 .sidebar-gym-btn:hover,
-.sidebar-plants-btn:hover {
+.sidebar-plants-btn:hover,
+.sidebar-checklist-btn:hover,
+.sidebar-meals-btn:hover {
   background: var(--color-primary-light);
   color: var(--color-primary);
 }
 
 .sidebar-gym-btn.active,
-.sidebar-plants-btn.active {
+.sidebar-plants-btn.active,
+.sidebar-checklist-btn.active,
+.sidebar-meals-btn.active {
   color: var(--color-primary);
   background: var(--color-primary-light);
   border-left-color: var(--color-primary);
