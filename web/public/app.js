@@ -5882,7 +5882,14 @@
 
     var slotsHtml = plan.slots.map(function (slot) {
       var label = escapeHtml(slot.day_label) + " / " + escapeHtml(slot.slot_label);
-      var content = slot.meal_name ? "🍽 " + escapeHtml(slot.meal_name) : slot.recipe_name ? "📄 " + escapeHtml(slot.recipe_name) : "<em>—</em>";
+      var content;
+      if (slot.meal_name) {
+        content = "🍽 " + escapeHtml(slot.meal_name);
+      } else if (slot.recipe_name) {
+        content = "<button class='meals-slot-recipe-link btn-link' data-recipe-id='" + slot.recipe_id + "'>" + escapeHtml(slot.recipe_name) + "</button>";
+      } else {
+        content = "<em>—</em>";
+      }
       return "<li class='meals-slot-item'>" +
         "<span class='meals-slot-label'>" + label + ":</span> " +
         "<span class='meals-slot-content'>" + content + "</span>" +
@@ -5909,6 +5916,23 @@
         "<ul class='meals-slots-list'>" + slotsHtml + "</ul>" +
         (canWrite ? renderAddSlotForm(plan) : "") +
       "</div>";
+
+    // Recipe links: click → switch to recipes tab and open that recipe
+    mealsPlanDetailEl.querySelectorAll(".meals-slot-recipe-link").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var recipeId = parseInt(btn.dataset.recipeId);
+        var recipe = mealsRecipesData.find(function (r) { return r.id === recipeId; });
+        if (recipe) {
+          switchMealsTab("recipes");
+          renderMealsRecipeDetail(recipe);
+        } else {
+          loadMealsRecipes().then(function () {
+            var r = mealsRecipesData.find(function (r) { return r.id === recipeId; });
+            if (r) { switchMealsTab("recipes"); renderMealsRecipeDetail(r); }
+          });
+        }
+      });
+    });
 
     if (canWrite) {
       var titleEl = mealsPlanDetailEl.querySelector("[data-field='plan-name']");
@@ -6152,11 +6176,10 @@
     });
 
     function renderItem(item) {
-      var label = (item.amount ? item.amount + " " : "") + (item.unit ? item.unit + " " : "") + escapeHtml(item.name);
       return "<li class='meals-shopping-item" + (item.checked ? " checked" : "") + "' data-item-id='" + item.id + "'>" +
         "<label class='meals-shopping-check'>" +
           "<input type='checkbox'" + (item.checked ? " checked" : "") + (canWrite ? "" : " disabled") + " data-item-id='" + item.id + "'>" +
-          "<span>" + label + "</span>" +
+          "<span>" + escapeHtml(item.name) + "</span>" +
         "</label>" +
         (canWrite ? "<button class='btn-icon meals-item-delete' data-item-id='" + item.id + "'>✕</button>" : "") +
         "</li>";
@@ -6168,6 +6191,7 @@
       itemsHtml += grouped[src].map(renderItem).join("");
     });
     if (noGroup.length) {
+      itemsHtml += "<li class='meals-shopping-group-header'>" + t("meals_shopping_adhoc_heading") + "</li>";
       itemsHtml += noGroup.map(renderItem).join("");
     }
 
@@ -6378,6 +6402,7 @@
       meals_share_shopping_title: "Jaa ostoslista",
       meals_shopping_from_plan_label: "Luo ruokalistan perusteella (valinnainen)",
       meals_shopping_no_plan: "— Tyhjä lista —",
+      meals_shopping_adhoc_heading: "Muut ostokset",
       meals_ing_amount_ph: "Määrä",
       meals_ing_unit_ph: "Yksikkö",
       meals_ing_name_ph: "Ainesosa",
@@ -6429,6 +6454,7 @@
       meals_share_shopping_title: "Share shopping list",
       meals_shopping_from_plan_label: "Generate from meal plan (optional)",
       meals_shopping_no_plan: "— Empty list —",
+      meals_shopping_adhoc_heading: "Other items",
       meals_ing_amount_ph: "Amount",
       meals_ing_unit_ph: "Unit",
       meals_ing_name_ph: "Ingredient",
