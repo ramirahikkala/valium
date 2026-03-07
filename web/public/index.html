@@ -457,52 +457,92 @@
 
           <!-- Recipes sub-view -->
           <div id="meals-recipes-section" class="meals-section">
-            <div class="meals-toolbar">
+            <div class="meals-toolbar" id="meals-recipes-toolbar">
               <h2 class="meals-heading" data-i18n="meals_recipes_heading">Reseptit</h2>
               <div class="meals-toolbar-actions">
                 <button class="btn btn-primary btn-sm" id="meals-add-recipe-btn" data-i18n="meals_add_recipe_btn">+ Uusi resepti</button>
                 <button class="btn btn-secondary btn-sm" id="meals-recipe-share-btn" data-i18n="meals_share_recipes_btn">👥 Jaa reseptejä</button>
               </div>
             </div>
-            <div class="meals-layout">
-              <div id="meals-recipes-list" class="meals-list"></div>
-              <div id="meals-recipe-detail" class="meals-detail" hidden></div>
+            <!-- List view -->
+            <div id="meals-recipes-list-view">
+              <div id="meals-recipes-list" class="meals-grid"></div>
+            </div>
+            <!-- Detail view (read-only) -->
+            <div id="meals-recipe-detail-view" hidden>
+              <div class="meals-detail-nav">
+                <button id="meals-recipe-back-btn" class="btn btn-secondary btn-sm" data-i18n="back_to_list_btn">← Takaisin</button>
+                <div class="meals-detail-nav-actions">
+                  <button id="meals-recipe-edit-open-btn" class="btn btn-primary btn-sm" data-i18n="edit_btn">Muokkaa</button>
+                  <button id="meals-recipe-share-open-btn" class="btn btn-secondary btn-sm">👥 <span data-i18n="share_btn">Jaa</span></button>
+                  <button id="meals-recipe-delete-btn" class="btn btn-danger btn-sm" data-i18n="delete_btn">Poista</button>
+                </div>
+              </div>
+              <div id="meals-recipe-detail" class="meals-detail-content"></div>
+            </div>
+            <!-- Edit view -->
+            <div id="meals-recipe-edit-view" hidden>
+              <div class="meals-detail-nav">
+                <button id="meals-recipe-edit-back-btn" class="btn btn-secondary btn-sm" data-i18n="back_btn">← Takaisin</button>
+              </div>
+              <div id="meals-recipe-edit" class="meals-detail-content"></div>
             </div>
           </div>
 
           <!-- Meals sub-view -->
           <div id="meals-meals-section" class="meals-section" hidden>
-            <div class="meals-toolbar">
+            <div class="meals-toolbar" id="meals-meals-toolbar">
               <h2 class="meals-heading" data-i18n="meals_meals_heading">Ateriat</h2>
               <button class="btn btn-primary btn-sm" id="meals-add-meal-btn" data-i18n="meals_add_meal_btn">+ Uusi ateria</button>
             </div>
-            <div class="meals-layout">
-              <div id="meals-meals-list" class="meals-list"></div>
-              <div id="meals-meal-detail" class="meals-detail" hidden></div>
+            <!-- List view -->
+            <div id="meals-meals-list-view">
+              <div id="meals-meals-list" class="meals-grid"></div>
+            </div>
+            <!-- Detail view -->
+            <div id="meals-meal-detail-view" hidden>
+              <div class="meals-detail-nav">
+                <button id="meals-meal-back-btn" class="btn btn-secondary btn-sm" data-i18n="back_to_list_btn">← Takaisin</button>
+              </div>
+              <div id="meals-meal-detail" class="meals-detail-content"></div>
             </div>
           </div>
 
           <!-- Plans sub-view -->
           <div id="meals-plans-section" class="meals-section" hidden>
-            <div class="meals-toolbar">
+            <div class="meals-toolbar" id="meals-plans-toolbar">
               <h2 class="meals-heading" data-i18n="meals_plans_heading">Ruokalistat</h2>
               <button class="btn btn-primary btn-sm" id="meals-add-plan-btn" data-i18n="meals_add_plan_btn">+ Uusi ruokalista</button>
             </div>
-            <div class="meals-layout">
-              <div id="meals-plans-list" class="meals-list"></div>
-              <div id="meals-plan-detail" class="meals-detail" hidden></div>
+            <!-- List view -->
+            <div id="meals-plans-list-view">
+              <div id="meals-plans-list" class="meals-grid"></div>
+            </div>
+            <!-- Detail view -->
+            <div id="meals-plan-detail-view" hidden>
+              <div class="meals-detail-nav">
+                <button id="meals-plan-back-btn" class="btn btn-secondary btn-sm" data-i18n="back_to_list_btn">← Takaisin</button>
+              </div>
+              <div id="meals-plan-detail" class="meals-detail-content"></div>
             </div>
           </div>
 
           <!-- Shopping sub-view -->
           <div id="meals-shopping-section" class="meals-section" hidden>
-            <div class="meals-toolbar">
+            <div class="meals-toolbar" id="meals-shopping-toolbar">
               <h2 class="meals-heading" data-i18n="meals_shopping_heading">Ostoslistat</h2>
               <button class="btn btn-primary btn-sm" id="meals-add-shopping-btn" data-i18n="meals_add_shopping_btn">+ Uusi ostoslista</button>
             </div>
-            <div class="meals-layout">
-              <div id="meals-shopping-list" class="meals-list"></div>
-              <div id="meals-shopping-detail" class="meals-detail" hidden></div>
+            <!-- List view -->
+            <div id="meals-shopping-list-view">
+              <div id="meals-shopping-list" class="meals-grid"></div>
+            </div>
+            <!-- Detail view -->
+            <div id="meals-shopping-detail-view" hidden>
+              <div class="meals-detail-nav">
+                <button id="meals-shopping-back-btn" class="btn btn-secondary btn-sm" data-i18n="back_to_list_btn">← Takaisin</button>
+              </div>
+              <div id="meals-shopping-detail" class="meals-detail-content"></div>
             </div>
           </div>
 
