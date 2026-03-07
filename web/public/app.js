@@ -190,6 +190,15 @@
       new_note_placeholder: "Otsikko...",
       no_notes: "Ei muistiinpanoja",
       new_note_text_placeholder: "Muistiinpano...",
+      plants_guides_tab: "Kasvatusohjeet",
+      plants_guides_heading: "Kasvatusohjeet",
+      plants_add_guide_btn: "+ Uusi ohje",
+      plants_guide_ai_ph: "Kasvin nimi (hae AI:lla)...",
+      plants_guide_ai_btn: "✨ Täytä AI:lla",
+      plants_guide_plant_name_label: "Kasvin nimi (suomi)",
+      plants_guide_latin_name_label: "Tieteellinen nimi",
+      plants_guide_text_label: "Kasvatusohje",
+      no_guides: "Ei kasvatusohjeita",
       save_btn: "Tallenna",
 
       // Kasvit — suodattimet
@@ -525,6 +534,15 @@
       new_note_placeholder: "Title...",
       no_notes: "No notes",
       new_note_text_placeholder: "Note...",
+      plants_guides_tab: "Growing guides",
+      plants_guides_heading: "Growing guides",
+      plants_add_guide_btn: "+ New guide",
+      plants_guide_ai_ph: "Plant name (AI fill)...",
+      plants_guide_ai_btn: "✨ Fill with AI",
+      plants_guide_plant_name_label: "Plant name (Finnish)",
+      plants_guide_latin_name_label: "Scientific name",
+      plants_guide_text_label: "Growing guide",
+      no_guides: "No growing guides",
       save_btn: "Save",
 
       // Plants — filters
@@ -3299,6 +3317,11 @@
   var plantsLocationsSection = document.getElementById("plants-locations-section");
   var plantsNotesSection = document.getElementById("plants-notes-section");
   var plantsNotesListEl = document.getElementById("plants-notes-list");
+  var plantsGuidesSection = document.getElementById("plants-guides-section");
+  var plantsGuideDetailSection = document.getElementById("plants-guide-detail-section");
+  var plantsGuideEditSection = document.getElementById("plants-guide-edit-section");
+  var plantsGuidesGridEl = document.getElementById("plants-guides-grid");
+  var plantsGuidesSearchEl = document.getElementById("plants-guides-search");
   var addNoteForm = document.getElementById("add-note-form");
   var newNoteTitleInput = document.getElementById("new-note-title");
   var newNoteTextInput = document.getElementById("new-note-text");
@@ -3481,9 +3504,13 @@
     plantsEditSection.hidden = true;
     plantsLocationsSection.hidden = tab !== "locations";
     plantsNotesSection.hidden = tab !== "notes";
+    plantsGuidesSection.hidden = tab !== "guides";
+    plantsGuideDetailSection.hidden = true;
+    plantsGuideEditSection.hidden = true;
     if (tab === "list") loadPlants();
     else if (tab === "locations") { loadLocations(); }
     else if (tab === "notes") { loadPlantNotes(); }
+    else if (tab === "guides") { loadPlantGuides(); }
   }
 
   // ---------- Locations ----------
@@ -3688,6 +3715,170 @@
       } catch (_) {}
     });
   }
+
+  // ---------- Plant growing guides ----------
+
+  var plantsGuidesData = [];
+  var plantsGuidesSearchQuery = "";
+  var plantsCurrentGuide = null;
+
+  async function loadPlantGuides() {
+    try {
+      var guides = await apiFetch(PLANTS_API + "/guides");
+      if (!guides) return;
+      plantsGuidesData = guides;
+      renderPlantGuidesList();
+    } catch (_) {}
+  }
+
+  function renderPlantGuidesList() {
+    if (!plantsGuidesGridEl) return;
+    var filtered = plantsGuidesData.filter(function (g) {
+      if (!plantsGuidesSearchQuery) return true;
+      var q = plantsGuidesSearchQuery.toLowerCase();
+      return g.plant_name.toLowerCase().includes(q) || g.latin_name.toLowerCase().includes(q);
+    });
+    if (!filtered.length) {
+      plantsGuidesGridEl.innerHTML = '<p class="plants-count">' + t("no_guides") + "</p>";
+      return;
+    }
+    plantsGuidesGridEl.innerHTML = filtered.map(function (g) {
+      var preview = g.guide_text ? g.guide_text.slice(0, 100) + (g.guide_text.length > 100 ? "…" : "") : "";
+      return "<div class='plant-guide-card' data-id='" + g.id + "'>" +
+        "<div class='plant-guide-card-name'>" + escapeHtml(g.plant_name) + "</div>" +
+        (g.latin_name ? "<div class='plant-guide-card-latin'><em>" + escapeHtml(g.latin_name) + "</em></div>" : "") +
+        (preview ? "<div class='plant-guide-card-preview'>" + escapeHtml(preview) + "</div>" : "") +
+        "</div>";
+    }).join("");
+    plantsGuidesGridEl.querySelectorAll(".plant-guide-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var guide = plantsGuidesData.find(function (g) { return g.id === parseInt(card.dataset.id); });
+        if (guide) openPlantGuideDetail(guide);
+      });
+    });
+  }
+
+  if (plantsGuidesSearchEl) {
+    plantsGuidesSearchEl.addEventListener("input", function () {
+      plantsGuidesSearchQuery = plantsGuidesSearchEl.value;
+      renderPlantGuidesList();
+    });
+  }
+
+  function openPlantGuideDetail(guide) {
+    plantsCurrentGuide = guide;
+    plantsGuidesSection.hidden = true;
+    plantsGuideDetailSection.hidden = false;
+    plantsGuideEditSection.hidden = true;
+    var content = document.getElementById("plants-guide-detail-content");
+    if (content) {
+      content.innerHTML =
+        "<h2 class='plant-guide-detail-name'>" + escapeHtml(guide.plant_name) + "</h2>" +
+        (guide.latin_name ? "<p class='plant-guide-detail-latin'><em>" + escapeHtml(guide.latin_name) + "</em></p>" : "") +
+        "<div class='plant-guide-detail-text'>" + escapeHtml(guide.guide_text).replace(/\n/g, "<br>") + "</div>";
+    }
+    window.scrollTo(0, 0);
+  }
+
+  function openPlantGuideEdit(guide) {
+    plantsCurrentGuide = guide;
+    plantsGuidesSection.hidden = true;
+    plantsGuideDetailSection.hidden = true;
+    plantsGuideEditSection.hidden = false;
+    document.getElementById("guide-edit-plant-name").value = guide ? guide.plant_name : "";
+    document.getElementById("guide-edit-latin-name").value = guide ? guide.latin_name : "";
+    document.getElementById("guide-edit-text").value = guide ? guide.guide_text : "";
+    document.getElementById("guide-ai-query").value = "";
+    var errEl = document.getElementById("guide-ai-error");
+    if (errEl) errEl.hidden = true;
+    window.scrollTo(0, 0);
+  }
+
+  document.getElementById("guide-detail-back-btn").addEventListener("click", function () {
+    plantsCurrentGuide = null;
+    plantsGuideDetailSection.hidden = true;
+    plantsGuidesSection.hidden = false;
+  });
+
+  document.getElementById("guide-edit-btn").addEventListener("click", function () {
+    if (plantsCurrentGuide) openPlantGuideEdit(plantsCurrentGuide);
+  });
+
+  document.getElementById("guide-delete-btn").addEventListener("click", async function () {
+    if (!plantsCurrentGuide) return;
+    if (!confirm(t("confirm_delete"))) return;
+    try {
+      await apiFetch(PLANTS_API + "/guides/" + plantsCurrentGuide.id, { method: "DELETE" });
+      plantsCurrentGuide = null;
+      plantsGuideDetailSection.hidden = true;
+      plantsGuidesSection.hidden = false;
+      await loadPlantGuides();
+    } catch (_) {}
+  });
+
+  document.getElementById("guide-edit-back-btn").addEventListener("click", function () {
+    if (plantsCurrentGuide) {
+      openPlantGuideDetail(plantsCurrentGuide);
+    } else {
+      plantsGuideEditSection.hidden = true;
+      plantsGuidesSection.hidden = false;
+    }
+  });
+
+  document.getElementById("guide-edit-save-btn").addEventListener("click", async function () {
+    var plantName = document.getElementById("guide-edit-plant-name").value.trim();
+    var latinName = document.getElementById("guide-edit-latin-name").value.trim();
+    var guideText = document.getElementById("guide-edit-text").value;
+    if (!plantName) return;
+    try {
+      var body = { plant_name: plantName, latin_name: latinName, guide_text: guideText };
+      var result;
+      if (plantsCurrentGuide) {
+        result = await apiFetch(PLANTS_API + "/guides/" + plantsCurrentGuide.id, {
+          method: "PUT", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+      } else {
+        result = await apiFetch(PLANTS_API + "/guides", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+      }
+      if (result) {
+        await loadPlantGuides();
+        plantsCurrentGuide = plantsGuidesData.find(function (g) { return g.id === result.id; }) || result;
+        openPlantGuideDetail(plantsCurrentGuide);
+      }
+    } catch (_) {}
+  });
+
+  document.getElementById("add-guide-btn").addEventListener("click", function () {
+    plantsCurrentGuide = null;
+    openPlantGuideEdit(null);
+  });
+
+  // AI fill for guide
+  document.getElementById("guide-ai-fill-btn").addEventListener("click", async function () {
+    var query = document.getElementById("guide-ai-query").value.trim();
+    var errEl = document.getElementById("guide-ai-error");
+    if (!query) return;
+    var btn = document.getElementById("guide-ai-fill-btn");
+    btn.disabled = true;
+    btn.textContent = "…";
+    if (errEl) errEl.hidden = true;
+    try {
+      var result = await apiFetch("/api/ai/plants/fill-guide?query=" + encodeURIComponent(query));
+      if (result) {
+        if (result.plant_name) document.getElementById("guide-edit-plant-name").value = result.plant_name;
+        if (result.latin_name) document.getElementById("guide-edit-latin-name").value = result.latin_name;
+        if (result.guide_text) document.getElementById("guide-edit-text").value = result.guide_text;
+      }
+    } catch (e) {
+      if (errEl) { errEl.textContent = e.message || t("error_generic"); errEl.hidden = false; }
+    }
+    btn.disabled = false;
+    btn.textContent = t("plants_guide_ai_btn");
+  });
 
   // ---------- Plants list ----------
 

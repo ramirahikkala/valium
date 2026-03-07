@@ -12,9 +12,12 @@ from sqlalchemy.orm import selectinload
 
 from auth import get_current_user
 from database import get_session
-from models import Plant, PlantGroupMember, PlantImage, PlantLocation, PlantNote, User
+from models import Plant, PlantGroupMember, PlantGrowingGuide, PlantImage, PlantLocation, PlantNote, User
 from schemas import (
     PlantCreate,
+    PlantGrowingGuideCreate,
+    PlantGrowingGuideResponse,
+    PlantGrowingGuideUpdate,
     PlantImageCaptionUpdate,
     PlantImageResponse,
     PlantLocationCreate,
@@ -278,6 +281,77 @@ async def delete_plant_note(
     if note is None or note.user_id not in group_ids:
         raise HTTPException(status_code=404, detail="Note not found")
     await session.delete(note)
+    await session.commit()
+
+
+# ---------- Plant growing guides ----------
+
+
+@router.get("/guides", response_model=list[PlantGrowingGuideResponse])
+async def list_plant_guides(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[PlantGrowingGuide]:
+    """List all growing guides for the current user's group, newest first."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    result = await session.execute(
+        select(PlantGrowingGuide)
+        .where(PlantGrowingGuide.user_id.in_(group_ids))
+        .order_by(PlantGrowingGuide.updated_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.post("/guides", response_model=PlantGrowingGuideResponse, status_code=201)
+async def create_plant_guide(
+    body: PlantGrowingGuideCreate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantGrowingGuide:
+    """Create a new plant growing guide."""
+    guide = PlantGrowingGuide(
+        user_id=current_user.id,
+        plant_name=body.plant_name.strip(),
+        latin_name=body.latin_name.strip(),
+        guide_text=body.guide_text,
+    )
+    session.add(guide)
+    await session.commit()
+    await session.refresh(guide)
+    return guide
+
+
+@router.put("/guides/{guide_id}", response_model=PlantGrowingGuideResponse)
+async def update_plant_guide(
+    guide_id: int,
+    body: PlantGrowingGuideUpdate,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantGrowingGuide:
+    """Update a plant growing guide."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    guide = await session.get(PlantGrowingGuide, guide_id)
+    if guide is None or guide.user_id not in group_ids:
+        raise HTTPException(status_code=404, detail="Guide not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(guide, field, value)
+    await session.commit()
+    await session.refresh(guide)
+    return guide
+
+
+@router.delete("/guides/{guide_id}", status_code=204)
+async def delete_plant_guide(
+    guide_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete a plant growing guide."""
+    group_ids = await _get_group_user_ids(session, current_user.id)
+    guide = await session.get(PlantGrowingGuide, guide_id)
+    if guide is None or guide.user_id not in group_ids:
+        raise HTTPException(status_code=404, detail="Guide not found")
+    await session.delete(guide)
     await session.commit()
 
 

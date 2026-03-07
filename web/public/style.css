@@ -2907,6 +2907,54 @@ input[type="datetime-local"]:focus {
   margin-top: 0.15rem;
 }
 
+/* Plant growing guides */
+.plant-guide-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.plant-guide-card:hover { background: var(--color-hover); border-color: var(--color-primary); }
+.plant-guide-card-name { font-weight: 600; font-size: 1rem; }
+.plant-guide-card-latin { font-size: 0.82rem; color: var(--color-text-muted); margin-top: 0.1rem; }
+.plant-guide-card-preview {
+  font-size: 0.8rem; color: var(--color-text-muted);
+  margin-top: 0.35rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.plant-guide-detail-card {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+.plant-guide-detail-name { font-size: 1.4rem; font-weight: 700; margin: 0 0 0.25rem; }
+.plant-guide-detail-latin { font-size: 0.9rem; color: var(--color-text-muted); margin: 0 0 1rem; }
+.plant-guide-detail-text { font-size: 0.92rem; line-height: 1.65; white-space: pre-wrap; }
+
+.plant-guide-edit-form {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.plant-guide-ai-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+.plant-guide-ai-input { flex: 1; min-width: 180px; }
+.plants-toolbar-heading { font-size: 1.2rem; font-weight: 600; margin: 0; }
+
 /* Plant notes */
 .plant-note-card {
   background: var(--color-surface);

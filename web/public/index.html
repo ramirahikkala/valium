@@ -114,6 +114,7 @@
               <button class="sidebar-plants-btn active" data-plants-tab="list" data-i18n="plants_list_tab">Kasvit</button>
               <button class="sidebar-plants-btn" data-plants-tab="locations" data-i18n="plants_locations_tab">Sijainnit</button>
               <button class="sidebar-plants-btn" data-plants-tab="notes" data-i18n="plants_notes_tab">Muistiinpanot</button>
+              <button class="sidebar-plants-btn" data-plants-tab="guides" data-i18n="plants_guides_tab">Kasvatusohjeet</button>
             </div>
           </div>
 
@@ -748,6 +749,55 @@
               <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
             </form>
             <div id="plants-notes-list"></div>
+          </div>
+
+          <!-- Growing guides list sub-view -->
+          <div id="plants-guides-section" class="plants-section" hidden>
+            <div class="plants-toolbar">
+              <h2 class="plants-toolbar-heading" data-i18n="plants_guides_heading">Kasvatusohjeet</h2>
+              <input type="search" id="plants-guides-search" class="plants-search" data-i18n-placeholder="plants_search_placeholder" placeholder="Hae...">
+              <button class="btn btn-primary btn-sm" id="add-guide-btn" data-i18n="plants_add_guide_btn">+ Uusi ohje</button>
+            </div>
+            <div id="plants-guides-grid" class="plants-grid"></div>
+          </div>
+
+          <!-- Growing guide detail sub-view -->
+          <div id="plants-guide-detail-section" class="plants-section" hidden>
+            <div class="plants-toolbar">
+              <button id="guide-detail-back-btn" class="btn btn-secondary btn-sm" data-i18n="plants_back_btn">← Takaisin</button>
+              <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap">
+                <button id="guide-edit-btn" class="btn btn-primary btn-sm" data-i18n="plant_edit_btn">✎ Muokkaa</button>
+                <button id="guide-delete-btn" class="btn btn-danger btn-sm" data-i18n="delete_btn">Poista</button>
+              </div>
+            </div>
+            <div id="plants-guide-detail-content" class="plant-guide-detail-card"></div>
+          </div>
+
+          <!-- Growing guide edit sub-view -->
+          <div id="plants-guide-edit-section" class="plants-section" hidden>
+            <div class="plants-toolbar">
+              <button id="guide-edit-back-btn" class="btn btn-secondary btn-sm" data-i18n="plants_back_btn">← Takaisin</button>
+              <button id="guide-edit-save-btn" class="btn btn-primary btn-sm" data-i18n="save_btn">Tallenna</button>
+            </div>
+            <div class="plant-guide-edit-form">
+              <div class="plant-guide-ai-row">
+                <input type="text" id="guide-ai-query" class="plant-guide-ai-input" data-i18n-placeholder="plants_guide_ai_ph" placeholder="Kasvin nimi (hae AI:lla)...">
+                <button type="button" id="guide-ai-fill-btn" class="btn btn-secondary btn-sm" data-i18n="plants_guide_ai_btn">✨ Täytä AI:lla</button>
+              </div>
+              <p id="guide-ai-error" class="plant-ai-error" hidden></p>
+              <div class="form-group">
+                <label data-i18n="plants_guide_plant_name_label">Kasvin nimi (suomi)</label>
+                <input type="text" id="guide-edit-plant-name" required autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label data-i18n="plants_guide_latin_name_label">Tieteellinen nimi</label>
+                <input type="text" id="guide-edit-latin-name" autocomplete="off">
+              </div>
+              <div class="form-group">
+                <label data-i18n="plants_guide_text_label">Kasvatusohje</label>
+                <textarea id="guide-edit-text" rows="12" style="width:100%"></textarea>
+              </div>
+            </div>
           </div>
 
         </div>

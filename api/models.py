@@ -560,6 +560,29 @@ class PlantNote(Base):
     )
 
 
+class PlantGrowingGuide(Base):
+    """A growing/cultivation guide for a plant species."""
+
+    __tablename__ = "plant_growing_guides"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    plant_name: Mapped[str] = mapped_column(String(500), nullable=False, server_default="")
+    latin_name: Mapped[str] = mapped_column(String(500), nullable=False, server_default="")
+    guide_text: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 # ---------- AI providers ----------
 
 

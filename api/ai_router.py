@@ -23,6 +23,7 @@ from schemas import (
     AIProviderResponse,
     AIProviderUpdate,
     PlantFillNameResponse,
+    PlantGrowingGuideFillResponse,
     PlantResponse,
 )
 
@@ -129,6 +130,46 @@ async def fill_plant_name(
         common_name=data.get("common_name"),
         category=data.get("category"),
         notes=data.get("notes"),
+    )
+
+
+@router.post("/plants/fill-guide", response_model=PlantGrowingGuideFillResponse)
+async def fill_plant_guide(
+    query: str = Query(..., description="Plant name (Finnish or scientific) to generate guide for"),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantGrowingGuideFillResponse:
+    """Generate a Finnish growing guide for a plant by name."""
+    prompt = (
+        f"Tunnista kasvi nimeltä '{query}' ja kirjoita sille yksityiskohtainen kasvatusohje suomeksi. "
+        "Palauta VAIN kelvollinen JSON seuraavilla avaimilla: "
+        '{"plant_name": "suomenkielinen nimi", "latin_name": "tieteellinen nimi", '
+        '"guide_text": "yksityiskohtainen kasvatusohje suomeksi, sisältäen idätyksen, '
+        'kasvuolosuhteet, kastelun, lannoituksen, sadonkorjuun tai hoidon"}. '
+        "plant_name tulee olla suomeksi. latin_name tulee olla oikea tieteellinen nimi. "
+        "guide_text tulee olla suomenkielinen, kattava kasvatusohje."
+    )
+    try:
+        raw = await ai_complete(session, prompt)
+    except AIError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI call failed: {e}")
+
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="AI returned invalid JSON")
+
+    return PlantGrowingGuideFillResponse(
+        plant_name=data.get("plant_name", ""),
+        latin_name=data.get("latin_name", ""),
+        guide_text=data.get("guide_text", ""),
     )
 
 

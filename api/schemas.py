@@ -531,6 +531,44 @@ class PlantGroupResponse(BaseModel):
     members: list[PlantGroupMemberResponse] = []
 
 
+class PlantGrowingGuideCreate(BaseModel):
+    """Schema for creating a plant growing guide."""
+
+    plant_name: str
+    latin_name: str = ""
+    guide_text: str = ""
+
+
+class PlantGrowingGuideUpdate(BaseModel):
+    """Schema for updating a plant growing guide. All fields optional."""
+
+    plant_name: str | None = None
+    latin_name: str | None = None
+    guide_text: str | None = None
+
+
+class PlantGrowingGuideResponse(BaseModel):
+    """Schema returned for a single plant growing guide."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    plant_name: str
+    latin_name: str
+    guide_text: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class PlantGrowingGuideFillResponse(BaseModel):
+    """AI-filled fields for a growing guide."""
+
+    plant_name: str
+    latin_name: str
+    guide_text: str
+
+
 class PlantNoteCreate(BaseModel):
     """Schema for creating a plant note."""
 
