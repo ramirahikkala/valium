@@ -92,6 +92,19 @@
             </div>
           </div>
 
+          <!-- Ruokalista -->
+          <div class="sidebar-section" id="sidebar-section-meals" hidden>
+            <button class="sidebar-section-btn" id="view-tab-meals" data-view="meals">
+              <span class="sidebar-label" data-i18n="meals_tab">Ruokalista</span>
+            </button>
+            <div class="sidebar-children" id="sidebar-meals-children" hidden>
+              <button class="sidebar-meals-btn active" data-meals-tab="recipes" data-i18n="meals_recipes_tab">Reseptit</button>
+              <button class="sidebar-meals-btn" data-meals-tab="meals" data-i18n="meals_meals_tab">Ateriat</button>
+              <button class="sidebar-meals-btn" data-meals-tab="plans" data-i18n="meals_plans_tab">Ruokalistat</button>
+              <button class="sidebar-meals-btn" data-meals-tab="shopping" data-i18n="meals_shopping_tab">Ostoslistat</button>
+            </div>
+          </div>
+
           <!-- Kasvit -->
           <div class="sidebar-section" id="sidebar-section-plants" hidden>
             <button class="sidebar-section-btn" id="view-tab-plants" data-view="plants">
@@ -439,6 +452,62 @@
           </div>
         </div>
 
+        <!-- Meals view -->
+        <div id="meals-view" hidden>
+
+          <!-- Recipes sub-view -->
+          <div id="meals-recipes-section" class="meals-section">
+            <div class="meals-toolbar">
+              <h2 class="meals-heading" data-i18n="meals_recipes_heading">Reseptit</h2>
+              <div class="meals-toolbar-actions">
+                <button class="btn btn-primary btn-sm" id="meals-add-recipe-btn" data-i18n="meals_add_recipe_btn">+ Uusi resepti</button>
+                <button class="btn btn-secondary btn-sm" id="meals-recipe-share-btn" data-i18n="meals_share_recipes_btn">👥 Jaa reseptejä</button>
+              </div>
+            </div>
+            <div class="meals-layout">
+              <div id="meals-recipes-list" class="meals-list"></div>
+              <div id="meals-recipe-detail" class="meals-detail" hidden></div>
+            </div>
+          </div>
+
+          <!-- Meals sub-view -->
+          <div id="meals-meals-section" class="meals-section" hidden>
+            <div class="meals-toolbar">
+              <h2 class="meals-heading" data-i18n="meals_meals_heading">Ateriat</h2>
+              <button class="btn btn-primary btn-sm" id="meals-add-meal-btn" data-i18n="meals_add_meal_btn">+ Uusi ateria</button>
+            </div>
+            <div class="meals-layout">
+              <div id="meals-meals-list" class="meals-list"></div>
+              <div id="meals-meal-detail" class="meals-detail" hidden></div>
+            </div>
+          </div>
+
+          <!-- Plans sub-view -->
+          <div id="meals-plans-section" class="meals-section" hidden>
+            <div class="meals-toolbar">
+              <h2 class="meals-heading" data-i18n="meals_plans_heading">Ruokalistat</h2>
+              <button class="btn btn-primary btn-sm" id="meals-add-plan-btn" data-i18n="meals_add_plan_btn">+ Uusi ruokalista</button>
+            </div>
+            <div class="meals-layout">
+              <div id="meals-plans-list" class="meals-list"></div>
+              <div id="meals-plan-detail" class="meals-detail" hidden></div>
+            </div>
+          </div>
+
+          <!-- Shopping sub-view -->
+          <div id="meals-shopping-section" class="meals-section" hidden>
+            <div class="meals-toolbar">
+              <h2 class="meals-heading" data-i18n="meals_shopping_heading">Ostoslistat</h2>
+              <button class="btn btn-primary btn-sm" id="meals-add-shopping-btn" data-i18n="meals_add_shopping_btn">+ Uusi ostoslista</button>
+            </div>
+            <div class="meals-layout">
+              <div id="meals-shopping-list" class="meals-list"></div>
+              <div id="meals-shopping-detail" class="meals-detail" hidden></div>
+            </div>
+          </div>
+
+        </div>
+
         <!-- Plants view -->
         <div id="plants-view" hidden>
 
@@ -782,6 +851,170 @@
           <button type="button" class="btn btn-secondary" id="gym-modal-cancel" data-i18n="cancel">Peruuta</button>
           <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: new recipe modal -->
+  <div id="meals-new-recipe-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_add_recipe_btn">Uusi resepti</h2>
+        <button class="modal-close" id="meals-new-recipe-modal-close">&#x2715;</button>
+      </div>
+      <form id="meals-new-recipe-form">
+        <div class="form-group">
+          <label for="meals-new-recipe-name" data-i18n="meals_recipe_name_label">Nimi</label>
+          <input type="text" id="meals-new-recipe-name" required autocomplete="off">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="meals-new-recipe-category" data-i18n="meals_recipe_category_label">Kategoria</label>
+            <select id="meals-new-recipe-category">
+              <option value="breakfast" data-i18n="meals_cat_breakfast">Aamupala</option>
+              <option value="lunch" data-i18n="meals_cat_lunch">Lounas</option>
+              <option value="dinner" data-i18n="meals_cat_dinner">Päivällinen</option>
+              <option value="snack" data-i18n="meals_cat_snack">Välipala</option>
+              <option value="dessert" data-i18n="meals_cat_dessert">Jälkiruoka</option>
+              <option value="side" data-i18n="meals_cat_side">Lisuke</option>
+              <option value="other" data-i18n="meals_cat_other" selected>Muu</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="meals-new-recipe-servings" data-i18n="meals_recipe_servings_label">Annoksia</label>
+            <input type="number" id="meals-new-recipe-servings" min="1" value="4">
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="meals-new-recipe-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="create_btn">Luo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: new meal modal -->
+  <div id="meals-new-meal-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_add_meal_btn">Uusi ateria</h2>
+        <button class="modal-close" id="meals-new-meal-modal-close">&#x2715;</button>
+      </div>
+      <form id="meals-new-meal-form">
+        <div class="form-group">
+          <label for="meals-new-meal-name" data-i18n="meals_meal_name_label">Nimi</label>
+          <input type="text" id="meals-new-meal-name" required autocomplete="off">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="meals-new-meal-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="create_btn">Luo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: new plan modal -->
+  <div id="meals-new-plan-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_add_plan_btn">Uusi ruokalista</h2>
+        <button class="modal-close" id="meals-new-plan-modal-close">&#x2715;</button>
+      </div>
+      <form id="meals-new-plan-form">
+        <div class="form-group">
+          <label for="meals-new-plan-name" data-i18n="meals_plan_name_label">Nimi</label>
+          <input type="text" id="meals-new-plan-name" required autocomplete="off">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="meals-new-plan-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="create_btn">Luo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: new shopping list modal -->
+  <div id="meals-new-shopping-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_add_shopping_btn">Uusi ostoslista</h2>
+        <button class="modal-close" id="meals-new-shopping-modal-close">&#x2715;</button>
+      </div>
+      <form id="meals-new-shopping-form">
+        <div class="form-group">
+          <label for="meals-new-shopping-name" data-i18n="meals_shopping_name_label">Nimi</label>
+          <input type="text" id="meals-new-shopping-name" required autocomplete="off">
+        </div>
+        <div class="form-group">
+          <label for="meals-new-shopping-plan" data-i18n="meals_shopping_from_plan_label">Luo ruokalistan perusteella (valinnainen)</label>
+          <select id="meals-new-shopping-plan">
+            <option value="">— Tyhjä lista —</option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="meals-new-shopping-cancel" data-i18n="cancel">Peruuta</button>
+          <button type="submit" class="btn btn-primary" data-i18n="create_btn">Luo</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: recipe share modal (batch) -->
+  <div id="meals-recipe-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_share_recipes_btn">Jaa reseptejä</h2>
+        <button class="modal-close" id="meals-recipe-share-modal-close">&#x2715;</button>
+      </div>
+      <form id="meals-recipe-share-form" style="display:flex;flex-direction:column;gap:0.5rem">
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap">
+          <input type="email" id="meals-recipe-share-email" required placeholder="email@example.com" autocomplete="off" style="flex:1;min-width:180px">
+          <select id="meals-recipe-share-permission">
+            <option value="read" data-i18n="share_perm_read">Luku</option>
+            <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+          </select>
+        </div>
+        <div id="meals-recipe-share-picker" class="meals-share-picker"></div>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="meals_share_selected_btn">Jaa valitut</button>
+      </form>
+      <div id="meals-recipe-share-existing" class="share-list" style="margin-top:1rem"></div>
+    </div>
+  </div>
+
+  <!-- Meals: plan share modal -->
+  <div id="meals-plan-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_share_plan_title">Jaa ruokalista</h2>
+        <button class="modal-close" id="meals-plan-share-modal-close">&#x2715;</button>
+      </div>
+      <div id="meals-plan-share-list" class="share-list"></div>
+      <form id="meals-plan-share-form" class="share-add-form">
+        <input type="email" id="meals-plan-share-email" required placeholder="email@example.com" autocomplete="off">
+        <select id="meals-plan-share-permission">
+          <option value="read" data-i18n="share_perm_read">Luku</option>
+          <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Meals: shopping list share modal -->
+  <div id="meals-shopping-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="meals_share_shopping_title">Jaa ostoslista</h2>
+        <button class="modal-close" id="meals-shopping-share-modal-close">&#x2715;</button>
+      </div>
+      <div id="meals-shopping-share-list" class="share-list"></div>
+      <form id="meals-shopping-share-form" class="share-add-form">
+        <input type="email" id="meals-shopping-share-email" required placeholder="email@example.com" autocomplete="off">
+        <select id="meals-shopping-share-permission">
+          <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+          <option value="read" data-i18n="share_perm_read">Luku</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
       </form>
     </div>
   </div>

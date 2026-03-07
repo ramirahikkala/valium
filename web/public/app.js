@@ -1586,6 +1586,8 @@
     if (plantsSection) plantsSection.hidden = !features.plants;
     var checklistSection = document.getElementById("sidebar-section-checklist");
     if (checklistSection) checklistSection.hidden = !features.checklist;
+    var mealsSection = document.getElementById("sidebar-section-meals");
+    if (mealsSection) mealsSection.hidden = !features.meals;
     var adminSection = document.getElementById("sidebar-section-admin");
     if (adminSection) adminSection.hidden = !isAdmin;
 
@@ -1595,6 +1597,7 @@
     else if (features.gym) firstView = "gym";
     else if (features.plants) firstView = "plants";
     else if (features.checklist) firstView = "checklist";
+    else if (features.meals) firstView = "meals";
     else if (isAdmin) firstView = "admin";
 
     // Restore view from URL hash if possible
@@ -1606,12 +1609,14 @@
       gym: !!features.gym,
       plants: !!features.plants,
       checklist: !!features.checklist,
+      meals: !!features.meals,
       admin: isAdmin,
     };
     if (hashView && viewAllowed[hashView]) {
       if (hashView === "gym" && hashSubtab) gymCurrentTab = hashSubtab;
       if (hashView === "plants" && hashSubtab) plantsCurrentTab = hashSubtab;
       if (hashView === "checklist" && hashSubtab) checklistCurrentTab = hashSubtab;
+      if (hashView === "meals" && hashSubtab) mealsCurrentTab = hashSubtab;
       switchToView(hashView);
     } else if (firstView) {
       switchToView(firstView);
@@ -1793,10 +1798,14 @@
   viewTabAdmin.addEventListener("click", function () { switchToView("admin"); closeSidebarOnMobile(); });
   viewTabPlants.addEventListener("click", function () { switchToView("plants"); closeSidebarOnMobile(); });
   if (viewTabChecklist) viewTabChecklist.addEventListener("click", function () { switchToView("checklist"); closeSidebarOnMobile(); });
+  var viewTabMeals = document.getElementById("view-tab-meals");
+  var mealsView = document.getElementById("meals-view");
+  if (viewTabMeals) viewTabMeals.addEventListener("click", function () { switchToView("meals"); closeSidebarOnMobile(); });
 
   var sidebarTasksChildren = document.getElementById("sidebar-tasks-children");
   var sidebarPlantsChildren = document.getElementById("sidebar-plants-children");
   var sidebarChecklistChildren = document.getElementById("sidebar-checklist-children");
+  var sidebarMealsChildren = document.getElementById("sidebar-meals-children");
 
   function switchToView(view) {
     // Hide all views
@@ -1805,17 +1814,20 @@
     adminView.hidden = true;
     plantsView.hidden = true;
     if (checklistView) checklistView.hidden = true;
+    if (mealsView) mealsView.hidden = true;
     // Remove all active states
     viewTabTasks.classList.remove("active");
     viewTabGym.classList.remove("active");
     viewTabAdmin.classList.remove("active");
     viewTabPlants.classList.remove("active");
     if (viewTabChecklist) viewTabChecklist.classList.remove("active");
+    if (viewTabMeals) viewTabMeals.classList.remove("active");
     // Hide all sub-navs
     sidebarTasksChildren.hidden = true;
     sidebarGymChildren.hidden = true;
     if (sidebarPlantsChildren) sidebarPlantsChildren.hidden = true;
     if (sidebarChecklistChildren) sidebarChecklistChildren.hidden = true;
+    if (sidebarMealsChildren) sidebarMealsChildren.hidden = true;
 
     if (view === "gym") {
       gymView.hidden = false;
@@ -1837,6 +1849,11 @@
       if (viewTabChecklist) viewTabChecklist.classList.add("active");
       if (sidebarChecklistChildren) sidebarChecklistChildren.hidden = false;
       switchChecklistTab(checklistCurrentTab);
+    } else if (view === "meals") {
+      if (mealsView) mealsView.hidden = false;
+      if (viewTabMeals) viewTabMeals.classList.add("active");
+      if (sidebarMealsChildren) sidebarMealsChildren.hidden = false;
+      switchMealsTab(mealsCurrentTab);
     } else {
       // Default: tasks
       tasksView.hidden = false;
@@ -5235,5 +5252,1165 @@
   }
 
   // Esc closes new-session modal (handled by global keydown via newSessionModal variable above)
+
+  // ========== MEALS MODULE ==========
+
+  var MEALS_API = "/api/meals";
+  var mealsCurrentTab = "recipes";
+  var mealsRecipesData = [];
+  var mealsMealsData = [];
+  var mealsPlansData = [];
+  var mealsShoppingData = [];
+  var mealsCurrentRecipe = null;
+  var mealsCurrentMeal = null;
+  var mealsCurrentPlan = null;
+  var mealsCurrentShopping = null;
+
+  // DOM refs — views
+  var mealsRecipesSection = document.getElementById("meals-recipes-section");
+  var mealsMealsSection = document.getElementById("meals-meals-section");
+  var mealsPlansSection = document.getElementById("meals-plans-section");
+  var mealsShoppingSection = document.getElementById("meals-shopping-section");
+
+  // DOM refs — lists and details
+  var mealsRecipesListEl = document.getElementById("meals-recipes-list");
+  var mealsRecipeDetailEl = document.getElementById("meals-recipe-detail");
+  var mealsMealsListEl = document.getElementById("meals-meals-list");
+  var mealsMealDetailEl = document.getElementById("meals-meal-detail");
+  var mealsPlansListEl = document.getElementById("meals-plans-list");
+  var mealsPlanDetailEl = document.getElementById("meals-plan-detail");
+  var mealsShoppingListEl = document.getElementById("meals-shopping-list");
+  var mealsShoppingDetailEl = document.getElementById("meals-shopping-detail");
+
+  // DOM refs — modals
+  var mealsNewRecipeModal = document.getElementById("meals-new-recipe-modal");
+  var mealsNewMealModal = document.getElementById("meals-new-meal-modal");
+  var mealsNewPlanModal = document.getElementById("meals-new-plan-modal");
+  var mealsNewShoppingModal = document.getElementById("meals-new-shopping-modal");
+  var mealsRecipeShareModal = document.getElementById("meals-recipe-share-modal");
+  var mealsPlanShareModal = document.getElementById("meals-plan-share-modal");
+  var mealsShoppingShareModal = document.getElementById("meals-shopping-share-modal");
+
+  // i18n helpers
+  var MEAL_CATEGORIES = {
+    breakfast: { fi: "Aamupala", en: "Breakfast" },
+    lunch:     { fi: "Lounas",   en: "Lunch" },
+    dinner:    { fi: "Päivällinen", en: "Dinner" },
+    snack:     { fi: "Välipala", en: "Snack" },
+    dessert:   { fi: "Jälkiruoka", en: "Dessert" },
+    side:      { fi: "Lisuke",   en: "Side dish" },
+    other:     { fi: "Muu",      en: "Other" },
+  };
+
+  function mealCategoryLabel(cat) {
+    var entry = MEAL_CATEGORIES[cat];
+    if (!entry) return cat;
+    return entry[currentLang] || entry.fi;
+  }
+
+  // ---------- Tab switching ----------
+
+  document.querySelectorAll(".sidebar-meals-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      switchMealsTab(btn.dataset.mealsTab);
+      closeSidebarOnMobile();
+    });
+  });
+
+  function switchMealsTab(tab) {
+    mealsCurrentTab = tab;
+    location.hash = "meals/" + tab;
+    document.querySelectorAll(".sidebar-meals-btn").forEach(function (b) {
+      b.classList.toggle("active", b.dataset.mealsTab === tab);
+    });
+    mealsRecipesSection.hidden = tab !== "recipes";
+    mealsMealsSection.hidden = tab !== "meals";
+    mealsPlansSection.hidden = tab !== "plans";
+    mealsShoppingSection.hidden = tab !== "shopping";
+    if (tab === "recipes") loadMealsRecipes();
+    else if (tab === "meals") loadMealsMeals();
+    else if (tab === "plans") loadMealsPlans();
+    else if (tab === "shopping") loadMealsShopping();
+  }
+
+  // ---------- Recipes ----------
+
+  async function loadMealsRecipes() {
+    try {
+      mealsRecipesData = await apiFetch(MEALS_API + "/recipes");
+      renderMealsRecipesList();
+    } catch (_) {}
+  }
+
+  function renderMealsRecipesList() {
+    if (!mealsRecipesListEl) return;
+    if (!mealsRecipesData.length) {
+      mealsRecipesListEl.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
+      return;
+    }
+    mealsRecipesListEl.innerHTML = mealsRecipesData.map(function (r) {
+      var isShared = r.permission !== "owner";
+      return "<div class='meals-card" + (mealsCurrentRecipe && mealsCurrentRecipe.id === r.id ? " active" : "") + "' data-id='" + r.id + "'>" +
+        "<div class='meals-card-title'>" + esc(r.name) +
+        (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
+        "</div>" +
+        "<div class='meals-card-meta'>" + mealCategoryLabel(r.category) + " · " + r.servings + " " + t("meals_servings_unit") + "</div>" +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(r.owner_name || "") + "</div>" : "") +
+        "</div>";
+    }).join("");
+    mealsRecipesListEl.querySelectorAll(".meals-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var recipe = mealsRecipesData.find(function (r) { return r.id === parseInt(card.dataset.id); });
+        if (recipe) renderMealsRecipeDetail(recipe);
+      });
+    });
+  }
+
+  function renderMealsRecipeDetail(recipe) {
+    mealsCurrentRecipe = recipe;
+    renderMealsRecipesList(); // update active state
+    if (!mealsRecipeDetailEl) return;
+    mealsRecipeDetailEl.hidden = false;
+    var isOwner = recipe.permission === "owner";
+    var canWrite = isOwner || recipe.permission === "write";
+
+    mealsRecipeDetailEl.innerHTML =
+      "<div class='meals-detail-header'>" +
+        "<div class='meals-detail-title-row'>" +
+          (canWrite
+            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='name'>" + esc(recipe.name) + "</h3>"
+            : "<h3 class='meals-detail-title'>" + esc(recipe.name) + "</h3>") +
+          "<div class='meals-detail-actions'>" +
+            (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-recipe-share-open-btn' data-i18n='share_btn'>👥 " + t("share_btn") + "</button>" : "") +
+            (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-recipe-delete-btn' data-i18n='delete_btn'>" + t("delete_btn") + "</button>" : "") +
+          "</div>" +
+        "</div>" +
+        "<div class='meals-detail-meta-row'>" +
+          (canWrite
+            ? "<select id='meals-recipe-category-sel'>" + Object.keys(MEAL_CATEGORIES).map(function (k) {
+                return "<option value='" + k + "'" + (recipe.category === k ? " selected" : "") + ">" + mealCategoryLabel(k) + "</option>";
+              }).join("") + "</select>"
+            : "<span class='meals-badge'>" + mealCategoryLabel(recipe.category) + "</span>") +
+          (canWrite
+            ? "<label class='meals-servings-label'>" + t("meals_recipe_servings_label") + ": <input type='number' id='meals-recipe-servings-inp' min='1' value='" + recipe.servings + "' style='width:4rem'></label>"
+            : "<span class='meals-badge'>" + recipe.servings + " " + t("meals_servings_unit") + "</span>") +
+        "</div>" +
+      "</div>" +
+      "<div class='meals-detail-section'>" +
+        "<h4>" + t("meals_ingredients_heading") + "</h4>" +
+        "<ul class='meals-ingredients-list' id='meals-recipe-ings'>" +
+          recipe.ingredients.map(function (ing) {
+            return "<li class='meals-ingredient-item'>" +
+              "<span>" + (ing.amount ? esc(ing.amount) + " " : "") + (ing.unit ? esc(ing.unit) + " " : "") + esc(ing.name) + "</span>" +
+              (canWrite ? "<button class='btn-icon meals-ing-delete' data-ing-id='" + ing.id + "'>✕</button>" : "") +
+              "</li>";
+          }).join("") +
+        "</ul>" +
+        (canWrite
+          ? "<form id='meals-add-ing-form' class='meals-add-ing-form'>" +
+              "<input type='text' id='meals-ing-amount' placeholder='" + t("meals_ing_amount_ph") + "' style='width:5rem'>" +
+              "<input type='text' id='meals-ing-unit' placeholder='" + t("meals_ing_unit_ph") + "' style='width:5rem'>" +
+              "<input type='text' id='meals-ing-name' placeholder='" + t("meals_ing_name_ph") + "' required style='flex:1'>" +
+              "<button type='submit' class='btn btn-primary btn-sm'>+</button>" +
+            "</form>"
+          : "") +
+      "</div>" +
+      "<div class='meals-detail-section'>" +
+        "<h4>" + t("meals_instructions_heading") + "</h4>" +
+        (canWrite
+          ? "<textarea id='meals-recipe-desc' class='meals-desc-textarea' rows='8'>" + esc(recipe.description || "") + "</textarea>" +
+            "<button class='btn btn-primary btn-sm' id='meals-recipe-save-desc-btn'>" + t("save_btn") + "</button>"
+          : "<div class='meals-desc-view'>" + (recipe.description ? esc(recipe.description).replace(/\n/g, "<br>") : "<em>" + t("no_items") + "</em>") + "</div>") +
+      "</div>";
+
+    // Wire up events
+    if (canWrite) {
+      var titleEl = mealsRecipeDetailEl.querySelector("[data-field='name']");
+      if (titleEl) {
+        titleEl.addEventListener("blur", async function () {
+          var newName = titleEl.textContent.trim();
+          if (newName && newName !== recipe.name) {
+            try {
+              var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newName })
+              });
+              mealsCurrentRecipe = updated;
+              await loadMealsRecipes();
+            } catch (_) { titleEl.textContent = recipe.name; }
+          }
+        });
+        titleEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); titleEl.blur(); } });
+      }
+
+      var catSel = document.getElementById("meals-recipe-category-sel");
+      if (catSel) catSel.addEventListener("change", async function () {
+        try {
+          var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category: catSel.value })
+          });
+          mealsCurrentRecipe = updated;
+          await loadMealsRecipes();
+          renderMealsRecipeDetail(mealsCurrentRecipe);
+        } catch (_) {}
+      });
+
+      var servingsInp = document.getElementById("meals-recipe-servings-inp");
+      if (servingsInp) servingsInp.addEventListener("change", async function () {
+        var val = parseInt(servingsInp.value, 10);
+        if (!val || val < 1) return;
+        try {
+          var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ servings: val })
+          });
+          mealsCurrentRecipe = updated;
+          await loadMealsRecipes();
+        } catch (_) {}
+      });
+
+      var addIngForm = document.getElementById("meals-add-ing-form");
+      if (addIngForm) addIngForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var amount = document.getElementById("meals-ing-amount").value.trim() || null;
+        var unit = document.getElementById("meals-ing-unit").value.trim() || null;
+        var name = document.getElementById("meals-ing-name").value.trim();
+        if (!name) return;
+        try {
+          await apiFetch(MEALS_API + "/recipes/" + recipe.id + "/ingredients", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name, amount: amount, unit: unit })
+          });
+          addIngForm.reset();
+          var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id);
+          mealsCurrentRecipe = updated;
+          renderMealsRecipeDetail(mealsCurrentRecipe);
+          loadMealsRecipes();
+        } catch (_) {}
+      });
+
+      mealsRecipeDetailEl.querySelectorAll(".meals-ing-delete").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var ingId = parseInt(btn.dataset.ingId);
+          try {
+            await apiFetch(MEALS_API + "/recipes/" + recipe.id + "/ingredients/" + ingId, { method: "DELETE" });
+            var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id);
+            mealsCurrentRecipe = updated;
+            renderMealsRecipeDetail(mealsCurrentRecipe);
+          } catch (_) {}
+        });
+      });
+
+      var saveDescBtn = document.getElementById("meals-recipe-save-desc-btn");
+      if (saveDescBtn) saveDescBtn.addEventListener("click", async function () {
+        var desc = document.getElementById("meals-recipe-desc").value;
+        try {
+          var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: desc })
+          });
+          mealsCurrentRecipe = updated;
+        } catch (_) {}
+      });
+    }
+
+    var shareOpenBtn = document.getElementById("meals-recipe-share-open-btn");
+    if (shareOpenBtn) shareOpenBtn.addEventListener("click", function () {
+      openMealsRecipeShareModal();
+    });
+
+    var deleteBtn = document.getElementById("meals-recipe-delete-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", async function () {
+      if (!confirm(t("confirm_delete"))) return;
+      try {
+        await apiFetch(MEALS_API + "/recipes/" + recipe.id, { method: "DELETE" });
+        mealsCurrentRecipe = null;
+        mealsRecipeDetailEl.hidden = true;
+        await loadMealsRecipes();
+      } catch (_) {}
+    });
+  }
+
+  // Add recipe button
+  var mealsAddRecipeBtn = document.getElementById("meals-add-recipe-btn");
+  if (mealsAddRecipeBtn) mealsAddRecipeBtn.addEventListener("click", function () {
+    if (mealsNewRecipeModal) mealsNewRecipeModal.hidden = false;
+  });
+  document.getElementById("meals-new-recipe-modal-close").addEventListener("click", function () {
+    mealsNewRecipeModal.hidden = true;
+  });
+  document.getElementById("meals-new-recipe-cancel").addEventListener("click", function () {
+    mealsNewRecipeModal.hidden = true;
+  });
+  document.getElementById("meals-new-recipe-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = document.getElementById("meals-new-recipe-name").value.trim();
+    var category = document.getElementById("meals-new-recipe-category").value;
+    var servings = parseInt(document.getElementById("meals-new-recipe-servings").value, 10) || 4;
+    if (!name) return;
+    try {
+      var created = await apiFetch(MEALS_API + "/recipes", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, category: category, servings: servings })
+      });
+      mealsNewRecipeModal.hidden = true;
+      this.reset();
+      await loadMealsRecipes();
+      if (created) {
+        var fresh = mealsRecipesData.find(function (r) { return r.id === created.id; });
+        if (fresh) renderMealsRecipeDetail(fresh);
+      }
+    } catch (_) {}
+  });
+
+  // ---------- Recipe sharing ----------
+
+  var mealsCurrentRecipeShareId = null;
+
+  async function openMealsRecipeShareModal() {
+    if (!mealsRecipeShareModal) return;
+    mealsRecipeShareModal.hidden = false;
+    // Populate recipe picker with owned recipes
+    var picker = document.getElementById("meals-recipe-share-picker");
+    if (picker) {
+      var owned = mealsRecipesData.filter(function (r) { return r.permission === "owner"; });
+      if (!owned.length) {
+        picker.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
+      } else {
+        picker.innerHTML = owned.map(function (r) {
+          return "<label class='meals-share-picker-item'><input type='checkbox' value='" + r.id + "'> " + esc(r.name) + "</label>";
+        }).join("");
+      }
+    }
+    // Load existing shares
+    var existingEl = document.getElementById("meals-recipe-share-existing");
+    if (existingEl) {
+      try {
+        var shares = await apiFetch(MEALS_API + "/recipes/shares");
+        if (!shares.length) {
+          existingEl.innerHTML = "";
+        } else {
+          // Group by user
+          var byUser = {};
+          shares.forEach(function (s) {
+            var key = s.shared_with_email;
+            if (!byUser[key]) byUser[key] = { name: s.shared_with_name, email: key, items: [] };
+            byUser[key].items.push(s);
+          });
+          existingEl.innerHTML = Object.values(byUser).map(function (u) {
+            return "<div class='share-row'><span class='share-name'>" + esc(u.name) + " (" + esc(u.email) + ")</span><span class='share-items'>" +
+              u.items.map(function (s) {
+                return "<span class='share-item-tag'>" + esc(mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }) ? mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }).name : "?") +
+                  " <button class='share-remove-btn' data-recipe-id='" + s.recipe_id + "' data-share-id='" + s.id + "'>✕</button></span>";
+              }).join("") +
+              "</span></div>";
+          }).join("");
+          existingEl.querySelectorAll(".share-remove-btn").forEach(function (btn) {
+            btn.addEventListener("click", async function () {
+              try {
+                await apiFetch(MEALS_API + "/recipes/" + btn.dataset.recipeId + "/shares/" + btn.dataset.shareId, { method: "DELETE" });
+                await openMealsRecipeShareModal();
+                await loadMealsRecipes();
+              } catch (_) {}
+            });
+          });
+        }
+      } catch (_) {}
+    }
+  }
+
+  if (document.getElementById("meals-recipe-share-modal-close")) {
+    document.getElementById("meals-recipe-share-modal-close").addEventListener("click", function () {
+      if (mealsRecipeShareModal) mealsRecipeShareModal.hidden = true;
+    });
+  }
+
+  document.getElementById("meals-recipe-share-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var email = document.getElementById("meals-recipe-share-email").value.trim();
+    var perm = document.getElementById("meals-recipe-share-permission").value;
+    var picker = document.getElementById("meals-recipe-share-picker");
+    var ids = picker ? Array.from(picker.querySelectorAll("input:checked")).map(function (cb) { return parseInt(cb.value); }) : [];
+    if (!email || !ids.length) return;
+    try {
+      await apiFetch(MEALS_API + "/recipes/shares/batch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, permission: perm, recipe_ids: ids })
+      });
+      this.reset();
+      await openMealsRecipeShareModal();
+      await loadMealsRecipes();
+    } catch (_) {}
+  });
+
+  var mealsRecipeShareOpenBtn2 = document.getElementById("meals-recipe-share-btn");
+  if (mealsRecipeShareOpenBtn2) mealsRecipeShareOpenBtn2.addEventListener("click", function () {
+    openMealsRecipeShareModal();
+  });
+
+  // ---------- Meals (ateriat) ----------
+
+  async function loadMealsMeals() {
+    try {
+      mealsMealsData = await apiFetch(MEALS_API + "/meal-list");
+      renderMealsMealsList();
+    } catch (_) {}
+  }
+
+  function renderMealsMealsList() {
+    if (!mealsMealsListEl) return;
+    if (!mealsMealsData.length) {
+      mealsMealsListEl.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
+      return;
+    }
+    mealsMealsListEl.innerHTML = mealsMealsData.map(function (m) {
+      return "<div class='meals-card" + (mealsCurrentMeal && mealsCurrentMeal.id === m.id ? " active" : "") + "' data-id='" + m.id + "'>" +
+        "<div class='meals-card-title'>" + esc(m.name) + "</div>" +
+        "<div class='meals-card-meta'>" + m.recipes.length + " " + t("meals_recipes_count") + "</div>" +
+        "</div>";
+    }).join("");
+    mealsMealsListEl.querySelectorAll(".meals-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var meal = mealsMealsData.find(function (m) { return m.id === parseInt(card.dataset.id); });
+        if (meal) renderMealsMealDetail(meal);
+      });
+    });
+  }
+
+  function renderMealsMealDetail(meal) {
+    mealsCurrentMeal = meal;
+    renderMealsMealsList();
+    if (!mealsMealDetailEl) return;
+    mealsMealDetailEl.hidden = false;
+
+    mealsMealDetailEl.innerHTML =
+      "<div class='meals-detail-header'>" +
+        "<div class='meals-detail-title-row'>" +
+          "<h3 class='meals-detail-title' contenteditable='true' data-field='meal-name'>" + esc(meal.name) + "</h3>" +
+          "<button class='btn btn-danger btn-sm' id='meals-meal-delete-btn'>" + t("delete_btn") + "</button>" +
+        "</div>" +
+      "</div>" +
+      "<div class='meals-detail-section'>" +
+        "<h4>" + t("meals_recipes_heading_in_meal") + "</h4>" +
+        "<ul class='meals-ingredients-list' id='meals-meal-recipe-list'>" +
+          meal.recipes.map(function (r) {
+            return "<li class='meals-ingredient-item'><span>" + esc(r.recipe_name) + "</span>" +
+              "<button class='btn-icon meals-mr-delete' data-mr-id='" + r.id + "'>✕</button></li>";
+          }).join("") +
+        "</ul>" +
+        "<form id='meals-add-recipe-to-meal-form' class='meals-add-ing-form'>" +
+          "<select id='meals-meal-recipe-sel' style='flex:1'><option value=''>" + t("meals_pick_recipe") + "</option>" +
+          mealsRecipesData.map(function (r) {
+            return "<option value='" + r.id + "'>" + esc(r.name) + "</option>";
+          }).join("") +
+          "</select>" +
+          "<button type='submit' class='btn btn-primary btn-sm'>+</button>" +
+        "</form>" +
+      "</div>";
+
+    var titleEl = mealsMealDetailEl.querySelector("[data-field='meal-name']");
+    if (titleEl) {
+      titleEl.addEventListener("blur", async function () {
+        var newName = titleEl.textContent.trim();
+        if (newName && newName !== meal.name) {
+          try {
+            var updated = await apiFetch(MEALS_API + "/meal-list/" + meal.id, {
+              method: "PUT", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: newName })
+            });
+            mealsCurrentMeal = updated;
+            await loadMealsMeals();
+          } catch (_) { titleEl.textContent = meal.name; }
+        }
+      });
+      titleEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); titleEl.blur(); } });
+    }
+
+    var deleteBtn = document.getElementById("meals-meal-delete-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", async function () {
+      if (!confirm(t("confirm_delete"))) return;
+      try {
+        await apiFetch(MEALS_API + "/meal-list/" + meal.id, { method: "DELETE" });
+        mealsCurrentMeal = null;
+        mealsMealDetailEl.hidden = true;
+        await loadMealsMeals();
+      } catch (_) {}
+    });
+
+    var addForm = document.getElementById("meals-add-recipe-to-meal-form");
+    if (addForm) addForm.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var recipeId = parseInt(document.getElementById("meals-meal-recipe-sel").value);
+      if (!recipeId) return;
+      try {
+        await apiFetch(MEALS_API + "/meal-list/" + meal.id + "/recipes", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipe_id: recipeId })
+        });
+        var updated = await apiFetch(MEALS_API + "/meal-list");
+        mealsMealsData = updated;
+        var fresh = mealsMealsData.find(function (m) { return m.id === meal.id; });
+        if (fresh) { mealsCurrentMeal = fresh; renderMealsMealDetail(fresh); renderMealsMealsList(); }
+      } catch (_) {}
+    });
+
+    mealsMealDetailEl.querySelectorAll(".meals-mr-delete").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var mrId = parseInt(btn.dataset.mrId);
+        try {
+          await apiFetch(MEALS_API + "/meal-list/" + meal.id + "/recipes/" + mrId, { method: "DELETE" });
+          var updated = await apiFetch(MEALS_API + "/meal-list");
+          mealsMealsData = updated;
+          var fresh = mealsMealsData.find(function (m) { return m.id === meal.id; });
+          if (fresh) { mealsCurrentMeal = fresh; renderMealsMealDetail(fresh); renderMealsMealsList(); }
+        } catch (_) {}
+      });
+    });
+  }
+
+  var mealsAddMealBtn = document.getElementById("meals-add-meal-btn");
+  if (mealsAddMealBtn) mealsAddMealBtn.addEventListener("click", function () {
+    if (mealsNewMealModal) mealsNewMealModal.hidden = false;
+  });
+  document.getElementById("meals-new-meal-modal-close").addEventListener("click", function () {
+    mealsNewMealModal.hidden = true;
+  });
+  document.getElementById("meals-new-meal-cancel").addEventListener("click", function () {
+    mealsNewMealModal.hidden = true;
+  });
+  document.getElementById("meals-new-meal-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = document.getElementById("meals-new-meal-name").value.trim();
+    if (!name) return;
+    try {
+      var created = await apiFetch(MEALS_API + "/meal-list", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name })
+      });
+      mealsNewMealModal.hidden = true;
+      this.reset();
+      await loadMealsMeals();
+      if (created) {
+        var fresh = mealsMealsData.find(function (m) { return m.id === created.id; });
+        if (fresh) renderMealsMealDetail(fresh);
+      }
+    } catch (_) {}
+  });
+
+  // ---------- Meal plans ----------
+
+  async function loadMealsPlans() {
+    try {
+      mealsPlansData = await apiFetch(MEALS_API + "/plans");
+      renderMealsPlansList();
+    } catch (_) {}
+  }
+
+  function renderMealsPlansList() {
+    if (!mealsPlansListEl) return;
+    if (!mealsPlansData.length) {
+      mealsPlansListEl.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
+      return;
+    }
+    mealsPlansListEl.innerHTML = mealsPlansData.map(function (p) {
+      var isShared = p.permission !== "owner";
+      return "<div class='meals-card" + (mealsCurrentPlan && mealsCurrentPlan.id === p.id ? " active" : "") + "' data-id='" + p.id + "'>" +
+        "<div class='meals-card-title'>" + esc(p.name) +
+        (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
+        "</div>" +
+        "<div class='meals-card-meta'>" + p.slots.length + " " + t("meals_slots_count") + "</div>" +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(p.owner_name || "") + "</div>" : "") +
+        "</div>";
+    }).join("");
+    mealsPlansListEl.querySelectorAll(".meals-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var plan = mealsPlansData.find(function (p) { return p.id === parseInt(card.dataset.id); });
+        if (plan) renderMealsPlanDetail(plan);
+      });
+    });
+  }
+
+  function renderMealsPlanDetail(plan) {
+    mealsCurrentPlan = plan;
+    renderMealsPlansList();
+    if (!mealsPlanDetailEl) return;
+    mealsPlanDetailEl.hidden = false;
+    var isOwner = plan.permission === "owner";
+    var canWrite = isOwner || plan.permission === "write";
+
+    var slotsHtml = plan.slots.map(function (slot) {
+      var label = esc(slot.day_label) + " / " + esc(slot.slot_label);
+      var content = slot.meal_name ? "🍽 " + esc(slot.meal_name) : slot.recipe_name ? "📄 " + esc(slot.recipe_name) : "<em>—</em>";
+      return "<li class='meals-slot-item'>" +
+        "<span class='meals-slot-label'>" + label + ":</span> " +
+        "<span class='meals-slot-content'>" + content + "</span>" +
+        (canWrite ? "<button class='btn-icon meals-slot-delete' data-slot-id='" + slot.id + "'>✕</button>" : "") +
+        "</li>";
+    }).join("");
+
+    mealsPlanDetailEl.innerHTML =
+      "<div class='meals-detail-header'>" +
+        "<div class='meals-detail-title-row'>" +
+          (canWrite
+            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='plan-name'>" + esc(plan.name) + "</h3>"
+            : "<h3 class='meals-detail-title'>" + esc(plan.name) + "</h3>") +
+          "<div class='meals-detail-actions'>" +
+            (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-plan-share-open-btn'>👥 " + t("share_btn") + "</button>" : "") +
+            "<button class='btn btn-primary btn-sm' id='meals-plan-generate-btn'>" + t("meals_generate_shopping_btn") + "</button>" +
+            (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-plan-delete-btn'>" + t("delete_btn") + "</button>" : "") +
+          "</div>" +
+        "</div>" +
+        (plan.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(plan.owner_name || "") + "</div>" : "") +
+      "</div>" +
+      "<div class='meals-detail-section'>" +
+        "<h4>" + t("meals_slots_heading") + "</h4>" +
+        "<ul class='meals-slots-list'>" + slotsHtml + "</ul>" +
+        (canWrite ? renderAddSlotForm(plan) : "") +
+      "</div>";
+
+    if (canWrite) {
+      var titleEl = mealsPlanDetailEl.querySelector("[data-field='plan-name']");
+      if (titleEl && isOwner) {
+        titleEl.addEventListener("blur", async function () {
+          var newName = titleEl.textContent.trim();
+          if (newName && newName !== plan.name) {
+            try {
+              var updated = await apiFetch(MEALS_API + "/plans/" + plan.id, {
+                method: "PUT", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: newName })
+              });
+              mealsCurrentPlan = updated;
+              await loadMealsPlans();
+            } catch (_) { titleEl.textContent = plan.name; }
+          }
+        });
+        titleEl.addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); titleEl.blur(); } });
+      }
+
+      var addSlotForm = document.getElementById("meals-add-slot-form");
+      if (addSlotForm) addSlotForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var day = document.getElementById("meals-slot-day").value.trim();
+        var slot = document.getElementById("meals-slot-label").value.trim();
+        var mealId = document.getElementById("meals-slot-meal-sel").value || null;
+        var recipeId = document.getElementById("meals-slot-recipe-sel").value || null;
+        if (!day || !slot) return;
+        try {
+          await apiFetch(MEALS_API + "/plans/" + plan.id + "/slots", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              day_label: day, slot_label: slot,
+              meal_id: mealId ? parseInt(mealId) : null,
+              recipe_id: (!mealId && recipeId) ? parseInt(recipeId) : null
+            })
+          });
+          addSlotForm.reset();
+          var updated = await apiFetch(MEALS_API + "/plans");
+          mealsPlansData = updated;
+          var fresh = mealsPlansData.find(function (p) { return p.id === plan.id; });
+          if (fresh) { mealsCurrentPlan = fresh; renderMealsPlanDetail(fresh); renderMealsPlansList(); }
+        } catch (_) {}
+      });
+
+      mealsPlanDetailEl.querySelectorAll(".meals-slot-delete").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var slotId = parseInt(btn.dataset.slotId);
+          try {
+            await apiFetch(MEALS_API + "/plans/" + plan.id + "/slots/" + slotId, { method: "DELETE" });
+            var updated = await apiFetch(MEALS_API + "/plans");
+            mealsPlansData = updated;
+            var fresh = mealsPlansData.find(function (p) { return p.id === plan.id; });
+            if (fresh) { mealsCurrentPlan = fresh; renderMealsPlanDetail(fresh); renderMealsPlansList(); }
+          } catch (_) {}
+        });
+      });
+    }
+
+    var shareBtn = document.getElementById("meals-plan-share-open-btn");
+    if (shareBtn) shareBtn.addEventListener("click", function () { openMealsPlanShareModal(plan.id); });
+
+    var generateBtn = document.getElementById("meals-plan-generate-btn");
+    if (generateBtn) generateBtn.addEventListener("click", function () {
+      switchMealsTab("shopping");
+      var planSel = document.getElementById("meals-new-shopping-plan");
+      if (planSel) {
+        populateMealsShoppingPlanSelect();
+        setTimeout(function () { planSel.value = String(plan.id); }, 50);
+      }
+      if (mealsNewShoppingModal) mealsNewShoppingModal.hidden = false;
+      var nameInp = document.getElementById("meals-new-shopping-name");
+      if (nameInp) nameInp.value = plan.name;
+    });
+
+    var deleteBtn = document.getElementById("meals-plan-delete-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", async function () {
+      if (!confirm(t("confirm_delete"))) return;
+      try {
+        await apiFetch(MEALS_API + "/plans/" + plan.id, { method: "DELETE" });
+        mealsCurrentPlan = null;
+        mealsPlanDetailEl.hidden = true;
+        await loadMealsPlans();
+      } catch (_) {}
+    });
+  }
+
+  function renderAddSlotForm(plan) {
+    var mealOptions = mealsMealsData.map(function (m) {
+      return "<option value='" + m.id + "'>" + esc(m.name) + "</option>";
+    }).join("");
+    var recipeOptions = mealsRecipesData.map(function (r) {
+      return "<option value='" + r.id + "'>" + esc(r.name) + "</option>";
+    }).join("");
+    return "<form id='meals-add-slot-form' class='meals-add-slot-form'>" +
+      "<input type='text' id='meals-slot-day' list='meals-days-list' placeholder='" + t("meals_slot_day_ph") + "' required style='flex:1'>" +
+      "<datalist id='meals-days-list'><option>Maanantai</option><option>Tiistai</option><option>Keskiviikko</option><option>Torstai</option><option>Perjantai</option><option>Lauantai</option><option>Sunnuntai</option></datalist>" +
+      "<input type='text' id='meals-slot-label' list='meals-slots-list' placeholder='" + t("meals_slot_label_ph") + "' required style='flex:1'>" +
+      "<datalist id='meals-slots-list'><option>Aamupala</option><option>Lounas</option><option>Päivällinen</option><option>Välipala</option></datalist>" +
+      "<select id='meals-slot-meal-sel'><option value=''>" + t("meals_pick_meal") + "</option>" + mealOptions + "</select>" +
+      "<select id='meals-slot-recipe-sel'><option value=''>" + t("meals_pick_recipe") + "</option>" + recipeOptions + "</select>" +
+      "<button type='submit' class='btn btn-primary btn-sm'>+</button>" +
+      "</form>";
+  }
+
+  var mealsAddPlanBtn = document.getElementById("meals-add-plan-btn");
+  if (mealsAddPlanBtn) mealsAddPlanBtn.addEventListener("click", function () {
+    if (mealsNewPlanModal) mealsNewPlanModal.hidden = false;
+  });
+  document.getElementById("meals-new-plan-modal-close").addEventListener("click", function () { mealsNewPlanModal.hidden = true; });
+  document.getElementById("meals-new-plan-cancel").addEventListener("click", function () { mealsNewPlanModal.hidden = true; });
+  document.getElementById("meals-new-plan-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = document.getElementById("meals-new-plan-name").value.trim();
+    if (!name) return;
+    try {
+      var created = await apiFetch(MEALS_API + "/plans", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name })
+      });
+      mealsNewPlanModal.hidden = true;
+      this.reset();
+      await loadMealsPlans();
+      if (created) {
+        var fresh = mealsPlansData.find(function (p) { return p.id === created.id; });
+        if (fresh) renderMealsPlanDetail(fresh);
+      }
+    } catch (_) {}
+  });
+
+  // ---------- Plan sharing ----------
+
+  var mealsPlanShareCurrentId = null;
+
+  async function openMealsPlanShareModal(planId) {
+    mealsPlanShareCurrentId = planId;
+    if (!mealsPlanShareModal) return;
+    mealsPlanShareModal.hidden = false;
+    var listEl = document.getElementById("meals-plan-share-list");
+    if (listEl) {
+      try {
+        var shares = await apiFetch(MEALS_API + "/plans/" + planId + "/shares");
+        listEl.innerHTML = shares.map(function (s) {
+          return "<div class='share-row'><span class='share-name'>" + esc(s.shared_with_name) + " (" + esc(s.shared_with_email) + ")" +
+            " <span class='share-perm'>" + s.permission + "</span></span>" +
+            "<button class='btn-icon share-remove-btn' data-share-id='" + s.id + "'>✕</button></div>";
+        }).join("");
+        listEl.querySelectorAll(".share-remove-btn").forEach(function (btn) {
+          btn.addEventListener("click", async function () {
+            try {
+              await apiFetch(MEALS_API + "/plans/" + planId + "/shares/" + btn.dataset.shareId, { method: "DELETE" });
+              await openMealsPlanShareModal(planId);
+            } catch (_) {}
+          });
+        });
+      } catch (_) {}
+    }
+  }
+
+  if (document.getElementById("meals-plan-share-modal-close")) {
+    document.getElementById("meals-plan-share-modal-close").addEventListener("click", function () {
+      if (mealsPlanShareModal) mealsPlanShareModal.hidden = true;
+    });
+  }
+  document.getElementById("meals-plan-share-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!mealsPlanShareCurrentId) return;
+    var email = document.getElementById("meals-plan-share-email").value.trim();
+    var perm = document.getElementById("meals-plan-share-permission").value;
+    try {
+      await apiFetch(MEALS_API + "/plans/" + mealsPlanShareCurrentId + "/shares", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, permission: perm })
+      });
+      this.reset();
+      await openMealsPlanShareModal(mealsPlanShareCurrentId);
+      await loadMealsPlans();
+    } catch (_) {}
+  });
+
+  // ---------- Shopping lists ----------
+
+  function populateMealsShoppingPlanSelect() {
+    var sel = document.getElementById("meals-new-shopping-plan");
+    if (!sel) return;
+    var owned = mealsPlansData.filter(function (p) { return p.permission === "owner"; });
+    sel.innerHTML = "<option value=''>" + t("meals_shopping_no_plan") + "</option>" +
+      owned.map(function (p) { return "<option value='" + p.id + "'>" + esc(p.name) + "</option>"; }).join("");
+  }
+
+  async function loadMealsShopping() {
+    try {
+      mealsShoppingData = await apiFetch(MEALS_API + "/shopping");
+      renderMealsShoppingList();
+    } catch (_) {}
+  }
+
+  function renderMealsShoppingList() {
+    if (!mealsShoppingListEl) return;
+    if (!mealsShoppingData.length) {
+      mealsShoppingListEl.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
+      return;
+    }
+    mealsShoppingListEl.innerHTML = mealsShoppingData.map(function (lst) {
+      var isShared = lst.permission !== "owner";
+      var checked = lst.items.filter(function (i) { return i.checked; }).length;
+      return "<div class='meals-card" + (mealsCurrentShopping && mealsCurrentShopping.id === lst.id ? " active" : "") + "' data-id='" + lst.id + "'>" +
+        "<div class='meals-card-title'>" + esc(lst.name) +
+        (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
+        "</div>" +
+        "<div class='meals-card-meta'>" + checked + "/" + lst.items.length + " " + t("meals_items_checked") + "</div>" +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(lst.owner_name || "") + "</div>" : "") +
+        "</div>";
+    }).join("");
+    mealsShoppingListEl.querySelectorAll(".meals-card").forEach(function (card) {
+      card.addEventListener("click", function () {
+        var lst = mealsShoppingData.find(function (l) { return l.id === parseInt(card.dataset.id); });
+        if (lst) renderMealsShoppingDetail(lst);
+      });
+    });
+  }
+
+  function renderMealsShoppingDetail(lst) {
+    mealsCurrentShopping = lst;
+    renderMealsShoppingList();
+    if (!mealsShoppingDetailEl) return;
+    mealsShoppingDetailEl.hidden = false;
+    var isOwner = lst.permission === "owner";
+    var canWrite = isOwner || lst.permission === "write";
+
+    // Group items by source_recipe
+    var grouped = {};
+    var noGroup = [];
+    lst.items.forEach(function (item) {
+      if (item.source_recipe) {
+        if (!grouped[item.source_recipe]) grouped[item.source_recipe] = [];
+        grouped[item.source_recipe].push(item);
+      } else {
+        noGroup.push(item);
+      }
+    });
+
+    function renderItem(item) {
+      var label = (item.amount ? item.amount + " " : "") + (item.unit ? item.unit + " " : "") + esc(item.name);
+      return "<li class='meals-shopping-item" + (item.checked ? " checked" : "") + "' data-item-id='" + item.id + "'>" +
+        "<label class='meals-shopping-check'>" +
+          "<input type='checkbox'" + (item.checked ? " checked" : "") + (canWrite ? "" : " disabled") + " data-item-id='" + item.id + "'>" +
+          "<span>" + label + "</span>" +
+        "</label>" +
+        (canWrite ? "<button class='btn-icon meals-item-delete' data-item-id='" + item.id + "'>✕</button>" : "") +
+        "</li>";
+    }
+
+    var itemsHtml = "";
+    Object.keys(grouped).forEach(function (src) {
+      itemsHtml += "<li class='meals-shopping-group-header'>" + esc(src) + "</li>";
+      itemsHtml += grouped[src].map(renderItem).join("");
+    });
+    if (noGroup.length) {
+      itemsHtml += noGroup.map(renderItem).join("");
+    }
+
+    mealsShoppingDetailEl.innerHTML =
+      "<div class='meals-detail-header'>" +
+        "<div class='meals-detail-title-row'>" +
+          "<h3 class='meals-detail-title'>" + esc(lst.name) + "</h3>" +
+          "<div class='meals-detail-actions'>" +
+            (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-shopping-share-open-btn'>👥 " + t("share_btn") + "</button>" : "") +
+            (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-shopping-delete-btn'>" + t("delete_btn") + "</button>" : "") +
+          "</div>" +
+        "</div>" +
+        (lst.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(lst.owner_name || "") + "</div>" : "") +
+      "</div>" +
+      "<ul class='meals-shopping-items-list' id='meals-shopping-items'>" + itemsHtml + "</ul>" +
+      (canWrite
+        ? "<form id='meals-add-shopping-item-form' class='meals-add-ing-form'>" +
+            "<input type='text' id='meals-item-amount' placeholder='" + t("meals_ing_amount_ph") + "' style='width:5rem'>" +
+            "<input type='text' id='meals-item-unit' placeholder='" + t("meals_ing_unit_ph") + "' style='width:5rem'>" +
+            "<input type='text' id='meals-item-name' placeholder='" + t("meals_ing_name_ph") + "' required style='flex:1'>" +
+            "<button type='submit' class='btn btn-primary btn-sm'>+</button>" +
+          "</form>"
+        : "");
+
+    // Wire up checkboxes
+    if (canWrite) {
+      mealsShoppingDetailEl.querySelectorAll("input[type=checkbox][data-item-id]").forEach(function (cb) {
+        cb.addEventListener("change", async function () {
+          var itemId = parseInt(cb.dataset.itemId);
+          try {
+            await apiFetch(MEALS_API + "/shopping/" + lst.id + "/items/" + itemId, { method: "PUT" });
+            var updated = await apiFetch(MEALS_API + "/shopping");
+            mealsShoppingData = updated;
+            var fresh = mealsShoppingData.find(function (l) { return l.id === lst.id; });
+            if (fresh) { mealsCurrentShopping = fresh; renderMealsShoppingDetail(fresh); renderMealsShoppingList(); }
+          } catch (_) { cb.checked = !cb.checked; }
+        });
+      });
+
+      mealsShoppingDetailEl.querySelectorAll(".meals-item-delete").forEach(function (btn) {
+        btn.addEventListener("click", async function () {
+          var itemId = parseInt(btn.dataset.itemId);
+          try {
+            await apiFetch(MEALS_API + "/shopping/" + lst.id + "/items/" + itemId, { method: "DELETE" });
+            var updated = await apiFetch(MEALS_API + "/shopping");
+            mealsShoppingData = updated;
+            var fresh = mealsShoppingData.find(function (l) { return l.id === lst.id; });
+            if (fresh) { mealsCurrentShopping = fresh; renderMealsShoppingDetail(fresh); renderMealsShoppingList(); }
+          } catch (_) {}
+        });
+      });
+
+      var addItemForm = document.getElementById("meals-add-shopping-item-form");
+      if (addItemForm) addItemForm.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var amount = document.getElementById("meals-item-amount").value.trim() || null;
+        var unit = document.getElementById("meals-item-unit").value.trim() || null;
+        var name = document.getElementById("meals-item-name").value.trim();
+        if (!name) return;
+        try {
+          await apiFetch(MEALS_API + "/shopping/" + lst.id + "/items", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: name, amount: amount, unit: unit })
+          });
+          addItemForm.reset();
+          var updated = await apiFetch(MEALS_API + "/shopping");
+          mealsShoppingData = updated;
+          var fresh = mealsShoppingData.find(function (l) { return l.id === lst.id; });
+          if (fresh) { mealsCurrentShopping = fresh; renderMealsShoppingDetail(fresh); renderMealsShoppingList(); }
+        } catch (_) {}
+      });
+    }
+
+    var shareBtn = document.getElementById("meals-shopping-share-open-btn");
+    if (shareBtn) shareBtn.addEventListener("click", function () { openMealsShoppingShareModal(lst.id); });
+
+    var deleteBtn = document.getElementById("meals-shopping-delete-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", async function () {
+      if (!confirm(t("confirm_delete"))) return;
+      try {
+        await apiFetch(MEALS_API + "/shopping/" + lst.id, { method: "DELETE" });
+        mealsCurrentShopping = null;
+        mealsShoppingDetailEl.hidden = true;
+        await loadMealsShopping();
+      } catch (_) {}
+    });
+  }
+
+  var mealsAddShoppingBtn = document.getElementById("meals-add-shopping-btn");
+  if (mealsAddShoppingBtn) mealsAddShoppingBtn.addEventListener("click", async function () {
+    await loadMealsPlans();
+    populateMealsShoppingPlanSelect();
+    if (mealsNewShoppingModal) mealsNewShoppingModal.hidden = false;
+  });
+  document.getElementById("meals-new-shopping-modal-close").addEventListener("click", function () { mealsNewShoppingModal.hidden = true; });
+  document.getElementById("meals-new-shopping-cancel").addEventListener("click", function () { mealsNewShoppingModal.hidden = true; });
+  document.getElementById("meals-new-shopping-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var name = document.getElementById("meals-new-shopping-name").value.trim();
+    var planId = document.getElementById("meals-new-shopping-plan").value || null;
+    if (!name) return;
+    try {
+      var created = await apiFetch(MEALS_API + "/shopping", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name, meal_plan_id: planId ? parseInt(planId) : null })
+      });
+      mealsNewShoppingModal.hidden = true;
+      this.reset();
+      await loadMealsShopping();
+      if (created) {
+        var fresh = mealsShoppingData.find(function (l) { return l.id === created.id; });
+        if (fresh) renderMealsShoppingDetail(fresh);
+      }
+    } catch (_) {}
+  });
+
+  // ---------- Shopping list sharing ----------
+
+  var mealsShoppingShareCurrentId = null;
+
+  async function openMealsShoppingShareModal(listId) {
+    mealsShoppingShareCurrentId = listId;
+    if (!mealsShoppingShareModal) return;
+    mealsShoppingShareModal.hidden = false;
+    var listEl = document.getElementById("meals-shopping-share-list");
+    if (listEl) {
+      try {
+        var shares = await apiFetch(MEALS_API + "/shopping/" + listId + "/shares");
+        listEl.innerHTML = shares.map(function (s) {
+          return "<div class='share-row'><span class='share-name'>" + esc(s.shared_with_name) + " (" + esc(s.shared_with_email) + ")" +
+            " <span class='share-perm'>" + s.permission + "</span></span>" +
+            "<button class='btn-icon share-remove-btn' data-share-id='" + s.id + "'>✕</button></div>";
+        }).join("");
+        listEl.querySelectorAll(".share-remove-btn").forEach(function (btn) {
+          btn.addEventListener("click", async function () {
+            try {
+              await apiFetch(MEALS_API + "/shopping/" + listId + "/shares/" + btn.dataset.shareId, { method: "DELETE" });
+              await openMealsShoppingShareModal(listId);
+            } catch (_) {}
+          });
+        });
+      } catch (_) {}
+    }
+  }
+
+  if (document.getElementById("meals-shopping-share-modal-close")) {
+    document.getElementById("meals-shopping-share-modal-close").addEventListener("click", function () {
+      if (mealsShoppingShareModal) mealsShoppingShareModal.hidden = true;
+    });
+  }
+  document.getElementById("meals-shopping-share-form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    if (!mealsShoppingShareCurrentId) return;
+    var email = document.getElementById("meals-shopping-share-email").value.trim();
+    var perm = document.getElementById("meals-shopping-share-permission").value;
+    try {
+      await apiFetch(MEALS_API + "/shopping/" + mealsShoppingShareCurrentId + "/shares", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email, permission: perm })
+      });
+      this.reset();
+      await openMealsShoppingShareModal(mealsShoppingShareCurrentId);
+      await loadMealsShopping();
+    } catch (_) {}
+  });
+
+  // Close meals modals on overlay click / Esc
+  [mealsNewRecipeModal, mealsNewMealModal, mealsNewPlanModal, mealsNewShoppingModal,
+   mealsRecipeShareModal, mealsPlanShareModal, mealsShoppingShareModal].forEach(function (modal) {
+    if (!modal) return;
+    modal.addEventListener("click", function (e) { if (e.target === modal) modal.hidden = true; });
+  });
+
+  // i18n additions for meals
+  var MEALS_I18N = {
+    fi: {
+      meals_tab: "Ruokalista",
+      meals_recipes_tab: "Reseptit",
+      meals_meals_tab: "Ateriat",
+      meals_plans_tab: "Ruokalistat",
+      meals_shopping_tab: "Ostoslistat",
+      meals_recipes_heading: "Reseptit",
+      meals_meals_heading: "Ateriat",
+      meals_plans_heading: "Ruokalistat",
+      meals_shopping_heading: "Ostoslistat",
+      meals_add_recipe_btn: "Uusi resepti",
+      meals_add_meal_btn: "Uusi ateria",
+      meals_add_plan_btn: "Uusi ruokalista",
+      meals_add_shopping_btn: "Uusi ostoslista",
+      meals_recipe_name_label: "Nimi",
+      meals_meal_name_label: "Nimi",
+      meals_plan_name_label: "Nimi",
+      meals_shopping_name_label: "Nimi",
+      meals_recipe_category_label: "Kategoria",
+      meals_recipe_servings_label: "Annoksia",
+      meals_servings_unit: "annosta",
+      meals_ingredients_heading: "Ainesosat",
+      meals_instructions_heading: "Ohje",
+      meals_recipes_count: "reseptiä",
+      meals_slots_count: "merkintää",
+      meals_items_checked: "ostettu",
+      meals_recipes_heading_in_meal: "Reseptit",
+      meals_slots_heading: "Ateriat",
+      meals_generate_shopping_btn: "🛒 Luo ostoslista",
+      meals_share_recipes_btn: "👥 Jaa reseptejä",
+      meals_share_selected_btn: "Jaa valitut",
+      meals_share_plan_title: "Jaa ruokalista",
+      meals_share_shopping_title: "Jaa ostoslista",
+      meals_shopping_from_plan_label: "Luo ruokalistan perusteella (valinnainen)",
+      meals_shopping_no_plan: "— Tyhjä lista —",
+      meals_ing_amount_ph: "Määrä",
+      meals_ing_unit_ph: "Yksikkö",
+      meals_ing_name_ph: "Ainesosa",
+      meals_slot_day_ph: "Päivä",
+      meals_slot_label_ph: "Ateria",
+      meals_pick_recipe: "Valitse resepti",
+      meals_pick_meal: "Valitse ateria",
+      meals_cat_breakfast: "Aamupala",
+      meals_cat_lunch: "Lounas",
+      meals_cat_dinner: "Päivällinen",
+      meals_cat_snack: "Välipala",
+      meals_cat_dessert: "Jälkiruoka",
+      meals_cat_side: "Lisuke",
+      meals_cat_other: "Muu",
+      share_btn: "Jaa",
+    },
+    en: {
+      meals_tab: "Meal Planner",
+      meals_recipes_tab: "Recipes",
+      meals_meals_tab: "Meals",
+      meals_plans_tab: "Meal Plans",
+      meals_shopping_tab: "Shopping",
+      meals_recipes_heading: "Recipes",
+      meals_meals_heading: "Meals",
+      meals_plans_heading: "Meal Plans",
+      meals_shopping_heading: "Shopping Lists",
+      meals_add_recipe_btn: "New Recipe",
+      meals_add_meal_btn: "New Meal",
+      meals_add_plan_btn: "New Meal Plan",
+      meals_add_shopping_btn: "New Shopping List",
+      meals_recipe_name_label: "Name",
+      meals_meal_name_label: "Name",
+      meals_plan_name_label: "Name",
+      meals_shopping_name_label: "Name",
+      meals_recipe_category_label: "Category",
+      meals_recipe_servings_label: "Servings",
+      meals_servings_unit: "servings",
+      meals_ingredients_heading: "Ingredients",
+      meals_instructions_heading: "Instructions",
+      meals_recipes_count: "recipes",
+      meals_slots_count: "entries",
+      meals_items_checked: "checked",
+      meals_recipes_heading_in_meal: "Recipes",
+      meals_slots_heading: "Meal slots",
+      meals_generate_shopping_btn: "🛒 Generate shopping list",
+      meals_share_recipes_btn: "👥 Share recipes",
+      meals_share_selected_btn: "Share selected",
+      meals_share_plan_title: "Share meal plan",
+      meals_share_shopping_title: "Share shopping list",
+      meals_shopping_from_plan_label: "Generate from meal plan (optional)",
+      meals_shopping_no_plan: "— Empty list —",
+      meals_ing_amount_ph: "Amount",
+      meals_ing_unit_ph: "Unit",
+      meals_ing_name_ph: "Ingredient",
+      meals_slot_day_ph: "Day",
+      meals_slot_label_ph: "Meal time",
+      meals_pick_recipe: "Pick a recipe",
+      meals_pick_meal: "Pick a meal",
+      meals_cat_breakfast: "Breakfast",
+      meals_cat_lunch: "Lunch",
+      meals_cat_dinner: "Dinner",
+      meals_cat_snack: "Snack",
+      meals_cat_dessert: "Dessert",
+      meals_cat_side: "Side dish",
+      meals_cat_other: "Other",
+      share_btn: "Share",
+    },
+  };
+
+  // Merge meals i18n into main translations
+  Object.keys(MEALS_I18N).forEach(function (lang) {
+    if (translations[lang]) {
+      Object.assign(translations[lang], MEALS_I18N[lang]);
+    }
+  });
 
 })();

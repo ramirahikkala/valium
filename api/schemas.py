@@ -731,3 +731,224 @@ class ChecklistSessionResponse(BaseModel):
     owner_id: int | None = None
     owner_name: str | None = None
     shares: list[ChecklistShareResponse] = []
+
+
+# ---------- Meals ----------
+
+
+class MealShareCreate(BaseModel):
+    """Schema for sharing a meal resource with another user."""
+
+    email: str
+    permission: str = "read"
+
+
+class MealShareResponse(BaseModel):
+    """Schema returned for a meal share record."""
+
+    id: int
+    shared_with_user_id: int
+    shared_with_name: str
+    shared_with_email: str
+    permission: str
+
+
+class RecipeBatchShareCreate(BaseModel):
+    """Schema for bulk-sharing multiple recipes with one user."""
+
+    email: str
+    permission: str = "read"
+    recipe_ids: list[int]
+
+
+class RecipeIngredientCreate(BaseModel):
+    """Schema for adding an ingredient to a recipe."""
+
+    name: str
+    amount: str | None = None
+    unit: str | None = None
+
+
+class RecipeIngredientResponse(BaseModel):
+    """Schema returned for a single recipe ingredient."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    amount: str | None
+    unit: str | None
+    position: int
+
+
+class RecipeCreate(BaseModel):
+    """Schema for creating a recipe."""
+
+    name: str
+    description: str | None = None
+    servings: int = 4
+    category: str = "other"
+
+
+class RecipeUpdate(BaseModel):
+    """Schema for updating a recipe. All fields optional."""
+
+    name: str | None = None
+    description: str | None = None
+    servings: int | None = None
+    category: str | None = None
+
+
+class RecipeResponse(BaseModel):
+    """Schema returned for a single recipe."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    user_id: int
+    name: str
+    description: str | None
+    servings: int
+    category: str
+    created_at: datetime
+    ingredients: list[RecipeIngredientResponse] = []
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[MealShareResponse] = []
+
+
+class MealCreate(BaseModel):
+    """Schema for creating a meal."""
+
+    name: str
+
+
+class MealUpdate(BaseModel):
+    """Schema for updating a meal."""
+
+    name: str
+
+
+class MealRecipeAdd(BaseModel):
+    """Schema for adding a recipe to a meal."""
+
+    recipe_id: int
+
+
+class MealRecipeResponse(BaseModel):
+    """Schema returned for a recipe in a meal."""
+
+    id: int
+    recipe_id: int
+    recipe_name: str
+    position: int
+
+
+class MealResponse(BaseModel):
+    """Schema returned for a single meal."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    recipes: list[MealRecipeResponse] = []
+
+
+class MealPlanCreate(BaseModel):
+    """Schema for creating a meal plan."""
+
+    name: str
+
+
+class MealPlanUpdate(BaseModel):
+    """Schema for updating a meal plan."""
+
+    name: str
+
+
+class MealPlanSlotCreate(BaseModel):
+    """Schema for adding a slot to a meal plan."""
+
+    day_label: str
+    slot_label: str
+    meal_id: int | None = None
+    recipe_id: int | None = None
+
+
+class MealPlanSlotResponse(BaseModel):
+    """Schema returned for a single meal plan slot."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    day_label: str
+    slot_label: str
+    meal_id: int | None
+    meal_name: str | None = None
+    recipe_id: int | None
+    recipe_name: str | None = None
+    position: int
+
+
+class MealPlanResponse(BaseModel):
+    """Schema returned for a single meal plan."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    created_at: datetime
+    slots: list[MealPlanSlotResponse] = []
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[MealShareResponse] = []
+
+
+class ShoppingListCreate(BaseModel):
+    """Schema for creating a shopping list."""
+
+    name: str
+    meal_plan_id: int | None = None
+    recipe_ids: list[int] = []
+
+
+class ShoppingListItemAdd(BaseModel):
+    """Schema for adding an item to a shopping list."""
+
+    name: str
+    amount: str | None = None
+    unit: str | None = None
+    source_recipe: str | None = None
+
+
+class ShoppingListItemResponse(BaseModel):
+    """Schema returned for a single shopping list item."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    amount: str | None
+    unit: str | None
+    checked: bool
+    source_recipe: str | None
+    position: int
+
+
+class ShoppingListResponse(BaseModel):
+    """Schema returned for a single shopping list."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    name: str
+    source_plan_id: int | None
+    created_at: datetime
+    items: list[ShoppingListItemResponse] = []
+    permission: str = "owner"
+    owner_id: int | None = None
+    owner_name: str | None = None
+    shares: list[MealShareResponse] = []

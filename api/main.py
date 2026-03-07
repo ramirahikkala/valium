@@ -25,6 +25,7 @@ from admin_router import router as admin_router
 from ai_router import router as ai_router
 from checklist_router import router as checklist_router
 from gym_router import router as gym_router
+from meal_router import router as meal_router
 from plants_router import router as plants_router
 from models import Alarm, List, ListShare, Task, TaskStatus, User, UserSettings
 from scheduler import start_scheduler, stop_scheduler
@@ -71,6 +72,7 @@ app.include_router(admin_router)
 app.include_router(plants_router)
 app.include_router(ai_router)
 app.include_router(checklist_router)
+app.include_router(meal_router)
 
 app.add_middleware(
     CORSMiddleware,

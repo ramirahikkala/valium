@@ -708,3 +708,198 @@ class ChecklistTemplateShare(Base):
     shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
 
     __table_args__ = (UniqueConstraint("template_id", "shared_with_user_id"),)
+
+
+# ---------- Meals ----------
+
+
+class Recipe(Base):
+    """A recipe with ingredients and instructions."""
+
+    __tablename__ = "recipes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    servings: Mapped[int] = mapped_column(Integer, nullable=False, default=4, server_default="4")
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    ingredients: Mapped[list["RecipeIngredient"]] = relationship(
+        cascade="all, delete-orphan", order_by="RecipeIngredient.position"
+    )
+    shares: Mapped[list["RecipeShare"]] = relationship(cascade="all, delete-orphan")
+
+
+class RecipeIngredient(Base):
+    """A single ingredient line in a recipe."""
+
+    __tablename__ = "recipe_ingredients"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    amount: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class RecipeShare(Base):
+    """Grants another user access to a recipe."""
+
+    __tablename__ = "recipe_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+    shared_with_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="read")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (UniqueConstraint("recipe_id", "shared_with_user_id"),)
+
+
+class Meal(Base):
+    """A named collection of recipes (e.g. 'Monday dinner')."""
+
+    __tablename__ = "meals"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    meal_recipes: Mapped[list["MealRecipe"]] = relationship(
+        cascade="all, delete-orphan", order_by="MealRecipe.position"
+    )
+
+
+class MealRecipe(Base):
+    """Association between a meal and a recipe."""
+
+    __tablename__ = "meal_recipes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meal_id: Mapped[int] = mapped_column(ForeignKey("meals.id", ondelete="CASCADE"), nullable=False)
+    recipe_id: Mapped[int] = mapped_column(ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    recipe: Mapped["Recipe"] = relationship("Recipe")
+
+
+class MealPlan(Base):
+    """A weekly or named meal plan containing scheduled meals."""
+
+    __tablename__ = "meal_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    slots: Mapped[list["MealPlanSlot"]] = relationship(
+        cascade="all, delete-orphan", order_by="MealPlanSlot.position"
+    )
+    shares: Mapped[list["MealPlanShare"]] = relationship(cascade="all, delete-orphan")
+
+
+class MealPlanSlot(Base):
+    """A single day+time entry in a meal plan, referencing a meal or recipe."""
+
+    __tablename__ = "meal_plan_slots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meal_plan_id: Mapped[int] = mapped_column(ForeignKey("meal_plans.id", ondelete="CASCADE"), nullable=False)
+    day_label: Mapped[str] = mapped_column(String(50), nullable=False)
+    slot_label: Mapped[str] = mapped_column(String(50), nullable=False)
+    meal_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meals.id", ondelete="SET NULL"), nullable=True
+    )
+    recipe_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recipes.id", ondelete="SET NULL"), nullable=True
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+    meal: Mapped["Meal | None"] = relationship("Meal")
+    recipe: Mapped["Recipe | None"] = relationship("Recipe")
+
+
+class MealPlanShare(Base):
+    """Grants another user access to a meal plan."""
+
+    __tablename__ = "meal_plan_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meal_plan_id: Mapped[int] = mapped_column(ForeignKey("meal_plans.id", ondelete="CASCADE"), nullable=False)
+    shared_with_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="read")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (UniqueConstraint("meal_plan_id", "shared_with_user_id"),)
+
+
+class ShoppingList(Base):
+    """A shopping list, optionally generated from a meal plan."""
+
+    __tablename__ = "shopping_lists"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    source_plan_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meal_plans.id", ondelete="SET NULL"), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    items: Mapped[list["ShoppingListItem"]] = relationship(
+        cascade="all, delete-orphan", order_by="ShoppingListItem.position"
+    )
+    shares: Mapped[list["ShoppingListShare"]] = relationship(cascade="all, delete-orphan")
+
+
+class ShoppingListItem(Base):
+    """A single checkable item in a shopping list."""
+
+    __tablename__ = "shopping_list_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    shopping_list_id: Mapped[int] = mapped_column(
+        ForeignKey("shopping_lists.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    amount: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    checked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
+    source_recipe: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
+
+class ShoppingListShare(Base):
+    """Grants another user access to a shopping list."""
+
+    __tablename__ = "shopping_list_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    shopping_list_id: Mapped[int] = mapped_column(
+        ForeignKey("shopping_lists.id", ondelete="CASCADE"), nullable=False
+    )
+    shared_with_user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    permission: Mapped[str] = mapped_column(String(10), nullable=False, default="write")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    shared_with: Mapped["User"] = relationship("User", foreign_keys=[shared_with_user_id])
+
+    __table_args__ = (UniqueConstraint("shopping_list_id", "shared_with_user_id"),)
