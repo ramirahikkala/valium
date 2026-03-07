@@ -175,6 +175,8 @@
       app_tasks_label: "Tehtävät",
       app_gym_label: "Sali",
       app_plants_label: "Kasvit",
+      app_checklist_label: "Pakkauslista",
+      app_meals_label: "Ateriat",
       no_apps_available: "Sinulla ei ole käyttöoikeutta mihinkään sovellukseen.",
       feature_enabled: "Käytössä",
       feature_disabled: "Poissa",
@@ -506,6 +508,8 @@
       app_tasks_label: "Tasks",
       app_gym_label: "Gym",
       app_plants_label: "Plants",
+      app_checklist_label: "Packing list",
+      app_meals_label: "Meals",
       no_apps_available: "You don't have access to any apps.",
       feature_enabled: "Enabled",
       feature_disabled: "Disabled",
@@ -2930,7 +2934,7 @@
 
   // ========== ADMIN MODULE ==========
 
-  var APP_LABELS = { tasks: "app_tasks_label", gym: "app_gym_label", plants: "app_plants_label" };
+  var APP_LABELS = { tasks: "app_tasks_label", gym: "app_gym_label", plants: "app_plants_label", checklist: "app_checklist_label", meals: "app_meals_label" };
 
   async function loadAdminPanel() {
     var listEl = document.getElementById("admin-users-list");
