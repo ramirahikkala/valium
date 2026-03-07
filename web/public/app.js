@@ -5392,11 +5392,11 @@
     mealsRecipesListEl.innerHTML = mealsRecipesData.map(function (r) {
       var isShared = r.permission !== "owner";
       return "<div class='meals-card" + (mealsCurrentRecipe && mealsCurrentRecipe.id === r.id ? " active" : "") + "' data-id='" + r.id + "'>" +
-        "<div class='meals-card-title'>" + esc(r.name) +
+        "<div class='meals-card-title'>" + escapeHtml(r.name) +
         (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
         "</div>" +
         "<div class='meals-card-meta'>" + mealCategoryLabel(r.category) + " · " + r.servings + " " + t("meals_servings_unit") + "</div>" +
-        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(r.owner_name || "") + "</div>" : "") +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + escapeHtml(r.owner_name || "") + "</div>" : "") +
         "</div>";
     }).join("");
     mealsRecipesListEl.querySelectorAll(".meals-card").forEach(function (card) {
@@ -5419,8 +5419,8 @@
       "<div class='meals-detail-header'>" +
         "<div class='meals-detail-title-row'>" +
           (canWrite
-            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='name'>" + esc(recipe.name) + "</h3>"
-            : "<h3 class='meals-detail-title'>" + esc(recipe.name) + "</h3>") +
+            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='name'>" + escapeHtml(recipe.name) + "</h3>"
+            : "<h3 class='meals-detail-title'>" + escapeHtml(recipe.name) + "</h3>") +
           "<div class='meals-detail-actions'>" +
             (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-recipe-share-open-btn' data-i18n='share_btn'>👥 " + t("share_btn") + "</button>" : "") +
             (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-recipe-delete-btn' data-i18n='delete_btn'>" + t("delete_btn") + "</button>" : "") +
@@ -5442,7 +5442,7 @@
         "<ul class='meals-ingredients-list' id='meals-recipe-ings'>" +
           recipe.ingredients.map(function (ing) {
             return "<li class='meals-ingredient-item'>" +
-              "<span>" + (ing.amount ? esc(ing.amount) + " " : "") + (ing.unit ? esc(ing.unit) + " " : "") + esc(ing.name) + "</span>" +
+              "<span>" + (ing.amount ? escapeHtml(ing.amount) + " " : "") + (ing.unit ? escapeHtml(ing.unit) + " " : "") + escapeHtml(ing.name) + "</span>" +
               (canWrite ? "<button class='btn-icon meals-ing-delete' data-ing-id='" + ing.id + "'>✕</button>" : "") +
               "</li>";
           }).join("") +
@@ -5459,9 +5459,9 @@
       "<div class='meals-detail-section'>" +
         "<h4>" + t("meals_instructions_heading") + "</h4>" +
         (canWrite
-          ? "<textarea id='meals-recipe-desc' class='meals-desc-textarea' rows='8'>" + esc(recipe.description || "") + "</textarea>" +
+          ? "<textarea id='meals-recipe-desc' class='meals-desc-textarea' rows='8'>" + escapeHtml(recipe.description || "") + "</textarea>" +
             "<button class='btn btn-primary btn-sm' id='meals-recipe-save-desc-btn'>" + t("save_btn") + "</button>"
-          : "<div class='meals-desc-view'>" + (recipe.description ? esc(recipe.description).replace(/\n/g, "<br>") : "<em>" + t("no_items") + "</em>") + "</div>") +
+          : "<div class='meals-desc-view'>" + (recipe.description ? escapeHtml(recipe.description).replace(/\n/g, "<br>") : "<em>" + t("no_items") + "</em>") + "</div>") +
       "</div>";
 
     // Wire up events
@@ -5620,7 +5620,7 @@
         picker.innerHTML = "<p class='meals-empty'>" + t("no_items") + "</p>";
       } else {
         picker.innerHTML = owned.map(function (r) {
-          return "<label class='meals-share-picker-item'><input type='checkbox' value='" + r.id + "'> " + esc(r.name) + "</label>";
+          return "<label class='meals-share-picker-item'><input type='checkbox' value='" + r.id + "'> " + escapeHtml(r.name) + "</label>";
         }).join("");
       }
     }
@@ -5640,9 +5640,9 @@
             byUser[key].items.push(s);
           });
           existingEl.innerHTML = Object.values(byUser).map(function (u) {
-            return "<div class='share-row'><span class='share-name'>" + esc(u.name) + " (" + esc(u.email) + ")</span><span class='share-items'>" +
+            return "<div class='share-row'><span class='share-name'>" + escapeHtml(u.name) + " (" + escapeHtml(u.email) + ")</span><span class='share-items'>" +
               u.items.map(function (s) {
-                return "<span class='share-item-tag'>" + esc(mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }) ? mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }).name : "?") +
+                return "<span class='share-item-tag'>" + escapeHtml(mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }) ? mealsRecipesData.find(function (r) { return r.id === s.recipe_id; }).name : "?") +
                   " <button class='share-remove-btn' data-recipe-id='" + s.recipe_id + "' data-share-id='" + s.id + "'>✕</button></span>";
               }).join("") +
               "</span></div>";
@@ -5707,7 +5707,7 @@
     }
     mealsMealsListEl.innerHTML = mealsMealsData.map(function (m) {
       return "<div class='meals-card" + (mealsCurrentMeal && mealsCurrentMeal.id === m.id ? " active" : "") + "' data-id='" + m.id + "'>" +
-        "<div class='meals-card-title'>" + esc(m.name) + "</div>" +
+        "<div class='meals-card-title'>" + escapeHtml(m.name) + "</div>" +
         "<div class='meals-card-meta'>" + m.recipes.length + " " + t("meals_recipes_count") + "</div>" +
         "</div>";
     }).join("");
@@ -5728,7 +5728,7 @@
     mealsMealDetailEl.innerHTML =
       "<div class='meals-detail-header'>" +
         "<div class='meals-detail-title-row'>" +
-          "<h3 class='meals-detail-title' contenteditable='true' data-field='meal-name'>" + esc(meal.name) + "</h3>" +
+          "<h3 class='meals-detail-title' contenteditable='true' data-field='meal-name'>" + escapeHtml(meal.name) + "</h3>" +
           "<button class='btn btn-danger btn-sm' id='meals-meal-delete-btn'>" + t("delete_btn") + "</button>" +
         "</div>" +
       "</div>" +
@@ -5736,14 +5736,14 @@
         "<h4>" + t("meals_recipes_heading_in_meal") + "</h4>" +
         "<ul class='meals-ingredients-list' id='meals-meal-recipe-list'>" +
           meal.recipes.map(function (r) {
-            return "<li class='meals-ingredient-item'><span>" + esc(r.recipe_name) + "</span>" +
+            return "<li class='meals-ingredient-item'><span>" + escapeHtml(r.recipe_name) + "</span>" +
               "<button class='btn-icon meals-mr-delete' data-mr-id='" + r.id + "'>✕</button></li>";
           }).join("") +
         "</ul>" +
         "<form id='meals-add-recipe-to-meal-form' class='meals-add-ing-form'>" +
           "<select id='meals-meal-recipe-sel' style='flex:1'><option value=''>" + t("meals_pick_recipe") + "</option>" +
           mealsRecipesData.map(function (r) {
-            return "<option value='" + r.id + "'>" + esc(r.name) + "</option>";
+            return "<option value='" + r.id + "'>" + escapeHtml(r.name) + "</option>";
           }).join("") +
           "</select>" +
           "<button type='submit' class='btn btn-primary btn-sm'>+</button>" +
@@ -5857,11 +5857,11 @@
     mealsPlansListEl.innerHTML = mealsPlansData.map(function (p) {
       var isShared = p.permission !== "owner";
       return "<div class='meals-card" + (mealsCurrentPlan && mealsCurrentPlan.id === p.id ? " active" : "") + "' data-id='" + p.id + "'>" +
-        "<div class='meals-card-title'>" + esc(p.name) +
+        "<div class='meals-card-title'>" + escapeHtml(p.name) +
         (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
         "</div>" +
         "<div class='meals-card-meta'>" + p.slots.length + " " + t("meals_slots_count") + "</div>" +
-        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(p.owner_name || "") + "</div>" : "") +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + escapeHtml(p.owner_name || "") + "</div>" : "") +
         "</div>";
     }).join("");
     mealsPlansListEl.querySelectorAll(".meals-card").forEach(function (card) {
@@ -5881,8 +5881,8 @@
     var canWrite = isOwner || plan.permission === "write";
 
     var slotsHtml = plan.slots.map(function (slot) {
-      var label = esc(slot.day_label) + " / " + esc(slot.slot_label);
-      var content = slot.meal_name ? "🍽 " + esc(slot.meal_name) : slot.recipe_name ? "📄 " + esc(slot.recipe_name) : "<em>—</em>";
+      var label = escapeHtml(slot.day_label) + " / " + escapeHtml(slot.slot_label);
+      var content = slot.meal_name ? "🍽 " + escapeHtml(slot.meal_name) : slot.recipe_name ? "📄 " + escapeHtml(slot.recipe_name) : "<em>—</em>";
       return "<li class='meals-slot-item'>" +
         "<span class='meals-slot-label'>" + label + ":</span> " +
         "<span class='meals-slot-content'>" + content + "</span>" +
@@ -5894,15 +5894,15 @@
       "<div class='meals-detail-header'>" +
         "<div class='meals-detail-title-row'>" +
           (canWrite
-            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='plan-name'>" + esc(plan.name) + "</h3>"
-            : "<h3 class='meals-detail-title'>" + esc(plan.name) + "</h3>") +
+            ? "<h3 class='meals-detail-title' contenteditable='true' data-field='plan-name'>" + escapeHtml(plan.name) + "</h3>"
+            : "<h3 class='meals-detail-title'>" + escapeHtml(plan.name) + "</h3>") +
           "<div class='meals-detail-actions'>" +
             (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-plan-share-open-btn'>👥 " + t("share_btn") + "</button>" : "") +
             "<button class='btn btn-primary btn-sm' id='meals-plan-generate-btn'>" + t("meals_generate_shopping_btn") + "</button>" +
             (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-plan-delete-btn'>" + t("delete_btn") + "</button>" : "") +
           "</div>" +
         "</div>" +
-        (plan.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(plan.owner_name || "") + "</div>" : "") +
+        (plan.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + escapeHtml(plan.owner_name || "") + "</div>" : "") +
       "</div>" +
       "<div class='meals-detail-section'>" +
         "<h4>" + t("meals_slots_heading") + "</h4>" +
@@ -5998,10 +5998,10 @@
 
   function renderAddSlotForm(plan) {
     var mealOptions = mealsMealsData.map(function (m) {
-      return "<option value='" + m.id + "'>" + esc(m.name) + "</option>";
+      return "<option value='" + m.id + "'>" + escapeHtml(m.name) + "</option>";
     }).join("");
     var recipeOptions = mealsRecipesData.map(function (r) {
-      return "<option value='" + r.id + "'>" + esc(r.name) + "</option>";
+      return "<option value='" + r.id + "'>" + escapeHtml(r.name) + "</option>";
     }).join("");
     return "<form id='meals-add-slot-form' class='meals-add-slot-form'>" +
       "<input type='text' id='meals-slot-day' list='meals-days-list' placeholder='" + t("meals_slot_day_ph") + "' required style='flex:1'>" +
@@ -6052,7 +6052,7 @@
       try {
         var shares = await apiFetch(MEALS_API + "/plans/" + planId + "/shares");
         listEl.innerHTML = shares.map(function (s) {
-          return "<div class='share-row'><span class='share-name'>" + esc(s.shared_with_name) + " (" + esc(s.shared_with_email) + ")" +
+          return "<div class='share-row'><span class='share-name'>" + escapeHtml(s.shared_with_name) + " (" + escapeHtml(s.shared_with_email) + ")" +
             " <span class='share-perm'>" + s.permission + "</span></span>" +
             "<button class='btn-icon share-remove-btn' data-share-id='" + s.id + "'>✕</button></div>";
         }).join("");
@@ -6096,7 +6096,7 @@
     if (!sel) return;
     var owned = mealsPlansData.filter(function (p) { return p.permission === "owner"; });
     sel.innerHTML = "<option value=''>" + t("meals_shopping_no_plan") + "</option>" +
-      owned.map(function (p) { return "<option value='" + p.id + "'>" + esc(p.name) + "</option>"; }).join("");
+      owned.map(function (p) { return "<option value='" + p.id + "'>" + escapeHtml(p.name) + "</option>"; }).join("");
   }
 
   async function loadMealsShopping() {
@@ -6116,11 +6116,11 @@
       var isShared = lst.permission !== "owner";
       var checked = lst.items.filter(function (i) { return i.checked; }).length;
       return "<div class='meals-card" + (mealsCurrentShopping && mealsCurrentShopping.id === lst.id ? " active" : "") + "' data-id='" + lst.id + "'>" +
-        "<div class='meals-card-title'>" + esc(lst.name) +
+        "<div class='meals-card-title'>" + escapeHtml(lst.name) +
         (isShared ? " <span class='meals-shared-badge'>" + t("checklist_shared_badge") + "</span>" : "") +
         "</div>" +
         "<div class='meals-card-meta'>" + checked + "/" + lst.items.length + " " + t("meals_items_checked") + "</div>" +
-        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(lst.owner_name || "") + "</div>" : "") +
+        (isShared ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + escapeHtml(lst.owner_name || "") + "</div>" : "") +
         "</div>";
     }).join("");
     mealsShoppingListEl.querySelectorAll(".meals-card").forEach(function (card) {
@@ -6152,7 +6152,7 @@
     });
 
     function renderItem(item) {
-      var label = (item.amount ? item.amount + " " : "") + (item.unit ? item.unit + " " : "") + esc(item.name);
+      var label = (item.amount ? item.amount + " " : "") + (item.unit ? item.unit + " " : "") + escapeHtml(item.name);
       return "<li class='meals-shopping-item" + (item.checked ? " checked" : "") + "' data-item-id='" + item.id + "'>" +
         "<label class='meals-shopping-check'>" +
           "<input type='checkbox'" + (item.checked ? " checked" : "") + (canWrite ? "" : " disabled") + " data-item-id='" + item.id + "'>" +
@@ -6164,7 +6164,7 @@
 
     var itemsHtml = "";
     Object.keys(grouped).forEach(function (src) {
-      itemsHtml += "<li class='meals-shopping-group-header'>" + esc(src) + "</li>";
+      itemsHtml += "<li class='meals-shopping-group-header'>" + escapeHtml(src) + "</li>";
       itemsHtml += grouped[src].map(renderItem).join("");
     });
     if (noGroup.length) {
@@ -6174,13 +6174,13 @@
     mealsShoppingDetailEl.innerHTML =
       "<div class='meals-detail-header'>" +
         "<div class='meals-detail-title-row'>" +
-          "<h3 class='meals-detail-title'>" + esc(lst.name) + "</h3>" +
+          "<h3 class='meals-detail-title'>" + escapeHtml(lst.name) + "</h3>" +
           "<div class='meals-detail-actions'>" +
             (isOwner ? "<button class='btn btn-secondary btn-sm' id='meals-shopping-share-open-btn'>👥 " + t("share_btn") + "</button>" : "") +
             (isOwner ? "<button class='btn btn-danger btn-sm' id='meals-shopping-delete-btn'>" + t("delete_btn") + "</button>" : "") +
           "</div>" +
         "</div>" +
-        (lst.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + esc(lst.owner_name || "") + "</div>" : "") +
+        (lst.permission !== "owner" ? "<div class='meals-owner-label'>" + t("checklist_shared_by") + " " + escapeHtml(lst.owner_name || "") + "</div>" : "") +
       "</div>" +
       "<ul class='meals-shopping-items-list' id='meals-shopping-items'>" + itemsHtml + "</ul>" +
       (canWrite
@@ -6297,7 +6297,7 @@
       try {
         var shares = await apiFetch(MEALS_API + "/shopping/" + listId + "/shares");
         listEl.innerHTML = shares.map(function (s) {
-          return "<div class='share-row'><span class='share-name'>" + esc(s.shared_with_name) + " (" + esc(s.shared_with_email) + ")" +
+          return "<div class='share-row'><span class='share-name'>" + escapeHtml(s.shared_with_name) + " (" + escapeHtml(s.shared_with_email) + ")" +
             " <span class='share-perm'>" + s.permission + "</span></span>" +
             "<button class='btn-icon share-remove-btn' data-share-id='" + s.id + "'>✕</button></div>";
         }).join("");
