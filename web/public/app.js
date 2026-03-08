@@ -5633,9 +5633,12 @@
         "<h4>" + t("meals_ingredients_heading") + "</h4>" +
         "<ul class='meals-ingredients-list' id='meals-recipe-ings'>" +
           recipe.ingredients.map(function (ing) {
-            return "<li class='meals-ingredient-item'>" +
-              "<span>" + (ing.amount ? escapeHtml(ing.amount) + " " : "") + (ing.unit ? escapeHtml(ing.unit) + " " : "") + escapeHtml(ing.name) + "</span>" +
+            return "<li class='meals-ingredient-item' data-ing-id='" + ing.id + "'>" +
+              "<span class='meals-ing-text'>" + (ing.amount ? escapeHtml(ing.amount) + " " : "") + (ing.unit ? escapeHtml(ing.unit) + " " : "") + escapeHtml(ing.name) + "</span>" +
+              "<div class='meals-ing-actions'>" +
+              "<button class='btn-icon meals-ing-edit' data-ing-id='" + ing.id + "' data-ing-amount='" + escapeHtml(ing.amount || "") + "' data-ing-unit='" + escapeHtml(ing.unit || "") + "' data-ing-name='" + escapeHtml(ing.name) + "'>✎</button>" +
               "<button class='btn-icon meals-ing-delete' data-ing-id='" + ing.id + "'>✕</button>" +
+              "</div>" +
               "</li>";
           }).join("") +
         "</ul>" +
@@ -5714,6 +5717,48 @@
         await loadMealsRecipes();
         _renderMealsRecipeEditContent(recipe);
       } catch (_) {}
+    });
+
+    mealsRecipeEditEl.querySelectorAll(".meals-ing-edit").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var ingId = btn.dataset.ingId;
+        var li = mealsRecipeEditEl.querySelector("li[data-ing-id='" + ingId + "']");
+        if (!li || li.querySelector(".meals-ing-edit-form")) return;
+        li.querySelector(".meals-ing-text").hidden = true;
+        li.querySelector(".meals-ing-actions").hidden = true;
+        var form = document.createElement("form");
+        form.className = "meals-ing-edit-form";
+        form.innerHTML =
+          "<input type='text' class='meals-ing-edit-amount' value='" + escapeHtml(btn.dataset.ingAmount) + "' placeholder='" + t("meals_ing_amount_ph") + "' style='width:5rem'>" +
+          "<input type='text' class='meals-ing-edit-unit' value='" + escapeHtml(btn.dataset.ingUnit) + "' placeholder='" + t("meals_ing_unit_ph") + "' style='width:5rem'>" +
+          "<input type='text' class='meals-ing-edit-name' value='" + escapeHtml(btn.dataset.ingName) + "' placeholder='" + t("meals_ing_name_ph") + "' required style='flex:1'>" +
+          "<button type='submit' class='btn btn-primary btn-sm'>" + t("save_btn") + "</button>" +
+          "<button type='button' class='btn btn-secondary btn-sm meals-ing-edit-cancel'>✕</button>";
+        li.appendChild(form);
+        form.querySelector(".meals-ing-edit-name").focus();
+        form.querySelector(".meals-ing-edit-cancel").addEventListener("click", function () {
+          li.querySelector(".meals-ing-text").hidden = false;
+          li.querySelector(".meals-ing-actions").hidden = false;
+          form.remove();
+        });
+        form.addEventListener("submit", async function (e) {
+          e.preventDefault();
+          var amount = form.querySelector(".meals-ing-edit-amount").value.trim() || null;
+          var unit = form.querySelector(".meals-ing-edit-unit").value.trim() || null;
+          var name = form.querySelector(".meals-ing-edit-name").value.trim();
+          if (!name) return;
+          try {
+            await apiFetch(MEALS_API + "/recipes/" + recipe.id + "/ingredients/" + ingId, {
+              method: "PUT", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: name, amount: amount, unit: unit })
+            });
+            var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id);
+            recipe = updated; mealsCurrentRecipe = updated;
+            await loadMealsRecipes();
+            _renderMealsRecipeEditContent(recipe);
+          } catch (_) {}
+        });
+      });
     });
 
     mealsRecipeEditEl.querySelectorAll(".meals-ing-delete").forEach(function (btn) {

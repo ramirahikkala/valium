@@ -3215,8 +3215,24 @@ input[type="datetime-local"]:focus {
   font-size: 0.9rem;
 }
 
-.meals-ingredient-item span,
+.meals-ingredient-item .meals-ing-text,
 .meals-slot-item span { flex: 1; }
+.meals-ing-actions { display: flex; gap: 0.2rem; }
+.meals-ing-edit-form {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  flex: 1;
+}
+.meals-ing-edit-form input {
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 0.85rem;
+}
 
 .meals-slot-label { font-weight: 600; min-width: 120px; }
 

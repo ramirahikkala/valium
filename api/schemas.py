@@ -807,6 +807,14 @@ class RecipeIngredientCreate(BaseModel):
     unit: str | None = None
 
 
+class RecipeIngredientUpdate(BaseModel):
+    """Schema for updating an ingredient."""
+
+    name: str
+    amount: str | None = None
+    unit: str | None = None
+
+
 class RecipeIngredientResponse(BaseModel):
     """Schema returned for a single recipe ingredient."""
 

@@ -40,6 +40,7 @@ from schemas import (
     RecipeCreate,
     RecipeIngredientCreate,
     RecipeIngredientResponse,
+    RecipeIngredientUpdate,
     RecipeResponse,
     RecipeUpdate,
     ShoppingListCreate,
@@ -351,6 +352,27 @@ async def add_ingredient(
     pos = len(recipe.ingredients)
     ing = RecipeIngredient(recipe_id=recipe_id, position=pos, **body.model_dump())
     db.add(ing)
+    await db.commit()
+    await db.refresh(ing)
+    return RecipeIngredientResponse.model_validate(ing)
+
+
+@router.put("/recipes/{recipe_id}/ingredients/{ing_id}", response_model=RecipeIngredientResponse)
+async def update_ingredient(
+    recipe_id: int,
+    ing_id: int,
+    body: RecipeIngredientUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_session),
+) -> RecipeIngredientResponse:
+    """Update an ingredient's name, amount or unit."""
+    await _load_recipe(db, recipe_id, current_user, require_write=True)
+    ing = await db.get(RecipeIngredient, ing_id)
+    if ing is None or ing.recipe_id != recipe_id:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+    ing.name = body.name
+    ing.amount = body.amount
+    ing.unit = body.unit
     await db.commit()
     await db.refresh(ing)
     return RecipeIngredientResponse.model_validate(ing)
