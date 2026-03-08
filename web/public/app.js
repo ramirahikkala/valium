@@ -232,7 +232,7 @@
       // Kasvit — modaali
       plant_modal_add_heading: "Lisää kasvi",
       plant_modal_edit_heading: "Muokkaa kasvia",
-      plant_add_hint: "Kuvat ja AI-yhteenveto lisättävissä tallennuksen jälkeen.",
+      plant_add_continue_btn: "Jatka →",
       plant_label_latin: "Tieteellinen nimi",
       plant_label_common: "Suomalainen nimi",
       plant_label_cultivar: "Lajike",
@@ -577,7 +577,7 @@
       // Plants — modal
       plant_modal_add_heading: "Add plant",
       plant_modal_edit_heading: "Edit plant",
-      plant_add_hint: "Images and AI summary available after saving.",
+      plant_add_continue_btn: "Continue →",
       plant_label_latin: "Scientific name",
       plant_label_common: "Common name",
       plant_label_cultivar: "Cultivar",
@@ -3387,7 +3387,8 @@
   var plantsEditImagesSection = document.querySelector(".plants-edit-images-section");
   var plantsEditAiSection = document.querySelector(".plants-edit-ai-section");
   var plantsEditHeading = document.getElementById("plants-edit-heading");
-  var plantAddHint = document.getElementById("plant-add-hint");
+  var plantEditExtraFields = document.getElementById("plant-edit-extra-fields");
+  var plantEditSubmitBtn = document.getElementById("plant-edit-submit-btn");
   var adminAiProvidersList = document.getElementById("admin-ai-providers-list");
   var adminAiForm = document.getElementById("admin-ai-form");
 
@@ -4203,8 +4204,9 @@
       plantsEditDeleteBtn.hidden = true;
       plantsEditImagesSection.hidden = true;
       plantsEditAiSection.hidden = true;
+      plantEditExtraFields.hidden = true;
       plantsEditHeading.textContent = t("plant_modal_add_heading");
-      plantAddHint.hidden = false;
+      plantEditSubmitBtn.textContent = t("plant_add_continue_btn");
     } else {
       plantsCurrentDetail = plant;
       plantEditIdInput.value = plant.id;
@@ -4223,8 +4225,9 @@
       plantsEditDeleteBtn.hidden = false;
       plantsEditImagesSection.hidden = false;
       plantsEditAiSection.hidden = false;
+      plantEditExtraFields.hidden = false;
       plantsEditHeading.textContent = t("plant_modal_edit_heading");
-      plantAddHint.hidden = true;
+      plantEditSubmitBtn.textContent = t("save");
 
       renderEditGallery(plant.images || []);
 

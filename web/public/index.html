@@ -643,65 +643,66 @@
                 <label for="plant-edit-cultivar" data-i18n="plant_label_cultivar">Lajike</label>
                 <input type="text" id="plant-edit-cultivar" autocomplete="off">
               </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="plant-edit-category" data-i18n="plant_label_category">Kategoria</label>
-                  <select id="plant-edit-category">
-                    <option value="perennial" data-i18n="plant_cat_perennial">Monivuotinen</option>
-                    <option value="annual" data-i18n="plant_cat_annual">Yksivuotinen</option>
-                    <option value="shrub" data-i18n="plant_cat_shrub">Pensas</option>
-                    <option value="tree" data-i18n="plant_cat_tree">Puu</option>
-                    <option value="houseplant" data-i18n="plant_cat_houseplant">Huonekasvi</option>
-                    <option value="vegetable" data-i18n="plant_cat_vegetable">Vihannes</option>
-                    <option value="herb" data-i18n="plant_cat_herb">Yrtti</option>
-                    <option value="bulb" data-i18n="plant_cat_bulb">Sipulikasvi</option>
-                    <option value="other" data-i18n="plant_cat_other">Muu</option>
-                  </select>
+              <div id="plant-edit-extra-fields">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="plant-edit-category" data-i18n="plant_label_category">Kategoria</label>
+                    <select id="plant-edit-category">
+                      <option value="perennial" data-i18n="plant_cat_perennial">Monivuotinen</option>
+                      <option value="annual" data-i18n="plant_cat_annual">Yksivuotinen</option>
+                      <option value="shrub" data-i18n="plant_cat_shrub">Pensas</option>
+                      <option value="tree" data-i18n="plant_cat_tree">Puu</option>
+                      <option value="houseplant" data-i18n="plant_cat_houseplant">Huonekasvi</option>
+                      <option value="vegetable" data-i18n="plant_cat_vegetable">Vihannes</option>
+                      <option value="herb" data-i18n="plant_cat_herb">Yrtti</option>
+                      <option value="bulb" data-i18n="plant_cat_bulb">Sipulikasvi</option>
+                      <option value="other" data-i18n="plant_cat_other">Muu</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="plant-edit-status" data-i18n="plant_label_status">Tila</label>
+                    <select id="plant-edit-status">
+                      <option value="active" data-i18n="plant_status_active">Aktiivinen</option>
+                      <option value="wishlist" data-i18n="plant_status_wishlist">Haluaisin</option>
+                      <option value="lost" data-i18n="plant_status_lost">Menetetty</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group" id="plant-edit-lost-year-group" hidden>
+                  <label for="plant-edit-lost-year" data-i18n="plant_label_lost_year">Menetetty vuonna</label>
+                  <input type="number" id="plant-edit-lost-year" min="1900" max="2100">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="plant-edit-location" data-i18n="plant_label_location">Sijainti</label>
+                    <select id="plant-edit-location">
+                      <option value="" data-i18n="plant_no_location">— ei sijaintia —</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="plant-edit-year-acquired" data-i18n="plant_label_year_acquired">Vuosi hankittu</label>
+                    <input type="number" id="plant-edit-year-acquired" min="1900" max="2100">
+                  </div>
                 </div>
                 <div class="form-group">
-                  <label for="plant-edit-status" data-i18n="plant_label_status">Tila</label>
-                  <select id="plant-edit-status">
-                    <option value="active" data-i18n="plant_status_active">Aktiivinen</option>
-                    <option value="wishlist" data-i18n="plant_status_wishlist">Haluaisin</option>
-                    <option value="lost" data-i18n="plant_status_lost">Menetetty</option>
-                  </select>
+                  <label for="plant-edit-source" data-i18n="plant_label_source">Lähde / mistä saatu</label>
+                  <input type="text" id="plant-edit-source" autocomplete="off">
                 </div>
-              </div>
-              <div class="form-group" id="plant-edit-lost-year-group" hidden>
-                <label for="plant-edit-lost-year" data-i18n="plant_label_lost_year">Menetetty vuonna</label>
-                <input type="number" id="plant-edit-lost-year" min="1900" max="2100">
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="plant-edit-location" data-i18n="plant_label_location">Sijainti</label>
-                  <select id="plant-edit-location">
-                    <option value="" data-i18n="plant_no_location">— ei sijaintia —</option>
-                  </select>
+                <div class="form-group form-group-inline">
+                  <label>
+                    <input type="checkbox" id="plant-edit-own-seeds">
+                    <span data-i18n="plant_label_own_seeds">Oma siemenkasvatus</span>
+                  </label>
                 </div>
                 <div class="form-group">
-                  <label for="plant-edit-year-acquired" data-i18n="plant_label_year_acquired">Vuosi hankittu</label>
-                  <input type="number" id="plant-edit-year-acquired" min="1900" max="2100">
+                  <label for="plant-edit-notes" data-i18n="plant_label_notes">Muistiinpanot</label>
+                  <textarea id="plant-edit-notes" rows="3"></textarea>
                 </div>
-              </div>
-              <div class="form-group">
-                <label for="plant-edit-source" data-i18n="plant_label_source">Lähde / mistä saatu</label>
-                <input type="text" id="plant-edit-source" autocomplete="off">
-              </div>
-              <div class="form-group form-group-inline">
-                <label>
-                  <input type="checkbox" id="plant-edit-own-seeds">
-                  <span data-i18n="plant_label_own_seeds">Oma siemenkasvatus</span>
-                </label>
-              </div>
-              <div class="form-group">
-                <label for="plant-edit-notes" data-i18n="plant_label_notes">Muistiinpanot</label>
-                <textarea id="plant-edit-notes" rows="3"></textarea>
               </div>
               <div class="modal-actions">
                 <button type="button" class="btn btn-secondary" id="plant-edit-cancel-btn" data-i18n="cancel">Peruuta</button>
-                <button type="submit" class="btn btn-primary" data-i18n="save">Tallenna</button>
+                <button type="submit" class="btn btn-primary" id="plant-edit-submit-btn" data-i18n="save">Tallenna</button>
               </div>
-              <p id="plant-add-hint" class="plant-add-hint" hidden data-i18n="plant_add_hint">Kuvat ja AI-yhteenveto lisättävissä tallennuksen jälkeen.</p>
             </form>
 
             <div class="plants-edit-images-section">
