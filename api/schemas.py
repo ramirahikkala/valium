@@ -805,6 +805,7 @@ class RecipeIngredientCreate(BaseModel):
     name: str
     amount: str | None = None
     unit: str | None = None
+    is_staple: bool = False
 
 
 class RecipeIngredientUpdate(BaseModel):
@@ -813,6 +814,7 @@ class RecipeIngredientUpdate(BaseModel):
     name: str
     amount: str | None = None
     unit: str | None = None
+    is_staple: bool = False
 
 
 class RecipeIngredientResponse(BaseModel):
@@ -825,6 +827,7 @@ class RecipeIngredientResponse(BaseModel):
     amount: str | None
     unit: str | None
     position: int
+    is_staple: bool
 
 
 class RecipeCreate(BaseModel):

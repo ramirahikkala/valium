@@ -5633,10 +5633,11 @@
         "<h4>" + t("meals_ingredients_heading") + "</h4>" +
         "<ul class='meals-ingredients-list' id='meals-recipe-ings'>" +
           recipe.ingredients.map(function (ing) {
-            return "<li class='meals-ingredient-item' data-ing-id='" + ing.id + "'>" +
-              "<span class='meals-ing-text'>" + (ing.amount ? escapeHtml(ing.amount) + " " : "") + (ing.unit ? escapeHtml(ing.unit) + " " : "") + escapeHtml(ing.name) + "</span>" +
+            return "<li class='meals-ingredient-item" + (ing.is_staple ? " meals-ing-staple" : "") + "' data-ing-id='" + ing.id + "'>" +
+              "<span class='meals-ing-text'>" + (ing.amount ? escapeHtml(ing.amount) + " " : "") + (ing.unit ? escapeHtml(ing.unit) + " " : "") + escapeHtml(ing.name) + (ing.is_staple ? " <span class='meals-ing-staple-badge'>" + t("meals_staple_badge") + "</span>" : "") + "</span>" +
               "<div class='meals-ing-actions'>" +
-              "<button class='btn-icon meals-ing-edit' data-ing-id='" + ing.id + "' data-ing-amount='" + escapeHtml(ing.amount || "") + "' data-ing-unit='" + escapeHtml(ing.unit || "") + "' data-ing-name='" + escapeHtml(ing.name) + "'>✎</button>" +
+              "<button class='btn-icon meals-ing-staple-toggle' data-ing-id='" + ing.id + "' data-is-staple='" + ing.is_staple + "' data-ing-amount='" + escapeHtml(ing.amount || "") + "' data-ing-unit='" + escapeHtml(ing.unit || "") + "' data-ing-name='" + escapeHtml(ing.name) + "' title='" + t("meals_staple_toggle_title") + "'>" + (ing.is_staple ? "★" : "☆") + "</button>" +
+              "<button class='btn-icon meals-ing-edit' data-ing-id='" + ing.id + "' data-ing-amount='" + escapeHtml(ing.amount || "") + "' data-ing-unit='" + escapeHtml(ing.unit || "") + "' data-ing-name='" + escapeHtml(ing.name) + "' data-is-staple='" + ing.is_staple + "'>✎</button>" +
               "<button class='btn-icon meals-ing-delete' data-ing-id='" + ing.id + "'>✕</button>" +
               "</div>" +
               "</li>";
@@ -5719,6 +5720,23 @@
       } catch (_) {}
     });
 
+    mealsRecipeEditEl.querySelectorAll(".meals-ing-staple-toggle").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        var ingId = btn.dataset.ingId;
+        var isStaple = btn.dataset.isStaple === "true";
+        try {
+          await apiFetch(MEALS_API + "/recipes/" + recipe.id + "/ingredients/" + ingId, {
+            method: "PUT", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name: btn.dataset.ingName, amount: btn.dataset.ingAmount || null, unit: btn.dataset.ingUnit || null, is_staple: !isStaple })
+          });
+          var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id);
+          recipe = updated; mealsCurrentRecipe = updated;
+          await loadMealsRecipes();
+          _renderMealsRecipeEditContent(recipe);
+        } catch (_) {}
+      });
+    });
+
     mealsRecipeEditEl.querySelectorAll(".meals-ing-edit").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var ingId = btn.dataset.ingId;
@@ -5750,7 +5768,7 @@
           try {
             await apiFetch(MEALS_API + "/recipes/" + recipe.id + "/ingredients/" + ingId, {
               method: "PUT", headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: name, amount: amount, unit: unit })
+              body: JSON.stringify({ name: name, amount: amount, unit: unit, is_staple: btn.dataset.isStaple === "true" })
             });
             var updated = await apiFetch(MEALS_API + "/recipes/" + recipe.id);
             recipe = updated; mealsCurrentRecipe = updated;
@@ -6674,6 +6692,8 @@
       meals_recipe_servings_label: "Annoksia",
       meals_servings_unit: "annosta",
       meals_ingredients_heading: "Ainesosat",
+      meals_staple_badge: "perusaines",
+      meals_staple_toggle_title: "Merkitse perusainekseksi (ei ostoslistalle)",
       meals_instructions_heading: "Ohje",
       meals_recipes_count: "reseptiä",
       meals_slots_count: "merkintää",
@@ -6726,6 +6746,8 @@
       meals_recipe_servings_label: "Servings",
       meals_servings_unit: "servings",
       meals_ingredients_heading: "Ingredients",
+      meals_staple_badge: "staple",
+      meals_staple_toggle_title: "Mark as staple (excluded from shopping list)",
       meals_instructions_heading: "Instructions",
       meals_recipes_count: "recipes",
       meals_slots_count: "entries",

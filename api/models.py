@@ -769,6 +769,7 @@ class RecipeIngredient(Base):
     amount: Mapped[str | None] = mapped_column(String(50), nullable=True)
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    is_staple: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
 
 
 class RecipeShare(Base):

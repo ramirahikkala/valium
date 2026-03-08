@@ -373,6 +373,7 @@ async def update_ingredient(
     ing.name = body.name
     ing.amount = body.amount
     ing.unit = body.unit
+    ing.is_staple = body.is_staple
     await db.commit()
     await db.refresh(ing)
     return RecipeIngredientResponse.model_validate(ing)
@@ -749,6 +750,8 @@ async def _build_shopping_items(
         if not recipe:
             continue
         for ing in recipe.ingredients:
+            if ing.is_staple:
+                continue
             items.append({
                 "name": ing.name,
                 "amount": ing.amount,
