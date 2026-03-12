@@ -6,3 +6,4 @@ node_modules/
 dist/
 build/
 .venv/
+docker-compose.override.yml
