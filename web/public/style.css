@@ -1632,8 +1632,20 @@ input[type="datetime-local"]:focus {
   border-bottom: none;
 }
 
+.library-exercise-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
 .library-exercise-name {
   font-weight: 500;
+}
+
+.library-exercise-meta {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
 }
 
 .library-exercise-btns {
