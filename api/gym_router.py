@@ -90,23 +90,24 @@ async def _get_last_performance(
 
 def _make_exercise_response(pe: ProgramExercise, last_perf: LastPerformance | None) -> ExerciseResponse:
     """Build an ExerciseResponse from a ProgramExercise ORM object."""
+    ex = pe.exercise
     return ExerciseResponse(
         id=pe.id,
         program_id=pe.program_id,
         exercise_id=pe.exercise_id,
-        exercise_name=pe.exercise.name,
-        weight=pe.weight,
+        exercise_name=ex.name,
         sets=pe.sets,
         reps=pe.reps,
         rest_seconds=pe.rest_seconds,
         position=pe.position,
-        auto_increment=pe.auto_increment,
-        increment_kg=pe.increment_kg,
-        base_weight=pe.base_weight,
-        reset_increment_kg=pe.reset_increment_kg,
-        consecutive_failures=pe.exercise.consecutive_failures,
-        deload_mode=pe.deload_mode,
-        failure_threshold=pe.failure_threshold,
+        weight=ex.weight,
+        base_weight=ex.base_weight,
+        auto_increment=ex.auto_increment,
+        increment_kg=ex.increment_kg,
+        reset_increment_kg=ex.reset_increment_kg,
+        deload_mode=ex.deload_mode,
+        failure_threshold=ex.failure_threshold,
+        consecutive_failures=ex.consecutive_failures,
         last_performance=last_perf,
     )
 
@@ -135,7 +136,17 @@ async def create_exercise_library(
     session: AsyncSession = Depends(get_session),
 ) -> GymExerciseResponse:
     """Create a new exercise in the user's exercise library."""
-    ex = Exercise(user_id=current_user.id, name=body.name)
+    ex = Exercise(
+        user_id=current_user.id,
+        name=body.name,
+        weight=body.weight,
+        base_weight=body.weight if body.auto_increment else 0.0,
+        auto_increment=body.auto_increment,
+        increment_kg=body.increment_kg,
+        reset_increment_kg=body.reset_increment_kg,
+        deload_mode=body.deload_mode,
+        failure_threshold=body.failure_threshold,
+    )
     session.add(ex)
     await session.commit()
     await session.refresh(ex)
@@ -149,13 +160,17 @@ async def update_exercise_library(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> GymExerciseResponse:
-    """Rename a library exercise."""
+    """Update a library exercise (name, weight, progression config)."""
     ex = await session.get(Exercise, exercise_id)
     if ex is None or ex.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Exercise not found")
+    old_auto_increment = ex.auto_increment
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(ex, field, value)
+    # Seed base_weight when auto_increment is enabled for the first time
+    if not old_auto_increment and ex.auto_increment and ex.base_weight == 0:
+        ex.base_weight = ex.weight
     await session.commit()
     await session.refresh(ex)
     return GymExerciseResponse.model_validate(ex)
@@ -347,15 +362,10 @@ async def create_program_exercise(
     pe = ProgramExercise(
         program_id=program_id,
         exercise_id=body.exercise_id,
-        weight=body.weight,
         sets=body.sets,
         reps=body.reps,
         rest_seconds=body.rest_seconds,
         position=position,
-        auto_increment=body.auto_increment,
-        increment_kg=body.increment_kg,
-        reset_increment_kg=body.reset_increment_kg,
-        base_weight=body.weight if body.auto_increment else 0.0,
     )
     session.add(pe)
     await session.commit()
@@ -392,13 +402,9 @@ async def update_program_exercise(
     pe = result.scalar_one_or_none()
     if pe is None:
         raise HTTPException(status_code=404, detail="Exercise not found")
-    old_auto_increment = pe.auto_increment
     update_data = body.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(pe, field, value)
-    # When auto_increment is enabled for the first time, seed base_weight from current weight
-    if not old_auto_increment and pe.auto_increment and pe.base_weight == 0:
-        pe.base_weight = pe.weight
     await session.commit()
     await session.refresh(pe)
     # reload exercise relationship
@@ -468,32 +474,22 @@ async def complete_session(
             .where(ProgramExercise.program_id == ws.program_id)
         )
         program_exercises = result.scalars().all()
-        for ex in program_exercises:
+        for pe in program_exercises:
+            ex = pe.exercise
             if not ex.auto_increment:
                 continue
-            if body.session_outcome == "failed_stay":
-                pass  # legacy: no changes
-            elif body.session_outcome == "failed_reset":
-                # legacy: immediate global reset for reset-mode exercises
-                if ex.deload_mode == "reset":
-                    ex.weight = ex.base_weight
-                    ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
-                    ex.exercise.consecutive_failures = 0
+            if pe.id in body.failed_exercise_ids:
+                ex.consecutive_failures += 1
+                if ex.consecutive_failures >= ex.failure_threshold:
+                    if ex.deload_mode == "percent":
+                        ex.weight = math.floor(ex.weight * 0.9 / 2.5) * 2.5
+                    else:
+                        ex.weight = ex.base_weight
+                        ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
+                    ex.consecutive_failures = 0
             else:
-                # Per-exercise logic based on failed_exercise_ids
-                if ex.id in body.failed_exercise_ids:
-                    ex.exercise.consecutive_failures += 1
-                    if ex.exercise.consecutive_failures >= ex.failure_threshold:
-                        if ex.deload_mode == "percent":
-                            # StrongLifts: 10% deload, floor to nearest 2.5 kg
-                            ex.weight = math.floor(ex.weight * 0.9 / 2.5) * 2.5
-                        else:
-                            ex.weight = ex.base_weight
-                            ex.base_weight = round(ex.base_weight + ex.reset_increment_kg, 2)
-                        ex.exercise.consecutive_failures = 0
-                else:
-                    ex.weight = round(ex.weight + ex.increment_kg, 2)
-                    ex.exercise.consecutive_failures = 0
+                ex.weight = round(ex.weight + ex.increment_kg, 2)
+                ex.consecutive_failures = 0
 
     ws.completed_at = datetime.now(timezone.utc)
     await session.commit()

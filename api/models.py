@@ -225,7 +225,11 @@ class Alarm(Base):
 
 
 class Exercise(Base):
-    """Represents a named exercise in the user's personal exercise library."""
+    """Represents a named exercise in the user's personal exercise library.
+
+    Includes all progression configuration so settings are shared across
+    any programs that reference this exercise.
+    """
 
     __tablename__ = "exercises"
 
@@ -234,6 +238,27 @@ class Exercise(Base):
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    weight: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
+    base_weight: Mapped[float] = mapped_column(
+        Float, nullable=False, default=0.0, server_default="0"
+    )
+    auto_increment: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    increment_kg: Mapped[float] = mapped_column(
+        Float, nullable=False, default=2.5, server_default="2.5"
+    )
+    reset_increment_kg: Mapped[float] = mapped_column(
+        Float, nullable=False, default=5.0, server_default="5"
+    )
+    deload_mode: Mapped[str] = mapped_column(
+        String, nullable=False, default="reset", server_default="reset"
+    )
+    failure_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
     consecutive_failures: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
@@ -277,7 +302,11 @@ class WorkoutProgram(Base):
 
 
 class ProgramExercise(Base):
-    """Represents a single exercise within a workout program."""
+    """Represents a single exercise within a workout program.
+
+    Only holds program-specific layout (sets, reps, rest, position).
+    All progression config lives on the Exercise itself.
+    """
 
     __tablename__ = "program_exercises"
 
@@ -288,31 +317,10 @@ class ProgramExercise(Base):
     exercise_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("exercises.id", ondelete="CASCADE"), nullable=False
     )
-    weight: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0, server_default="0"
-    )
     sets: Mapped[int] = mapped_column(Integer, nullable=False, default=3, server_default="3")
     reps: Mapped[int] = mapped_column(Integer, nullable=False, default=10, server_default="10")
     rest_seconds: Mapped[int] = mapped_column(Integer, nullable=False, default=90, server_default="90")
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    auto_increment: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=False, server_default="false"
-    )
-    increment_kg: Mapped[float] = mapped_column(
-        Float, nullable=False, default=2.5, server_default="2.5"
-    )
-    base_weight: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0, server_default="0"
-    )
-    reset_increment_kg: Mapped[float] = mapped_column(
-        Float, nullable=False, default=5.0, server_default="5"
-    )
-    deload_mode: Mapped[str] = mapped_column(
-        String, nullable=False, default="reset", server_default="reset"
-    )
-    failure_threshold: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=3, server_default="3"
-    )
 
     program: Mapped[WorkoutProgram] = relationship("WorkoutProgram", back_populates="exercises")
     exercise: Mapped[Exercise] = relationship("Exercise", back_populates="program_exercises")

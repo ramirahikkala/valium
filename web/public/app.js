@@ -1806,6 +1806,9 @@
   var gymDeloadMode = document.getElementById("gym-deload-mode");
   var gymResetGroup = document.getElementById("gym-reset-group");
   var gymFailureThreshold = document.getElementById("gym-failure-threshold");
+  var gymModalProgramFields = document.getElementById("gym-modal-program-fields");
+  var gymModalConfigFields = document.getElementById("gym-modal-config-fields");
+  var gymModalMode = "add"; // "add" | "edit" | "config"
 
   gymAutoincEnabled.addEventListener("change", function () {
     gymAutoincSettings.hidden = !gymAutoincEnabled.checked;
@@ -1934,11 +1937,17 @@
     gymExerciseLibrary.forEach(function (ex) {
       var row = document.createElement("div");
       row.className = "library-exercise-row";
+      var weightInfo = ex.auto_increment
+        ? ex.weight + "\u00a0kg" + (ex.consecutive_failures > 0 ? " \u00b7 " + ex.consecutive_failures + "/" + ex.failure_threshold + " ep." : "")
+        : ex.weight + "\u00a0kg";
       row.innerHTML =
+        '<div class="library-exercise-info">' +
         '<span class="library-exercise-name">' + escapeHtml(ex.name) + "</span>" +
+        '<span class="library-exercise-meta">' + weightInfo + "</span>" +
+        "</div>" +
         '<div class="library-exercise-btns">' +
-        '<button class="btn btn-icon btn-sm" data-action="rename-library-exercise" data-id="' + ex.id +
-        '" data-name="' + escapeHtml(ex.name) + '">' + t("rename_btn") + '</button>' +
+        '<button class="btn btn-icon btn-sm" data-action="configure-exercise" data-id="' + ex.id +
+        '" data-name="' + escapeHtml(ex.name) + '">' + t("edit_exercise_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-action="delete-library-exercise" data-id="' + ex.id + '">' + t("delete_btn") + '</button>' +
         "</div>";
       libraryExercisesListEl.appendChild(row);
@@ -1949,9 +1958,9 @@
     var btn = e.target.closest("button[data-action]");
     if (!btn) return;
     var id = parseInt(btn.dataset.id, 10);
-    if (btn.dataset.action === "rename-library-exercise") {
-      var newName = prompt(t("rename_prompt"), btn.dataset.name);
-      if (newName && newName.trim()) renameLibraryExercise(id, newName.trim());
+    if (btn.dataset.action === "configure-exercise") {
+      var ex = gymExerciseLibrary.find(function (e) { return e.id === id; });
+      if (ex) openGymModal("config", { exerciseId: ex.id, exerciseName: ex.name, weight: ex.weight, auto_increment: ex.auto_increment, increment_kg: ex.increment_kg, reset_increment_kg: ex.reset_increment_kg, deload_mode: ex.deload_mode, failure_threshold: ex.failure_threshold });
     } else if (btn.dataset.action === "delete-library-exercise") {
       if (confirm(t("delete_exercise_confirm"))) {
         deleteLibraryExercise(id);
@@ -1995,6 +2004,18 @@
         body: JSON.stringify({ name: name }),
       });
       await loadExerciseLibrary();
+    } catch (_) {}
+  }
+
+  async function updateExerciseConfig(id, data) {
+    try {
+      await apiFetch(GYM_API + "/exercises/" + id, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      await loadExerciseLibrary();
+      await loadGymPrograms();
     } catch (_) {}
   }
 
@@ -2088,14 +2109,9 @@
         '<div class="exercise-btns">' +
         '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
         ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
-        ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '" data-ex-weight="' + ex.weight +
-        '" data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
-        '" data-ex-rest="' + ex.rest_seconds +
-        '" data-ex-auto-increment="' + ex.auto_increment +
-        '" data-ex-increment-kg="' + ex.increment_kg +
-        '" data-ex-reset-increment-kg="' + ex.reset_increment_kg +
-        '" data-ex-deload-mode="' + (ex.deload_mode || 'reset') +
-        '" data-ex-failure-threshold="' + (ex.failure_threshold || 3) + '">' + t("edit_exercise_btn") + '</button>' +
+        ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '"' +
+        ' data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
+        '" data-ex-rest="' + ex.rest_seconds + '">' + t("edit_exercise_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
         ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
         '</div></div>'
@@ -2172,15 +2188,9 @@
         programId: parseInt(btn.dataset.programId, 10),
         exerciseId: parseInt(btn.dataset.exId, 10),
         exerciseName: btn.dataset.exExerciseName,
-        weight: parseFloat(btn.dataset.exWeight),
         sets: parseInt(btn.dataset.exSets, 10),
         reps: parseInt(btn.dataset.exReps, 10),
         rest_seconds: parseInt(btn.dataset.exRest, 10),
-        auto_increment: btn.dataset.exAutoIncrement === "true",
-        increment_kg: parseFloat(btn.dataset.exIncrementKg),
-        reset_increment_kg: parseFloat(btn.dataset.exResetIncrementKg),
-        deload_mode: btn.dataset.exDeloadMode || "reset",
-        failure_threshold: parseInt(btn.dataset.exFailureThreshold, 10) || 3,
       });
 
     } else if (action === "delete-exercise") {
@@ -2280,12 +2290,13 @@
   // ---------- Gym exercise modal ----------
 
   function openGymModal(mode, data) {
-    gymModalProgramId.value = data.programId;
+    gymModalMode = mode;
+    gymModalProgramId.value = data.programId || "";
     gymModalExerciseId.value = data.exerciseId || "";
-    gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
     gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
+    gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
     gymAutoincEnabled.checked = !!data.auto_increment;
     gymAutoincSettings.hidden = !data.auto_increment;
     gymAutoincIncrement.value = String(data.increment_kg !== undefined ? data.increment_kg : 2.5);
@@ -2293,16 +2304,31 @@
     gymDeloadMode.value = data.deload_mode || "reset";
     gymResetGroup.hidden = (data.deload_mode === "percent");
     gymFailureThreshold.value = data.failure_threshold !== undefined ? data.failure_threshold : 3;
-    gymModalTitle.textContent = mode === "edit" ? t("gym_modal_edit_heading") : t("gym_modal_add_heading");
 
-    if (mode === "edit") {
-      // Show static exercise name, hide dropdown
+    if (mode === "config") {
+      gymModalTitle.textContent = t("gym_modal_edit_heading");
+      gymModalProgramFields.hidden = true;
+      gymModalConfigFields.hidden = false;
       gymExSelectInput.required = false;
       gymModalSelectGroup.hidden = true;
       gymModalNameDisplay.hidden = false;
       gymModalExerciseNameEl.textContent = data.exerciseName || "";
+      gymModal.hidden = false;
+      gymExWeightInput.focus();
+    } else if (mode === "edit") {
+      gymModalTitle.textContent = t("gym_modal_edit_heading");
+      gymModalProgramFields.hidden = false;
+      gymModalConfigFields.hidden = true;
+      gymExSelectInput.required = false;
+      gymModalSelectGroup.hidden = true;
+      gymModalNameDisplay.hidden = false;
+      gymModalExerciseNameEl.textContent = data.exerciseName || "";
+      gymModal.hidden = false;
+      gymExSetsInput.focus();
     } else {
-      // Populate dropdown from library
+      gymModalTitle.textContent = t("gym_modal_add_heading");
+      gymModalProgramFields.hidden = false;
+      gymModalConfigFields.hidden = true;
       gymExSelectInput.required = true;
       gymModalSelectGroup.hidden = false;
       gymModalNameDisplay.hidden = true;
@@ -2313,12 +2339,7 @@
         opt.textContent = ex.name;
         gymExSelectInput.appendChild(opt);
       });
-    }
-
-    gymModal.hidden = false;
-    if (mode === "edit") {
-      gymExWeightInput.focus();
-    } else {
+      gymModal.hidden = false;
       gymExSelectInput.focus();
     }
   }
@@ -2336,38 +2357,43 @@
 
   gymModalForm.addEventListener("submit", function (e) {
     e.preventDefault();
-    var programId = parseInt(gymModalProgramId.value, 10);
     var exerciseId = gymModalExerciseId.value ? parseInt(gymModalExerciseId.value, 10) : null;
-    var autoincData = {
-      auto_increment: gymAutoincEnabled.checked,
-      increment_kg: parseFloat(gymAutoincIncrement.value) || 2.5,
-      reset_increment_kg: parseFloat(gymAutoincReset.value) || 5,
-      deload_mode: gymDeloadMode.value || "reset",
-      failure_threshold: parseInt(gymFailureThreshold.value, 10) || 3,
-    };
-    if (exerciseId) {
-      // Edit: only update weight/sets/reps/rest + auto-increment fields
-      var data = Object.assign({
+
+    if (gymModalMode === "config") {
+      // Update exercise config (weight, progression)
+      var configData = {
         weight: parseFloat(gymExWeightInput.value) || 0,
+        auto_increment: gymAutoincEnabled.checked,
+        increment_kg: parseFloat(gymAutoincIncrement.value) || 2.5,
+        reset_increment_kg: parseFloat(gymAutoincReset.value) || 5,
+        deload_mode: gymDeloadMode.value || "reset",
+        failure_threshold: parseInt(gymFailureThreshold.value, 10) || 3,
+      };
+      closeGymModal();
+      updateExerciseConfig(exerciseId, configData);
+    } else if (gymModalMode === "edit") {
+      // Update program exercise layout (sets/reps/rest only)
+      var programId = parseInt(gymModalProgramId.value, 10);
+      var layoutData = {
         sets: parseInt(gymExSetsInput.value, 10) || 3,
         reps: parseInt(gymExRepsInput.value, 10) || 10,
         rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
-      }, autoincData);
+      };
       closeGymModal();
-      updateExercise(programId, exerciseId, data);
+      updateExercise(programId, exerciseId, layoutData);
     } else {
-      // Add: send exercise_id from library
+      // Add exercise to program (exercise_id + layout)
+      var programId = parseInt(gymModalProgramId.value, 10);
       var selectedExId = parseInt(gymExSelectInput.value, 10);
       if (!selectedExId) return;
-      var data = Object.assign({
+      var addData = {
         exercise_id: selectedExId,
-        weight: parseFloat(gymExWeightInput.value) || 0,
         sets: parseInt(gymExSetsInput.value, 10) || 3,
         reps: parseInt(gymExRepsInput.value, 10) || 10,
         rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
-      }, autoincData);
+      };
       closeGymModal();
-      createExercise(programId, data);
+      createExercise(programId, addData);
     }
   });
 

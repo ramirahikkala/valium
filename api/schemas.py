@@ -244,12 +244,26 @@ class GymExerciseCreate(BaseModel):
     """Schema for creating an exercise in the user's exercise library."""
 
     name: str
+    weight: float = 0.0
+    auto_increment: bool = False
+    increment_kg: float = 2.5
+    reset_increment_kg: float = 5.0
+    deload_mode: str = "reset"
+    failure_threshold: int = 3
 
 
 class GymExerciseUpdate(BaseModel):
-    """Schema for renaming a library exercise."""
+    """Schema for updating a library exercise."""
 
     name: str | None = None
+    weight: float | None = None
+    base_weight: float | None = None
+    auto_increment: bool | None = None
+    increment_kg: float | None = None
+    reset_increment_kg: float | None = None
+    deload_mode: str | None = None
+    failure_threshold: int | None = None
+    consecutive_failures: int | None = None
 
 
 class GymExerciseResponse(BaseModel):
@@ -259,6 +273,14 @@ class GymExerciseResponse(BaseModel):
 
     id: int
     name: str
+    weight: float
+    base_weight: float
+    auto_increment: bool
+    increment_kg: float
+    reset_increment_kg: float
+    deload_mode: str
+    failure_threshold: int
+    consecutive_failures: int
 
 
 # ---------- Gym Programs ----------
@@ -289,29 +311,18 @@ class ExerciseCreate(BaseModel):
     """Schema for adding an exercise to a program."""
 
     exercise_id: int
-    weight: float = 0.0
     sets: int = 3
     reps: int = 10
     rest_seconds: int = 90
-    auto_increment: bool = False
-    increment_kg: float = 2.5
-    reset_increment_kg: float = 5.0
 
 
 class ExerciseUpdate(BaseModel):
-    """Schema for updating a program exercise. All fields optional."""
+    """Schema for updating a program exercise layout. All fields optional."""
 
-    weight: float | None = None
     sets: int | None = None
     reps: int | None = None
     rest_seconds: int | None = None
     position: int | None = None
-    auto_increment: bool | None = None
-    increment_kg: float | None = None
-    base_weight: float | None = None
-    reset_increment_kg: float | None = None
-    deload_mode: str | None = None
-    failure_threshold: int | None = None
 
 
 class ExerciseResponse(BaseModel):
@@ -321,18 +332,19 @@ class ExerciseResponse(BaseModel):
     program_id: int
     exercise_id: int
     exercise_name: str
-    weight: float
     sets: int
     reps: int
     rest_seconds: int
     position: int
+    # Progression config from Exercise
+    weight: float
+    base_weight: float
     auto_increment: bool
     increment_kg: float
-    base_weight: float
     reset_increment_kg: float
-    consecutive_failures: int
     deload_mode: str
     failure_threshold: int
+    consecutive_failures: int
     last_performance: LastPerformance | None = None
 
 
@@ -340,7 +352,6 @@ class SessionCompleteRequest(BaseModel):
     """Schema for completing a workout session with optional fail list."""
 
     failed_exercise_ids: list[int] = []
-    session_outcome: str = "success"  # "success" | "failed_stay" | "failed_reset"
 
 
 class ProgramResponse(BaseModel):
