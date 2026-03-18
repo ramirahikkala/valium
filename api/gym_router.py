@@ -516,15 +516,13 @@ async def complete_session(
 
 
 @router.delete("/sessions/{session_id}", status_code=204)
-async def cancel_session(
+async def delete_session(
     session_id: int,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ) -> None:
-    """Cancel/abandon an active workout session without applying any weight changes."""
+    """Delete a workout session (active or completed) without applying weight changes."""
     ws = await _get_session(session, session_id, current_user.id)
-    if ws.completed_at is not None:
-        raise HTTPException(status_code=400, detail="Session already completed")
     await session.delete(ws)
     await session.commit()
 

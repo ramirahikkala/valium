@@ -1793,10 +1793,27 @@ input[type="datetime-local"]:focus {
   color: var(--color-text-muted);
 }
 
+.session-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 .session-toggle-icon {
   font-size: 0.75rem;
   color: var(--color-text-muted);
-  flex-shrink: 0;
+}
+
+.btn-xs {
+  padding: 0.15rem 0.45rem;
+  font-size: 0.75rem;
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.session-item:hover .btn-xs {
+  opacity: 1;
 }
 
 .session-sets {

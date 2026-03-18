@@ -90,8 +90,8 @@
       delete_btn: "Poista",
       rename_prompt: "Uusi nimi:",
       delete_exercise_confirm: "Poistetaanko liike? Se poistetaan myös kaikista ohjelmista.",
-      delete_exercise_history_btn: "Poista historia",
-      delete_exercise_history_confirm: "Poistetaanko kaikki kirjatut sarjat tälle liikkeelle? Tätä ei voi peruuttaa.",
+      delete_session_btn: "Poista treeni",
+      delete_session_confirm: "Poistetaanko tämä treeni historiasta?",
       no_programs_empty: "Ei ohjelmia. Luo uusi ohjelma ylhäältä.",
       badge_active: "Aktiivinen",
       badge_archived: "Arkistoitu",
@@ -455,8 +455,8 @@
       delete_btn: "Delete",
       rename_prompt: "New name:",
       delete_exercise_confirm: "Delete exercise? It will also be removed from all programs.",
-      delete_exercise_history_btn: "Clear history",
-      delete_exercise_history_confirm: "Delete all logged sets for this exercise? This cannot be undone.",
+      delete_session_btn: "Delete session",
+      delete_session_confirm: "Remove this session from history?",
       no_programs_empty: "No programs. Create a new one above.",
       badge_active: "Active",
       badge_archived: "Archived",
@@ -1996,8 +1996,6 @@
         '<div class="library-exercise-btns">' +
         '<button class="btn btn-icon btn-sm" data-action="configure-exercise" data-id="' + ex.id +
         '" data-name="' + escapeHtml(ex.name) + '">' + t("edit_exercise_btn") + '</button>' +
-        '<button class="btn btn-secondary btn-sm" data-action="clear-exercise-history" data-id="' + ex.id +
-        '" data-name="' + escapeHtml(ex.name) + '">' + t("delete_exercise_history_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-action="delete-library-exercise" data-id="' + ex.id + '">' + t("delete_btn") + '</button>' +
         "</div>";
       libraryExercisesListEl.appendChild(row);
@@ -2011,16 +2009,6 @@
     if (btn.dataset.action === "configure-exercise") {
       var ex = gymExerciseLibrary.find(function (e) { return e.id === id; });
       if (ex) openGymModal("config", { exerciseId: ex.id, exerciseName: ex.name, weight: ex.weight, auto_increment: ex.auto_increment, increment_kg: ex.increment_kg, reset_increment_kg: ex.reset_increment_kg, deload_mode: ex.deload_mode, failure_threshold: ex.failure_threshold });
-    } else if (btn.dataset.action === "clear-exercise-history") {
-      var exName = btn.dataset.name;
-      if (confirm(exName + " — " + t("delete_exercise_history_confirm"))) {
-        apiFetch(GYM_API + "/exercises/" + id + "/history", { method: "DELETE" })
-          .then(function () {
-            // Invalidate cached progress data for this exercise
-            delete progressData[id];
-          })
-          .catch(function () {});
-      }
     } else if (btn.dataset.action === "delete-library-exercise") {
       if (confirm(t("delete_exercise_confirm"))) {
         deleteLibraryExercise(id);
@@ -2985,7 +2973,10 @@
         '<span class="session-program-name">' + escapeHtml(s.program_name) + "</span>" +
         '<span class="session-date">' + formatDate(s.started_at) + duration + "</span>" +
         "</div>" +
+        '<div class="session-header-actions">' +
+        '<button class="btn btn-danger btn-xs" data-action="delete-session" data-id="' + s.id + '">\u2715</button>' +
         '<span class="session-toggle-icon">\u25bc</span>' +
+        "</div>" +
         "</div>" +
         '<div class="session-sets" hidden></div>';
 
@@ -2994,6 +2985,22 @@
   }
 
   sessionsListEl.addEventListener("click", async function (e) {
+    var deleteBtn = e.target.closest("[data-action='delete-session']");
+    if (deleteBtn) {
+      e.stopPropagation();
+      if (!confirm(t("delete_session_confirm"))) return;
+      var sessionId = parseInt(deleteBtn.dataset.id, 10);
+      try {
+        await apiFetch(GYM_API + "/sessions/" + sessionId, { method: "DELETE" });
+        var item = deleteBtn.closest(".session-item");
+        if (item) item.remove();
+        if (!sessionsListEl.querySelector(".session-item")) {
+          sessionsListEl.innerHTML = '<p class="empty-state">' + t("no_sessions_text") + '</p>';
+        }
+      } catch (_) {}
+      return;
+    }
+
     var header = e.target.closest("[data-action='toggle-session']");
     if (!header) return;
     var item = header.closest(".session-item");
