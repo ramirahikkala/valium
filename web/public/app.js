@@ -162,6 +162,17 @@
       session_badge_active: "Kesken",
       no_sets_text: "Ei kirjattuja sarjoja.",
       sets_load_error: "Virhe haettaessa sarjoja.",
+      sessions_load_error: "Virhe haettaessa treenejä.",
+
+      // Sali — kehitys
+      progress_tab: "Kehitys",
+      progress_heading: "Kehityskäyrät",
+      progress_select_exercise: "Valitse liike",
+      progress_no_exercises: "Ei liikkeitä kirjastossa.",
+      progress_no_data: "Ei dataa tälle liikkeelle.",
+      progress_load_error: "Virhe haettaessa dataa.",
+      progress_chart_weight: "Paino (kg)",
+      progress_sets_label: "Sarjat",
 
       // Admin
       admin_tab: "Admin",
@@ -507,6 +518,17 @@
       session_badge_active: "Active",
       no_sets_text: "No logged sets.",
       sets_load_error: "Error loading sets.",
+      sessions_load_error: "Error loading workouts.",
+
+      // Gym — progress
+      progress_tab: "Progress",
+      progress_heading: "Progress charts",
+      progress_select_exercise: "Select exercise",
+      progress_no_exercises: "No exercises in library.",
+      progress_no_data: "No data for this exercise.",
+      progress_load_error: "Error loading data.",
+      progress_chart_weight: "Weight (kg)",
+      progress_sets_label: "Sets",
 
       // Admin
       admin_tab: "Admin",
@@ -1777,6 +1799,13 @@
   // Gym DOM elements — history
   var sessionsListEl = document.getElementById("sessions-list");
 
+  // Gym DOM elements — progress
+  var gymProgressSection = document.getElementById("gym-progress");
+  var progressExerciseSelect = document.getElementById("progress-exercise-select");
+  var progressChartWrap = document.getElementById("progress-chart-wrap");
+  var progressEmptyEl = document.getElementById("progress-empty");
+  var progressChartInstance = null;
+
   // Gym DOM elements — exercise library
   var addLibraryExerciseBtn = document.getElementById("add-library-exercise-btn");
   var addLibraryExerciseForm = document.getElementById("add-library-exercise-form");
@@ -1911,9 +1940,11 @@
     gymProgramsSection.hidden = tab !== "programs";
     gymWorkoutSection.hidden = tab !== "workout";
     gymHistorySection.hidden = tab !== "history";
+    gymProgressSection.hidden = tab !== "progress";
     if (tab === "programs") loadGymPrograms();
     else if (tab === "workout") loadWorkoutTab();
     else if (tab === "history") loadGymHistory();
+    else if (tab === "progress") loadGymProgress();
   }
 
   // ---------- Programs ----------
@@ -2883,11 +2914,14 @@
   // ---------- History ----------
 
   async function loadGymHistory() {
+    sessionsListEl.innerHTML = '<p class="empty-state">\u2026</p>';
     try {
       var sessions = await apiFetch(GYM_API + "/sessions");
       if (!sessions) return;
       renderSessionsList(sessions);
-    } catch (_) {}
+    } catch (_) {
+      sessionsListEl.innerHTML = '<p class="empty-state">' + t("sessions_load_error") + '</p>';
+    }
   }
 
   function renderSessionsList(sessions) {
@@ -2980,6 +3014,161 @@
       setsEl.innerHTML = '<p class="session-no-sets">' + t("sets_load_error") + '</p>';
     }
   });
+
+  // ---------- Progress ----------
+
+  async function loadGymProgress() {
+    progressChartWrap.hidden = true;
+    progressEmptyEl.hidden = true;
+    if (progressExerciseSelect.options.length <= 1) {
+      // Load exercise list first
+      try {
+        var exercises = await apiFetch(GYM_API + "/exercises");
+        if (!exercises) return;
+        progressExerciseSelect.innerHTML =
+          '<option value="">' + t("progress_select_exercise") + '</option>';
+        if (exercises.length === 0) {
+          progressEmptyEl.textContent = t("progress_no_exercises");
+          progressEmptyEl.hidden = false;
+          return;
+        }
+        exercises.forEach(function (ex) {
+          var opt = document.createElement("option");
+          opt.value = ex.id;
+          opt.textContent = ex.name;
+          progressExerciseSelect.appendChild(opt);
+        });
+      } catch (_) {
+        progressEmptyEl.textContent = t("progress_load_error");
+        progressEmptyEl.hidden = false;
+        return;
+      }
+    }
+    // If an exercise is already selected, render its chart
+    if (progressExerciseSelect.value) {
+      await renderProgressChart(parseInt(progressExerciseSelect.value, 10));
+    }
+  }
+
+  progressExerciseSelect.addEventListener("change", async function () {
+    if (!progressExerciseSelect.value) {
+      progressChartWrap.hidden = true;
+      progressEmptyEl.hidden = true;
+      return;
+    }
+    await renderProgressChart(parseInt(progressExerciseSelect.value, 10));
+  });
+
+  async function renderProgressChart(exerciseId) {
+    progressChartWrap.hidden = true;
+    progressEmptyEl.hidden = true;
+    try {
+      var data = await apiFetch(GYM_API + "/exercises/" + exerciseId + "/progress");
+      if (!data || data.length === 0) {
+        progressEmptyEl.textContent = t("progress_no_data");
+        progressEmptyEl.hidden = false;
+        return;
+      }
+
+      var labels = data.map(function (p) {
+        return new Date(p.date).toLocaleDateString(LOCALES[currentLang] || "fi-FI", {
+          month: "short",
+          day: "numeric",
+        });
+      });
+      var weights = data.map(function (p) { return p.max_weight; });
+      var totalReps = data.map(function (p) { return p.total_reps; });
+
+      progressChartWrap.hidden = false;
+      var canvas = document.getElementById("progress-chart");
+
+      if (progressChartInstance) {
+        progressChartInstance.destroy();
+        progressChartInstance = null;
+      }
+
+      var isDark = document.documentElement.classList.contains("dark") ||
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      var gridColor = isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.07)";
+      var labelColor = isDark ? "#ccc" : "#555";
+
+      progressChartInstance = new Chart(canvas, {
+        type: "line",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: t("progress_chart_weight"),
+              data: weights,
+              borderColor: "#4a90d9",
+              backgroundColor: "rgba(74,144,217,0.12)",
+              borderWidth: 2.5,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              tension: 0.25,
+              fill: true,
+              yAxisID: "yWeight",
+            },
+            {
+              label: t("progress_sets_label") + " (reps)",
+              data: totalReps,
+              borderColor: "#6dbf7e",
+              backgroundColor: "rgba(109,191,126,0.08)",
+              borderWidth: 1.5,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+              tension: 0.25,
+              borderDash: [5, 4],
+              fill: false,
+              yAxisID: "yReps",
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: {
+              labels: { color: labelColor, font: { size: 12 } },
+            },
+            tooltip: {
+              callbacks: {
+                afterBody: function (items) {
+                  var idx = items[0].dataIndex;
+                  var point = data[idx];
+                  var lines = point.sets.map(function (s) {
+                    return "  " + s.set_number + ". " + s.weight + "\u00a0kg \u00d7 " + s.reps;
+                  });
+                  return lines;
+                },
+              },
+            },
+          },
+          scales: {
+            x: {
+              ticks: { color: labelColor, font: { size: 11 } },
+              grid: { color: gridColor },
+            },
+            yWeight: {
+              position: "left",
+              title: { display: true, text: t("progress_chart_weight"), color: labelColor },
+              ticks: { color: labelColor },
+              grid: { color: gridColor },
+            },
+            yReps: {
+              position: "right",
+              title: { display: true, text: "Reps", color: labelColor },
+              ticks: { color: labelColor },
+              grid: { drawOnChartArea: false },
+            },
+          },
+        },
+      });
+    } catch (_) {
+      progressEmptyEl.textContent = t("progress_load_error");
+      progressEmptyEl.hidden = false;
+    }
+  }
 
   // ========== ADMIN MODULE ==========
 

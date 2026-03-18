@@ -412,6 +412,24 @@ class SessionSetResponse(BaseModel):
     completed_at: datetime
 
 
+class ExerciseProgressSet(BaseModel):
+    """A single set within a progress data point."""
+
+    set_number: int
+    weight: float
+    reps: int
+
+
+class ExerciseProgressPoint(BaseModel):
+    """One session's data for an exercise progress chart."""
+
+    session_id: int
+    date: datetime
+    sets: list[ExerciseProgressSet]
+    max_weight: float
+    total_reps: int
+
+
 # ---------- Plants ----------
 
 

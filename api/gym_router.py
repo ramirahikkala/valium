@@ -13,6 +13,8 @@ from database import get_session
 from models import Exercise, ProgramExercise, SessionSet, User, WorkoutProgram, WorkoutSession
 from schemas import (
     ExerciseCreate,
+    ExerciseProgressPoint,
+    ExerciseProgressSet,
     ExerciseResponse,
     ExerciseUpdate,
     GymExerciseCreate,
@@ -566,3 +568,49 @@ async def log_set(
     await session.commit()
     await session.refresh(s)
     return SessionSetResponse.model_validate(s)
+
+
+@router.get("/exercises/{exercise_id}/progress", response_model=list[ExerciseProgressPoint])
+async def get_exercise_progress(
+    exercise_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> list[ExerciseProgressPoint]:
+    """Return per-session progress data for an exercise (for charting)."""
+    result = await session.execute(
+        select(SessionSet, WorkoutSession)
+        .join(WorkoutSession, SessionSet.session_id == WorkoutSession.id)
+        .where(SessionSet.exercise_id == exercise_id)
+        .where(WorkoutSession.user_id == current_user.id)
+        .where(WorkoutSession.completed_at.isnot(None))
+        .order_by(WorkoutSession.started_at, SessionSet.set_number)
+    )
+    rows = result.all()
+
+    # Group by session
+    from collections import OrderedDict
+
+    sessions_map: dict[int, tuple[WorkoutSession, list[SessionSet]]] = OrderedDict()
+    for ss, ws in rows:
+        if ws.id not in sessions_map:
+            sessions_map[ws.id] = (ws, [])
+        sessions_map[ws.id][1].append(ss)
+
+    points: list[ExerciseProgressPoint] = []
+    for ws, sets in sessions_map.values():
+        set_points = [
+            ExerciseProgressSet(set_number=s.set_number, weight=s.weight_used, reps=s.reps_done)
+            for s in sets
+        ]
+        max_weight = max((s.weight_used for s in sets), default=0.0)
+        total_reps = sum(s.reps_done for s in sets)
+        points.append(
+            ExerciseProgressPoint(
+                session_id=ws.id,
+                date=ws.started_at,
+                sets=set_points,
+                max_weight=max_weight,
+                total_reps=total_reps,
+            )
+        )
+    return points

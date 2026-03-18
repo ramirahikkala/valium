@@ -78,6 +78,7 @@
               <button class="sidebar-gym-btn" data-gym-tab="workout" data-i18n="workout_tab">Treeni</button>
               <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">Ohjelmat</button>
               <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">Historia</button>
+              <button class="sidebar-gym-btn" data-gym-tab="progress" data-i18n="progress_tab">Kehitys</button>
             </div>
           </div>
 
@@ -301,6 +302,18 @@
           <div id="gym-history" class="gym-section" hidden>
             <h2 class="gym-section-heading" data-i18n="history_heading">Historia</h2>
             <div id="sessions-list"></div>
+          </div>
+
+          <!-- Progress sub-view -->
+          <div id="gym-progress" class="gym-section" hidden>
+            <h2 class="gym-section-heading" data-i18n="progress_heading">Kehityskäyrät</h2>
+            <div class="progress-controls">
+              <select id="progress-exercise-select"></select>
+            </div>
+            <div id="progress-chart-wrap" class="progress-chart-wrap" hidden>
+              <canvas id="progress-chart"></canvas>
+            </div>
+            <p id="progress-empty" class="empty-state" hidden></p>
           </div>
 
         </div>
@@ -1158,6 +1171,7 @@
 
   <script src="https://accounts.google.com/gsi/client" async></script>
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

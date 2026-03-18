@@ -1726,6 +1726,12 @@ input[type="datetime-local"]:focus {
 
 /* ---------- History tab ---------- */
 
+#sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
 .session-item {
   background: var(--color-surface);
   border-radius: var(--radius);
@@ -1829,6 +1835,32 @@ input[type="datetime-local"]:focus {
   font-size: 0.85rem;
   color: var(--color-text-muted);
   padding: 0.25rem 0;
+}
+
+/* ---------- Progress tab ---------- */
+
+.progress-controls {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.progress-controls select {
+  flex: 1;
+  max-width: 320px;
+}
+
+.progress-chart-wrap {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1rem 1.25rem 1.25rem;
+  position: relative;
+}
+
+.progress-chart-wrap canvas {
+  width: 100% !important;
+  max-height: 340px;
 }
 
 /* ---------- Responsive ---------- */
