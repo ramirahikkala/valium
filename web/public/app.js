@@ -2356,9 +2356,10 @@
       gymExSelectInput.required = false;
       gymModalSelectGroup.hidden = true;
       gymModalNameDisplay.hidden = false;
-      gymModalExerciseNameEl.textContent = data.exerciseName || "";
+      gymModalExerciseNameEl.value = data.exerciseName || "";
+      gymModalExerciseNameEl.readOnly = false;
       gymModal.hidden = false;
-      gymExWeightInput.focus();
+      gymModalExerciseNameEl.focus();
     } else if (mode === "edit") {
       gymModalTitle.textContent = t("gym_modal_edit_heading");
       gymModalProgramFields.hidden = false;
@@ -2366,7 +2367,8 @@
       gymExSelectInput.required = false;
       gymModalSelectGroup.hidden = true;
       gymModalNameDisplay.hidden = false;
-      gymModalExerciseNameEl.textContent = data.exerciseName || "";
+      gymModalExerciseNameEl.value = data.exerciseName || "";
+      gymModalExerciseNameEl.readOnly = true;
       gymModal.hidden = false;
       gymExSetsInput.focus();
     } else {
@@ -2404,8 +2406,9 @@
     var exerciseId = gymModalExerciseId.value ? parseInt(gymModalExerciseId.value, 10) : null;
 
     if (gymModalMode === "config") {
-      // Update exercise config (weight, progression)
+      // Update exercise config (name, weight, progression)
       var configData = {
+        name: gymModalExerciseNameEl.value.trim() || undefined,
         weight: parseFloat(gymExWeightInput.value) || 0,
         auto_increment: gymAutoincEnabled.checked,
         increment_kg: parseFloat(gymAutoincIncrement.value) || 2.5,
