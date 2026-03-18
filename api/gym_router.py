@@ -155,6 +155,22 @@ async def create_exercise_library(
     return GymExerciseResponse.model_validate(ex)
 
 
+@router.delete("/exercises/{exercise_id}/history", status_code=204)
+async def delete_exercise_history(
+    exercise_id: int,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    """Delete all logged sets for an exercise (history wipe)."""
+    ex = await session.get(Exercise, exercise_id)
+    if ex is None or ex.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    await session.execute(
+        SessionSet.__table__.delete().where(SessionSet.exercise_id == exercise_id)
+    )
+    await session.commit()
+
+
 @router.put("/exercises/{exercise_id}", response_model=GymExerciseResponse)
 async def update_exercise_library(
     exercise_id: int,
