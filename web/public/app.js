@@ -2938,14 +2938,14 @@
     try {
       var sessions = await apiFetch(GYM_API + "/sessions");
       if (!sessions) return;
-      renderSessionsList(sessions);
+      renderGymSessionsList(sessions);
     } catch (err) {
       console.error("loadGymHistory error:", err);
       sessionsListEl.innerHTML = '<p class="empty-state">' + t("sessions_load_error") + '</p>';
     }
   }
 
-  function renderSessionsList(sessions) {
+  function renderGymSessionsList(sessions) {
     sessionsListEl.innerHTML = "";
     if (sessions.length === 0) {
       sessionsListEl.innerHTML = '<p class="empty-state">' + t("no_sessions_text") + '</p>';
