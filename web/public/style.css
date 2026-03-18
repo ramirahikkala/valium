@@ -1839,15 +1839,21 @@ input[type="datetime-local"]:focus {
 
 /* ---------- Progress tab ---------- */
 
-.progress-header {
+.progress-sticky-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 0.5rem;
+  position: sticky;
+  top: 54px;
+  z-index: 30;
+  background: var(--color-bg);
+  padding: 0.5rem 0;
+  margin: -0.5rem 0 0;
 }
 
-.progress-header .gym-section-heading {
+.progress-sticky-bar .gym-section-heading {
   margin: 0;
 }
 
@@ -1967,6 +1973,21 @@ input[type="datetime-local"]:focus {
 
 .progress-stats-table td:first-child {
   font-weight: 600;
+}
+
+.progress-all-table td.ex-name {
+  font-weight: 700;
+  vertical-align: top;
+  padding-top: 0.6rem;
+}
+
+.progress-all-table tr.ex-first-row td {
+  border-top: 2px solid var(--color-border);
+}
+
+.progress-all-table thead tr + tr,
+.progress-all-table tbody tr:first-child td {
+  border-top: none;
 }
 
 .stats-date {

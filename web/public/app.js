@@ -3031,6 +3031,7 @@
   // ---------- Progress ----------
 
   var progressRangeMonths = null; // null = all time
+  var progressExercises = null;   // cached exercise list
 
   var progressRangeBtns = document.querySelectorAll("[data-progress-range]");
   progressRangeBtns.forEach(function (btn) {
@@ -3040,59 +3041,97 @@
       progressRangeMonths = btn.dataset.progressRange === "all"
         ? null
         : parseInt(btn.dataset.progressRange, 10);
-      // Re-render all open accordions with new range
-      progressAccordion.querySelectorAll("details[open]").forEach(function (det) {
+      // Re-render all accordion charts with new range (charts only, table stays all-time)
+      progressAccordion.querySelectorAll("details").forEach(function (det) {
         var exId = parseInt(det.dataset.exerciseId, 10);
-        if (progressData[exId]) renderExerciseChart(det, exId, progressData[exId]);
+        if (progressData[exId]) renderExerciseChartOnly(det, exId, progressData[exId]);
       });
     });
   });
 
   async function loadGymProgress() {
-    if (progressAccordion.children.length > 0) return; // already built
+    if (progressExercises) return; // already loaded
+    var allTableEl = document.getElementById("progress-all-table");
     progressAccordion.innerHTML = '<p class="empty-state">\u2026</p>';
+
     try {
       var exercises = await apiFetch(GYM_API + "/exercises");
-      if (!exercises) return;
-      if (exercises.length === 0) {
+      if (!exercises || exercises.length === 0) {
         progressAccordion.innerHTML = '<p class="empty-state">' + t("progress_no_exercises") + '</p>';
         return;
       }
+      progressExercises = exercises;
+
+      // Load all exercise data in parallel
+      var results = await Promise.all(exercises.map(function (ex) {
+        return apiFetch(GYM_API + "/exercises/" + ex.id + "/progress")
+          .then(function (d) { return { ex: ex, data: d || [] }; })
+          .catch(function () { return { ex: ex, data: [] }; });
+      }));
+
+      // Cache data
+      results.forEach(function (r) { progressData[r.ex.id] = r.data; });
+
+      // Build combined all-exercises table
+      renderAllExercisesTable(allTableEl, results);
+
+      // Build accordions (open by default)
       progressAccordion.innerHTML = "";
-      exercises.forEach(function (ex) {
+      results.forEach(function (r) {
         var det = document.createElement("details");
         det.className = "progress-ex-details";
-        det.dataset.exerciseId = ex.id;
+        det.dataset.exerciseId = r.ex.id;
+        det.open = true;
         var sum = document.createElement("summary");
         sum.className = "progress-ex-summary";
-        sum.textContent = ex.name;
+        sum.textContent = r.ex.name;
         det.appendChild(sum);
         var body = document.createElement("div");
         body.className = "progress-ex-body";
         det.appendChild(body);
-        det.addEventListener("toggle", function () {
-          if (!det.open) return;
-          if (progressData[ex.id]) {
-            renderExerciseChart(det, ex.id, progressData[ex.id]);
-            return;
-          }
-          body.innerHTML = '<p class="empty-state">\u2026</p>';
-          apiFetch(GYM_API + "/exercises/" + ex.id + "/progress").then(function (data) {
-            if (!data || data.length === 0) {
-              body.innerHTML = '<p class="empty-state">' + t("progress_no_data") + '</p>';
-              return;
-            }
-            progressData[ex.id] = data;
-            renderExerciseChart(det, ex.id, data);
-          }).catch(function () {
-            body.innerHTML = '<p class="empty-state">' + t("progress_load_error") + '</p>';
-          });
-        });
         progressAccordion.appendChild(det);
+        renderExerciseChartOnly(det, r.ex.id, r.data);
       });
     } catch (_) {
       progressAccordion.innerHTML = '<p class="empty-state">' + t("progress_load_error") + '</p>';
     }
+  }
+
+  function renderAllExercisesTable(tableEl, results) {
+    if (!tableEl) return;
+    var locale = LOCALES[currentLang] || "fi-FI";
+    function fd(d) { return new Date(d).toLocaleDateString(locale, { day: "numeric", month: "numeric", year: "2-digit" }); }
+
+    var rows = "";
+    results.forEach(function (r) {
+      if (!r.data.length) return;
+      var byReps = {};
+      r.data.forEach(function (point) {
+        point.sets.forEach(function (s) {
+          var rep = s.reps;
+          if (!byReps[rep]) {
+            byReps[rep] = { min: { weight: s.weight, date: point.date }, max: { weight: s.weight, date: point.date } };
+          } else {
+            if (s.weight < byReps[rep].min.weight) byReps[rep].min = { weight: s.weight, date: point.date };
+            if (s.weight > byReps[rep].max.weight) byReps[rep].max = { weight: s.weight, date: point.date };
+          }
+        });
+      });
+      var repsList = Object.keys(byReps).map(Number).sort(function (a, b) { return a - b; });
+      repsList.forEach(function (rep, i) {
+        var rec = byReps[rep];
+        rows += "<tr" + (i === 0 ? ' class="ex-first-row"' : "") + ">" +
+          (i === 0 ? '<td class="ex-name" rowspan="' + repsList.length + '">' + escapeHtml(r.ex.name) + "</td>" : "") +
+          "<td>" + rep + "\u00d7</td>" +
+          "<td>" + rec.min.weight + "\u00a0kg</td><td class='stats-date'>" + fd(rec.min.date) + "</td>" +
+          "<td>" + rec.max.weight + "\u00a0kg</td><td class='stats-date'>" + fd(rec.max.date) + "</td>" +
+          "</tr>";
+      });
+    });
+
+    if (!rows) { tableEl.hidden = true; return; }
+    tableEl.hidden = false;
+    tableEl.querySelector("tbody").innerHTML = rows;
   }
 
   function filterByRange(data) {
@@ -3102,19 +3141,18 @@
     return data.filter(function (p) { return new Date(p.date) >= cutoff; });
   }
 
-  function renderExerciseChart(det, exerciseId, allData) {
+  function renderExerciseChartOnly(det, exerciseId, allData) {
     var body = det.querySelector(".progress-ex-body");
     var filtered = filterByRange(allData);
-
-    // Stats table (always all-time)
-    var statsHtml = buildStatsTableHtml(allData);
-    // Chart
     var canvasId = "progress-chart-" + exerciseId;
-    body.innerHTML =
-      statsHtml +
-      '<div class="progress-chart-wrap">' +
-      '<canvas id="' + canvasId + '"></canvas>' +
-      '</div>';
+
+    // Preserve existing table if present, only replace chart area
+    var existingChart = body.querySelector(".progress-chart-wrap");
+    if (!existingChart) {
+      body.innerHTML = '<div class="progress-chart-wrap"><canvas id="' + canvasId + '"></canvas></div>';
+    } else {
+      existingChart.innerHTML = '<canvas id="' + canvasId + '"></canvas>';
+    }
 
     if (!filtered.length) {
       body.querySelector(".progress-chart-wrap").innerHTML =
@@ -3128,10 +3166,6 @@
     var labelColor = isDark ? "#ccc" : "#555";
     var locale = LOCALES[currentLang] || "fi-FI";
 
-    var labels = filtered.map(function (p) {
-      return new Date(p.date).toLocaleDateString(locale, { month: "short", day: "numeric" });
-    });
-
     if (progressCharts[exerciseId]) {
       progressCharts[exerciseId].destroy();
       delete progressCharts[exerciseId];
@@ -3140,7 +3174,9 @@
     progressCharts[exerciseId] = new Chart(document.getElementById(canvasId), {
       type: "line",
       data: {
-        labels: labels,
+        labels: filtered.map(function (p) {
+          return new Date(p.date).toLocaleDateString(locale, { month: "short", day: "numeric" });
+        }),
         datasets: [
           {
             label: t("progress_chart_weight"),
@@ -3205,36 +3241,6 @@
         },
       },
     });
-  }
-
-  function buildStatsTableHtml(data) {
-    var byReps = {};
-    data.forEach(function (point) {
-      point.sets.forEach(function (s) {
-        var r = s.reps;
-        if (!byReps[r]) {
-          byReps[r] = { min: { weight: s.weight, date: point.date }, max: { weight: s.weight, date: point.date } };
-        } else {
-          if (s.weight < byReps[r].min.weight) byReps[r].min = { weight: s.weight, date: point.date };
-          if (s.weight > byReps[r].max.weight) byReps[r].max = { weight: s.weight, date: point.date };
-        }
-      });
-    });
-    var repsCounts = Object.keys(byReps).map(Number).sort(function (a, b) { return a - b; });
-    if (!repsCounts.length) return "";
-    var locale = LOCALES[currentLang] || "fi-FI";
-    function fd(d) { return new Date(d).toLocaleDateString(locale, { day: "numeric", month: "numeric", year: "2-digit" }); }
-    var rows = repsCounts.map(function (r) {
-      var rec = byReps[r];
-      return "<tr><td>" + r + "\u00d7</td>" +
-        "<td>" + rec.min.weight + "\u00a0kg</td><td class='stats-date'>" + fd(rec.min.date) + "</td>" +
-        "<td>" + rec.max.weight + "\u00a0kg</td><td class='stats-date'>" + fd(rec.max.date) + "</td></tr>";
-    }).join("");
-    return '<table class="progress-stats-table"><thead><tr>' +
-      "<th>" + t("progress_stats_reps") + "</th>" +
-      "<th>" + t("progress_stats_min") + "</th><th></th>" +
-      "<th>" + t("progress_stats_max") + "</th><th></th>" +
-      "</tr></thead><tbody>" + rows + "</tbody></table>";
   }
 
   // ========== ADMIN MODULE ==========

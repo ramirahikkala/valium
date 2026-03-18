@@ -306,7 +306,7 @@
 
           <!-- Progress sub-view -->
           <div id="gym-progress" class="gym-section" hidden>
-            <div class="progress-header">
+            <div class="progress-sticky-bar">
               <h2 class="gym-section-heading" data-i18n="progress_heading">Kehityskäyrät</h2>
               <div class="progress-range-btns">
                 <button class="btn btn-sm progress-range-btn" data-progress-range="3" data-i18n="progress_range_3m">3 kk</button>
@@ -315,6 +315,19 @@
                 <button class="btn btn-sm progress-range-btn active" data-progress-range="all" data-i18n="progress_range_all">Kaikki</button>
               </div>
             </div>
+            <table id="progress-all-table" class="progress-stats-table progress-all-table" hidden>
+              <thead>
+                <tr>
+                  <th data-i18n="exercise_name_placeholder">Liike</th>
+                  <th data-i18n="progress_stats_reps">Toistot</th>
+                  <th data-i18n="progress_stats_min">Min</th>
+                  <th></th>
+                  <th data-i18n="progress_stats_max">Max</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
             <div id="progress-accordion"></div>
           </div>
 
