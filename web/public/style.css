@@ -1843,11 +1843,36 @@ input[type="datetime-local"]:focus {
   display: flex;
   gap: 0.75rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .progress-controls select {
   flex: 1;
+  min-width: 160px;
   max-width: 320px;
+}
+
+.progress-range-btns {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.progress-range-btn {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+
+.progress-range-btn.active,
+.progress-range-btn:hover {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
 }
 
 .progress-chart-wrap {
@@ -1861,6 +1886,47 @@ input[type="datetime-local"]:focus {
 .progress-chart-wrap canvas {
   width: 100% !important;
   max-height: 340px;
+}
+
+.progress-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.progress-stats-table th,
+.progress-stats-table td {
+  padding: 0.5rem 0.9rem;
+  text-align: left;
+}
+
+.progress-stats-table thead tr {
+  background: var(--color-surface-alt, var(--color-border));
+}
+
+.progress-stats-table th {
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+}
+
+.progress-stats-table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.progress-stats-table td:first-child {
+  font-weight: 600;
+}
+
+.stats-date {
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
 }
 
 /* ---------- Responsive ---------- */

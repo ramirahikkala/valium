@@ -309,11 +309,29 @@
             <h2 class="gym-section-heading" data-i18n="progress_heading">Kehityskäyrät</h2>
             <div class="progress-controls">
               <select id="progress-exercise-select"></select>
+              <div class="progress-range-btns">
+                <button class="btn btn-sm progress-range-btn" data-progress-range="3" data-i18n="progress_range_3m">3 kk</button>
+                <button class="btn btn-sm progress-range-btn" data-progress-range="6" data-i18n="progress_range_6m">6 kk</button>
+                <button class="btn btn-sm progress-range-btn" data-progress-range="12" data-i18n="progress_range_1y">1 v</button>
+                <button class="btn btn-sm progress-range-btn active" data-progress-range="all" data-i18n="progress_range_all">Kaikki</button>
+              </div>
             </div>
             <div id="progress-chart-wrap" class="progress-chart-wrap" hidden>
               <canvas id="progress-chart"></canvas>
             </div>
             <p id="progress-empty" class="empty-state" hidden></p>
+            <table id="progress-stats" class="progress-stats-table" hidden>
+              <thead>
+                <tr>
+                  <th data-i18n="progress_stats_reps">Toistot</th>
+                  <th data-i18n="progress_stats_min">Min</th>
+                  <th></th>
+                  <th data-i18n="progress_stats_max">Max</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
           </div>
 
         </div>
