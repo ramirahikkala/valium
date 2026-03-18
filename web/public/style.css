@@ -1839,17 +1839,16 @@ input[type="datetime-local"]:focus {
 
 /* ---------- Progress tab ---------- */
 
-.progress-controls {
+.progress-header {
   display: flex;
-  gap: 0.75rem;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
-.progress-controls select {
-  flex: 1;
-  min-width: 160px;
-  max-width: 320px;
+.progress-header .gym-section-heading {
+  margin: 0;
 }
 
 .progress-range-btns {
@@ -1873,6 +1872,52 @@ input[type="datetime-local"]:focus {
   background: var(--color-primary);
   color: #fff;
   border-color: var(--color-primary);
+}
+
+#progress-accordion {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-ex-details {
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.progress-ex-summary {
+  padding: 0.85rem 1.25rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.progress-ex-summary::-webkit-details-marker { display: none; }
+
+.progress-ex-summary::before {
+  content: "\25bc";
+  font-size: 0.65rem;
+  color: var(--color-text-muted);
+  transition: transform 0.2s;
+}
+
+.progress-ex-details[open] > .progress-ex-summary::before {
+  transform: rotate(-180deg);
+}
+
+.progress-ex-body {
+  padding: 0 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-border);
 }
 
 .progress-chart-wrap {
