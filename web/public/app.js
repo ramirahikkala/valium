@@ -2939,7 +2939,8 @@
       var sessions = await apiFetch(GYM_API + "/sessions");
       if (!sessions) return;
       renderSessionsList(sessions);
-    } catch (_) {
+    } catch (err) {
+      console.error("loadGymHistory error:", err);
       sessionsListEl.innerHTML = '<p class="empty-state">' + t("sessions_load_error") + '</p>';
     }
   }
