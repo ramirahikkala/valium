@@ -162,6 +162,7 @@
       no_sessions_text: "Ei treenejä vielä.",
       session_badge_done: "Valmis",
       session_badge_active: "Kesken",
+      resume_session_btn: "Jatka",
       no_sets_text: "Ei kirjattuja sarjoja.",
       sets_load_error: "Virhe haettaessa sarjoja.",
       sessions_load_error: "Virhe haettaessa treenejä.",
@@ -527,6 +528,7 @@
       no_sessions_text: "No workouts yet.",
       session_badge_done: "Done",
       session_badge_active: "Active",
+      resume_session_btn: "Resume",
       no_sets_text: "No logged sets.",
       sets_load_error: "Error loading sets.",
       sessions_load_error: "Error loading workouts.",
@@ -2679,6 +2681,13 @@
     card.querySelector(".ewc-done-banner").hidden = false;
     card.classList.remove("resting");
     card.classList.add("done");
+
+    // Auto-complete: if all exercises are done, trigger completion flow
+    if (gymActiveExercises.length > 0 && gymActiveExercises.every(function (ex) {
+      return gymExerciseStates[ex.id] === "done";
+    })) {
+      completeWorkoutBtn.click();
+    }
   }
 
   function startRestCountdown(exId, seconds) {
@@ -2967,6 +2976,10 @@
         ? '<span class="session-badge done">' + t("session_badge_done") + '</span>'
         : '<span class="session-badge active">' + t("session_badge_active") + '</span>';
 
+      var resumeBtn = !s.completed_at
+        ? '<button class="btn btn-primary btn-xs" data-action="resume-session" data-id="' + s.id + '" data-program-id="' + (s.program_id || "") + '">' + t("resume_session_btn") + '</button>'
+        : '';
+
       item.innerHTML =
         '<div class="session-header" data-action="toggle-session">' +
         '<div class="session-info">' +
@@ -2975,6 +2988,7 @@
         '<span class="session-date">' + formatDate(s.started_at) + duration + "</span>" +
         "</div>" +
         '<div class="session-header-actions">' +
+        resumeBtn +
         '<button class="btn btn-danger btn-xs" data-action="delete-session" data-id="' + s.id + '">\u2715</button>' +
         '<span class="session-toggle-icon">\u25bc</span>' +
         "</div>" +
@@ -2986,6 +3000,21 @@
   }
 
   sessionsListEl.addEventListener("click", async function (e) {
+    var resumeBtn = e.target.closest("[data-action='resume-session']");
+    if (resumeBtn) {
+      e.stopPropagation();
+      var sessionId = parseInt(resumeBtn.dataset.id, 10);
+      try {
+        var sessions = await apiFetch(GYM_API + "/sessions");
+        var found = sessions && sessions.find(function (s) { return s.id === sessionId; });
+        if (found) {
+          localStorage.setItem("gymActiveSessionId", String(sessionId));
+          switchGymTab("workout");
+        }
+      } catch (_) {}
+      return;
+    }
+
     var deleteBtn = e.target.closest("[data-action='delete-session']");
     if (deleteBtn) {
       e.stopPropagation();
