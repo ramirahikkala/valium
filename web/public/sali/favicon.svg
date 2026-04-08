@@ -1,12 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- Dumbbell icon -->
-  <rect x="28" y="26" width="8" height="12" rx="2" fill="#1c1c1e"/>
-  <!-- Left side -->
-  <rect x="10" y="24" width="6" height="16" rx="3" fill="#1c1c1e"/>
-  <rect x="4" y="27" width="6" height="10" rx="2.5" fill="#1c1c1e"/>
-  <rect x="14" y="26" width="14" height="12" rx="1" fill="#4a4a4e"/>
-  <!-- Right side -->
-  <rect x="48" y="24" width="6" height="16" rx="3" fill="#1c1c1e"/>
-  <rect x="54" y="27" width="6" height="10" rx="2.5" fill="#1c1c1e"/>
-  <rect x="36" y="26" width="14" height="12" rx="1" fill="#4a4a4e"/>
+  <!-- Bar -->
+  <rect x="20" y="30" width="24" height="4" rx="2" fill="#1c1c1e"/>
+  <!-- Left weight plates -->
+  <rect x="8" y="22" width="7" height="20" rx="3" fill="#1c1c1e"/>
+  <rect x="14" y="26" width="6" height="12" rx="2" fill="#4a4a4e"/>
+  <!-- Right weight plates -->
+  <rect x="49" y="22" width="7" height="20" rx="3" fill="#1c1c1e"/>
+  <rect x="44" y="26" width="6" height="12" rx="2" fill="#4a4a4e"/>
 </svg>
