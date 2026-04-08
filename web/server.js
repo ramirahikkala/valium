@@ -15,10 +15,10 @@ app.use(
   })
 );
 
-// Sali (gym) app — served for sali.* hostname
-const saliDir = path.join(__dirname, "public", "sali");
 const publicDir = path.join(__dirname, "public");
 
+// Sali (gym) app — served for sali.* hostname
+const saliDir = path.join(__dirname, "public", "sali");
 app.use(function (req, res, next) {
   var host = req.hostname || "";
   if (!host.startsWith("sali.")) return next();
@@ -27,6 +27,20 @@ app.use(function (req, res, next) {
   express.static(saliDir)(req, res, function () {
     express.static(publicDir)(req, res, function () {
       res.sendFile(path.join(saliDir, "index.html"));
+    });
+  });
+});
+
+// Kasvit (plants) app — served for kasvit.* hostname
+const kasvitDir = path.join(__dirname, "public", "kasvit");
+app.use(function (req, res, next) {
+  var host = req.hostname || "";
+  if (!host.startsWith("kasvit.")) return next();
+
+  // Try kasvit-specific static files first, then shared assets
+  express.static(kasvitDir)(req, res, function () {
+    express.static(publicDir)(req, res, function () {
+      res.sendFile(path.join(kasvitDir, "index.html"));
     });
   });
 });

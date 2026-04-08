@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kasvit</title>
+  <link rel="icon" href="/kasvit/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/common/common.css">
+</head>
+<body>
+  <!-- Login screen -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-card">
+      <h1>Kasvit</h1>
+      <p class="subtitle">Hallinnoi kasvikokoelmaasi</p>
+      <div id="google-signin-btn" class="google-signin-wrapper"></div>
+      <p id="login-error" class="login-error" hidden></p>
+    </div>
+  </div>
+
+  <!-- App (hidden until authenticated) -->
+  <div id="app-container" hidden>
+    <!-- Header injected by common.js -->
+
+    <div class="app-layout kasvit-layout">
+      <!-- Plants sub-tab nav -->
+      <nav class="kasvit-tab-nav">
+        <button class="sidebar-plants-btn active" data-plants-tab="list" data-i18n="plants_list_tab">Kasvit</button>
+        <button class="sidebar-plants-btn" data-plants-tab="locations" data-i18n="plants_locations_tab">Sijainnit</button>
+        <button class="sidebar-plants-btn" data-plants-tab="notes" data-i18n="plants_notes_tab">Muistiinpanot</button>
+        <button class="sidebar-plants-btn" data-plants-tab="guides" data-i18n="plants_guides_tab">Kasvatusohjeet</button>
+      </nav>
+
+      <main class="main-content">
+        <p id="error-message" class="error-message" hidden></p>
+
+        <!-- Plants list sub-view -->
+        <div id="plants-list-section" class="plants-section">
+          <div class="plants-toolbar">
+            <button class="btn btn-primary btn-sm" id="add-plant-btn" data-i18n="add_plant_btn">+ Lisää kasvi</button>
+            <input type="search" id="plants-search" class="plants-search" data-i18n-placeholder="plants_search_placeholder" placeholder="Hae...">
+            <div class="plants-view-toggle" role="group" aria-label="Näkymä">
+              <button id="plants-view-grid-btn" class="btn btn-icon active" title="Kortit">⊞</button>
+              <button id="plants-view-list-btn" class="btn btn-icon" title="Lista">☰</button>
+            </div>
+          </div>
+          <div class="plants-filters">
+            <select id="plants-filter-status" class="plants-filter-select">
+              <option value="" data-i18n="plants_all_statuses">Kaikki tilat</option>
+              <option value="active" data-i18n="plant_status_active">Aktiivinen</option>
+              <option value="wishlist" data-i18n="plant_status_wishlist">Haluaisin</option>
+              <option value="lost" data-i18n="plant_status_lost">Menetetty</option>
+            </select>
+            <select id="plants-filter-category" class="plants-filter-select">
+              <option value="" data-i18n="plants_all_categories">Kaikki kategoriat</option>
+              <option value="perennial" data-i18n="plant_cat_perennial">Monivuotinen</option>
+              <option value="annual" data-i18n="plant_cat_annual">Yksivuotinen</option>
+              <option value="shrub" data-i18n="plant_cat_shrub">Pensas</option>
+              <option value="tree" data-i18n="plant_cat_tree">Puu</option>
+              <option value="houseplant" data-i18n="plant_cat_houseplant">Huonekasvi</option>
+              <option value="vegetable" data-i18n="plant_cat_vegetable">Vihannes</option>
+              <option value="herb" data-i18n="plant_cat_herb">Yrtti</option>
+              <option value="bulb" data-i18n="plant_cat_bulb">Sipulikasvi</option>
+              <option value="other" data-i18n="plant_cat_other">Muu</option>
+            </select>
+            <select id="plants-filter-location" class="plants-filter-select">
+              <option value="" data-i18n="plants_all_locations">Kaikki sijainnit</option>
+            </select>
+            <select id="plants-group-by" class="plants-filter-select">
+              <option value="" data-i18n="plants_group_by_none">Ei ryhmittelyä</option>
+              <option value="category" data-i18n="plants_group_by_category">Kategorian mukaan</option>
+              <option value="location" data-i18n="plants_group_by_location">Sijainnin mukaan</option>
+              <option value="status" data-i18n="plants_group_by_status">Tilan mukaan</option>
+            </select>
+          </div>
+          <div id="plants-count" class="plants-count"></div>
+          <div id="plants-grid" class="plants-grid"></div>
+        </div>
+
+        <!-- Plant detail sub-view (read-only) -->
+        <div id="plants-detail-section" class="plants-section" hidden>
+          <div class="plants-detail-back">
+            <button class="btn btn-secondary btn-sm" id="plants-detail-back-btn" data-i18n="plants_back_btn">← Takaisin</button>
+            <button class="btn btn-primary btn-sm" id="plants-detail-edit-btn" data-i18n="plant_edit_btn">✎ Muokkaa</button>
+          </div>
+          <div class="plants-detail-header">
+            <h2 id="plants-detail-latin" class="plants-detail-latin"></h2>
+            <div id="plants-detail-cultivar" class="plants-detail-cultivar" hidden></div>
+            <div id="plants-detail-common" class="plants-detail-common" hidden></div>
+            <div id="plants-detail-badges" class="plant-card-meta"></div>
+          </div>
+          <div id="plants-detail-images" class="plants-detail-images">
+            <div id="plants-image-gallery" class="plants-image-gallery"></div>
+          </div>
+          <div id="plants-detail-fields" class="plants-detail-fields"></div>
+          <div id="plants-ai-summary-section" class="plants-ai-summary-section" hidden>
+            <h3 class="plants-ai-summary-heading" data-i18n="plant_ai_summary_heading">AI-yhteenveto</h3>
+            <div id="plants-detail-ai-summary" class="plants-ai-summary"></div>
+          </div>
+        </div>
+
+        <!-- Plant edit sub-view -->
+        <div id="plants-edit-section" class="plants-section" hidden>
+          <div class="plants-detail-back">
+            <button class="btn btn-secondary btn-sm" id="plants-edit-back-btn" data-i18n="plants_back_btn">← Takaisin</button>
+            <button class="btn btn-danger btn-sm" id="plants-edit-delete-btn" data-i18n="plant_edit_delete_btn">Poista kasvi</button>
+          </div>
+          <div class="plants-edit-heading-row">
+            <h2 class="plants-edit-heading" id="plants-edit-heading" data-i18n="plant_modal_edit_heading">Muokkaa kasvia</h2>
+            <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-ai-fill-btn"
+                    data-i18n="plant_ai_fill_btn">✨ Täydennä AI:lla</button>
+          </div>
+
+          <form id="plant-edit-form">
+            <input type="hidden" id="plant-edit-id">
+            <div class="form-group">
+              <label for="plant-edit-latin-name" data-i18n="plant_label_latin">Tieteellinen nimi</label>
+              <input type="text" id="plant-edit-latin-name" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="plant-edit-common-name" data-i18n="plant_label_common">Suomalainen nimi</label>
+              <input type="text" id="plant-edit-common-name" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="plant-edit-cultivar" data-i18n="plant_label_cultivar">Lajike</label>
+              <input type="text" id="plant-edit-cultivar" autocomplete="off">
+            </div>
+            <div id="plant-edit-extra-fields">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="plant-edit-category" data-i18n="plant_label_category">Kategoria</label>
+                  <select id="plant-edit-category">
+                    <option value="perennial" data-i18n="plant_cat_perennial">Monivuotinen</option>
+                    <option value="annual" data-i18n="plant_cat_annual">Yksivuotinen</option>
+                    <option value="shrub" data-i18n="plant_cat_shrub">Pensas</option>
+                    <option value="tree" data-i18n="plant_cat_tree">Puu</option>
+                    <option value="houseplant" data-i18n="plant_cat_houseplant">Huonekasvi</option>
+                    <option value="vegetable" data-i18n="plant_cat_vegetable">Vihannes</option>
+                    <option value="herb" data-i18n="plant_cat_herb">Yrtti</option>
+                    <option value="bulb" data-i18n="plant_cat_bulb">Sipulikasvi</option>
+                    <option value="other" data-i18n="plant_cat_other">Muu</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="plant-edit-status" data-i18n="plant_label_status">Tila</label>
+                  <select id="plant-edit-status">
+                    <option value="active" data-i18n="plant_status_active">Aktiivinen</option>
+                    <option value="wishlist" data-i18n="plant_status_wishlist">Haluaisin</option>
+                    <option value="lost" data-i18n="plant_status_lost">Menetetty</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group" id="plant-edit-lost-year-group" hidden>
+                <label for="plant-edit-lost-year" data-i18n="plant_label_lost_year">Menetetty vuonna</label>
+                <input type="number" id="plant-edit-lost-year" min="1900" max="2100">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="plant-edit-location" data-i18n="plant_label_location">Sijainti</label>
+                  <select id="plant-edit-location">
+                    <option value="" data-i18n="plant_no_location">— ei sijaintia —</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="plant-edit-year-acquired" data-i18n="plant_label_year_acquired">Vuosi hankittu</label>
+                  <input type="number" id="plant-edit-year-acquired" min="1900" max="2100">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="plant-edit-source" data-i18n="plant_label_source">Lähde / mistä saatu</label>
+                <input type="text" id="plant-edit-source" autocomplete="off">
+              </div>
+              <div class="form-group form-group-inline">
+                <label>
+                  <input type="checkbox" id="plant-edit-own-seeds">
+                  <span data-i18n="plant_label_own_seeds">Oma siemenkasvatus</span>
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="plant-edit-notes" data-i18n="plant_label_notes">Muistiinpanot</label>
+                <textarea id="plant-edit-notes" rows="3"></textarea>
+              </div>
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="btn btn-secondary" id="plant-edit-cancel-btn" data-i18n="cancel">Peruuta</button>
+              <button type="submit" class="btn btn-primary" id="plant-edit-submit-btn" data-i18n="save">Tallenna</button>
+            </div>
+          </form>
+
+          <div class="plants-edit-images-section">
+            <h3 class="plants-edit-section-heading" data-i18n="plant_edit_images_heading">Kuvat</h3>
+            <div id="plants-edit-gallery" class="plants-image-gallery"></div>
+            <div class="plants-edit-image-actions">
+              <label class="btn btn-secondary btn-sm plants-upload-btn">
+                <span data-i18n="plant_image_camera_btn">📷 Kamera</span>
+                <input type="file" id="plants-edit-image-camera" accept="image/*" capture="environment" style="position:absolute;width:0;height:0;opacity:0">
+              </label>
+              <label class="btn btn-secondary btn-sm plants-upload-btn">
+                <span data-i18n="plant_image_upload_btn">🖼 Galleria</span>
+                <input type="file" id="plants-edit-image-upload" accept="image/*" style="position:absolute;width:0;height:0;opacity:0">
+              </label>
+              <button id="plants-edit-wiki-image-btn" class="btn btn-secondary btn-sm"
+                      data-i18n="plant_ai_fetch_image_btn">🔍 Hae kuva verkosta</button>
+            </div>
+          </div>
+
+          <div class="plants-edit-ai-section">
+            <h3 class="plants-edit-section-heading" data-i18n="plant_ai_summary_heading">AI-yhteenveto</h3>
+            <div id="plants-edit-ai-summary-section" class="plants-ai-summary-section" hidden>
+              <div id="plants-edit-ai-summary" class="plants-ai-summary"></div>
+            </div>
+            <button id="plants-edit-ai-summary-btn" class="btn btn-secondary btn-sm"
+                    data-i18n="plant_ai_summary_btn">✨ Luo AI-yhteenveto</button>
+          </div>
+        </div>
+
+        <!-- Locations sub-view -->
+        <div id="plants-locations-section" class="plants-section" hidden>
+          <h2 class="gym-section-heading" data-i18n="plants_locations_heading">Sijainnit</h2>
+          <form id="add-location-form" class="inline-form">
+            <input type="text" id="new-location-name" data-i18n-placeholder="new_location_placeholder" placeholder="Uusi sijainti..." required autocomplete="off">
+            <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+          </form>
+          <div id="locations-list"></div>
+        </div>
+
+        <!-- Notes sub-view -->
+        <div id="plants-notes-section" class="plants-section" hidden>
+          <h2 class="gym-section-heading" data-i18n="plants_notes_heading">Muistiinpanot</h2>
+          <form id="add-note-form" class="plant-note-add-form">
+            <input type="text" id="new-note-title" data-i18n-placeholder="new_note_placeholder" placeholder="Otsikko..." required autocomplete="off">
+            <textarea id="new-note-text" rows="4" data-i18n-placeholder="new_note_text_placeholder" placeholder="Muistiinpano..."></textarea>
+            <button type="submit" class="btn btn-primary btn-sm" data-i18n="add_btn">Lisää</button>
+          </form>
+          <div id="plants-notes-list"></div>
+        </div>
+
+        <!-- Growing guides list sub-view -->
+        <div id="plants-guides-section" class="plants-section" hidden>
+          <div class="plants-toolbar">
+            <h2 class="plants-toolbar-heading" data-i18n="plants_guides_heading">Kasvatusohjeet</h2>
+            <input type="search" id="plants-guides-search" class="plants-search" data-i18n-placeholder="plants_search_placeholder" placeholder="Hae...">
+            <button class="btn btn-primary btn-sm" id="add-guide-btn" data-i18n="plants_add_guide_btn">+ Uusi ohje</button>
+          </div>
+          <div id="plants-guides-grid" class="plants-grid"></div>
+        </div>
+
+        <!-- Growing guide detail sub-view -->
+        <div id="plants-guide-detail-section" class="plants-section" hidden>
+          <div class="plants-toolbar">
+            <button id="guide-detail-back-btn" class="btn btn-secondary btn-sm" data-i18n="plants_back_btn">← Takaisin</button>
+            <div style="margin-left:auto;display:flex;gap:0.5rem;flex-wrap:wrap">
+              <button id="guide-edit-btn" class="btn btn-primary btn-sm" data-i18n="plant_edit_btn">✎ Muokkaa</button>
+              <button id="guide-delete-btn" class="btn btn-danger btn-sm" data-i18n="delete_btn">Poista</button>
+            </div>
+          </div>
+          <div id="plants-guide-detail-content" class="plant-guide-detail-card"></div>
+        </div>
+
+        <!-- Growing guide edit sub-view -->
+        <div id="plants-guide-edit-section" class="plants-section" hidden>
+          <div class="plants-toolbar">
+            <button id="guide-edit-back-btn" class="btn btn-secondary btn-sm" data-i18n="plants_back_btn">← Takaisin</button>
+            <button id="guide-edit-save-btn" class="btn btn-primary btn-sm" data-i18n="save_btn">Tallenna</button>
+            <button type="button" id="guide-ai-fill-btn" class="btn btn-secondary btn-sm" data-i18n="plants_guide_ai_btn">✨ Täydennä AI:lla</button>
+          </div>
+          <div class="plant-guide-edit-form">
+            <p id="guide-ai-error" class="plant-ai-error" hidden></p>
+            <div class="form-group">
+              <label data-i18n="plants_guide_plant_name_label">Kasvin nimi (suomi)</label>
+              <input type="text" id="guide-edit-plant-name" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label data-i18n="plants_guide_latin_name_label">Tieteellinen nimi</label>
+              <input type="text" id="guide-edit-latin-name" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label data-i18n="plants_guide_text_label">Kasvatusohje</label>
+              <textarea id="guide-edit-text" rows="12" style="width:100%"></textarea>
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- Plant collection share modal -->
+  <div id="plant-share-modal" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h2 data-i18n="share_collection_title">Jaa kokoelma</h2>
+        <button class="modal-close" id="plant-share-modal-close">&#x2715;</button>
+      </div>
+      <div id="plant-share-list" class="share-list"></div>
+      <form id="plant-share-form" class="share-add-form">
+        <select id="plant-share-user"></select>
+        <select id="plant-share-permission">
+          <option value="read" data-i18n="share_perm_read">Luku</option>
+          <option value="write" data-i18n="share_perm_write">Muokkaus</option>
+        </select>
+        <button type="submit" class="btn btn-primary btn-sm" data-i18n="share_add_btn">Jaa</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Plant image lightbox -->
+  <div id="plant-image-lightbox" class="plant-lightbox" hidden>
+    <button id="plant-lightbox-close" class="plant-lightbox-close">&#x2715;</button>
+    <img id="plant-lightbox-img" class="plant-lightbox-img" src="" alt="">
+  </div>
+
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="/common/common.js"></script>
+  <script src="/kasvit/kasvit.js"></script>
+</body>
+</html>
