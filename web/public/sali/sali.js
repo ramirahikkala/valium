@@ -313,9 +313,6 @@
   var loginError = document.getElementById("login-error");
   var googleSigninBtn = document.getElementById("google-signin-btn");
   var appContainer = document.getElementById("app-container");
-  var userAvatar = document.getElementById("user-avatar");
-  var userName = document.getElementById("user-name");
-  var signOutBtn = document.getElementById("sign-out-btn");
   var errorEl = document.getElementById("error-message");
 
   var authToken = localStorage.getItem("authToken") || null;
@@ -425,20 +422,24 @@
       });
   }
 
-  signOutBtn.addEventListener("click", signOut);
 
   async function initApp() {
     await loadUserSettings();
-    if (currentUser) {
-      userName.textContent = currentUser.name;
-      if (currentUser.picture) {
-        userAvatar.src = currentUser.picture;
-        userAvatar.alt = currentUser.name;
-        userAvatar.hidden = false;
-      } else {
-        userAvatar.hidden = true;
-      }
-    }
+    ValiumCommon.init({
+      appName: t("gym"),
+      user: currentUser,
+      currentLang: currentLang,
+      onSignOut: signOut,
+      onLanguageChange: async function (lang) {
+        await apiFetch("/api/user/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ language: lang }),
+        });
+        localStorage.setItem("lang", lang);
+        location.reload();
+      },
+    });
     showApp();
     // Restore tab from URL hash
     var hashParts = location.hash.slice(1).split("/");

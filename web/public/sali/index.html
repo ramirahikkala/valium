@@ -6,6 +6,7 @@
   <title>Sali</title>
   <link rel="icon" href="/sali/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/common/common.css">
 </head>
 <body>
   <!-- Login screen -->
@@ -20,20 +21,7 @@
 
   <!-- App (hidden until authenticated) -->
   <div id="app-container" hidden>
-    <header>
-      <div class="header-content">
-        <div class="header-left">
-          <h1 data-i18n="gym">Sali</h1>
-        </div>
-        <div class="header-right">
-          <div class="user-info">
-            <img id="user-avatar" class="user-avatar" src="" alt="" hidden>
-            <span id="user-name" class="user-name"></span>
-            <button id="sign-out-btn" class="btn btn-signout" data-i18n="sign_out">Sign out</button>
-          </div>
-        </div>
-      </div>
-    </header>
+    <!-- Header injected by common.js -->
 
     <div class="app-layout sali-layout">
       <!-- Gym sub-tab nav -->
@@ -234,6 +222,7 @@
 
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/common/common.js"></script>
   <script src="/sali/sali.js"></script>
 </body>
 </html>
