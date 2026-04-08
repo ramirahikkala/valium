@@ -5,6 +5,13 @@
   background: var(--color-primary);
   color: #fff;
   z-index: 100;
+  transition: margin-top 0.25s ease;
+}
+
+@media (max-width: 768px) {
+  #common-header.header-hidden {
+    margin-top: -52px;
+  }
 }
 
 #common-header .header-content {

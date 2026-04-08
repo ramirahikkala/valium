@@ -115,6 +115,38 @@ var ValiumCommon = (function () {
         _onSignOut();
       });
     }
+
+    // Auto-hide header on scroll (mobile only)
+    _wireScrollHide();
+  }
+
+  function _wireScrollHide() {
+    var header = document.getElementById("common-header");
+    if (!header) return;
+
+    // Find the scrollable content area (works for sali-layout and kasvit-layout)
+    var scroller = document.querySelector(".main-content");
+    if (!scroller) return;
+
+    var lastY = 0;
+    var ticking = false;
+
+    scroller.addEventListener("scroll", function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = scroller.scrollTop;
+        if (y <= 0) {
+          header.classList.remove("header-hidden");
+        } else if (y > lastY) {
+          header.classList.add("header-hidden");
+        } else {
+          header.classList.remove("header-hidden");
+        }
+        lastY = y;
+        ticking = false;
+      });
+    }, { passive: true });
   }
 
   function _esc(str) {
