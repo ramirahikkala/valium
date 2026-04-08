@@ -3593,7 +3593,7 @@ input[type="datetime-local"]:focus {
 .sali-layout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 42px);
   overflow: hidden;
 }
 
@@ -3654,7 +3654,7 @@ input[type="datetime-local"]:focus {
 .kasvit-layout {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 42px);
   overflow: hidden;
 }
 

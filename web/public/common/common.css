@@ -10,7 +10,7 @@
 
 @media (max-width: 768px) {
   #common-header.header-hidden {
-    margin-top: -52px;
+    margin-top: -42px;
   }
 }
 
@@ -19,7 +19,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
-  height: 52px;
+  height: 42px;
 }
 
 #common-header h1 {

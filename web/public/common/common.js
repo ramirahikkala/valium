@@ -128,22 +128,17 @@ var ValiumCommon = (function () {
     var scroller = document.querySelector(".main-content");
     if (!scroller) return;
 
-    var lastY = 0;
     var ticking = false;
 
     scroller.addEventListener("scroll", function () {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(function () {
-        var y = scroller.scrollTop;
-        if (y <= 0) {
+        if (scroller.scrollTop <= 0) {
           header.classList.remove("header-hidden");
-        } else if (y > lastY) {
-          header.classList.add("header-hidden");
         } else {
-          header.classList.remove("header-hidden");
+          header.classList.add("header-hidden");
         }
-        lastY = y;
         ticking = false;
       });
     }, { passive: true });
