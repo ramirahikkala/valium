@@ -135,9 +135,9 @@ var ValiumCommon = (function () {
       ticking = true;
       requestAnimationFrame(function () {
         if (scroller.scrollTop <= 0) {
-          header.classList.remove("header-hidden");
+          header.style.marginTop = "";
         } else {
-          header.classList.add("header-hidden");
+          header.style.marginTop = "-" + header.offsetHeight + "px";
         }
         ticking = false;
       });

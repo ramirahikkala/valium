@@ -8,11 +8,6 @@
   transition: margin-top 0.25s ease;
 }
 
-@media (max-width: 768px) {
-  #common-header.header-hidden {
-    margin-top: -42px;
-  }
-}
 
 #common-header .header-content {
   display: flex;
