@@ -26,8 +26,8 @@
     <div class="app-layout sali-layout">
       <!-- Gym sub-tab nav -->
       <nav class="sali-tab-nav">
-        <button class="sidebar-gym-btn active" data-gym-tab="programs" data-i18n="programs_tab">Ohjelmat</button>
-        <button class="sidebar-gym-btn" data-gym-tab="workout" data-i18n="workout_tab">Treeni</button>
+        <button class="sidebar-gym-btn active" data-gym-tab="workout" data-i18n="workout_tab">Treeni</button>
+        <button class="sidebar-gym-btn" data-gym-tab="programs" data-i18n="programs_tab">Ohjelmat</button>
         <button class="sidebar-gym-btn" data-gym-tab="history" data-i18n="history_tab">Historia</button>
         <button class="sidebar-gym-btn" data-gym-tab="progress" data-i18n="progress_tab">Kehitys</button>
       </nav>
@@ -146,6 +146,7 @@
       <form id="gym-modal-form">
         <input type="hidden" id="gym-modal-program-id">
         <input type="hidden" id="gym-modal-exercise-id">
+        <input type="hidden" id="gym-modal-library-exercise-id">
         <div class="form-group" id="gym-modal-select-group">
           <label for="gym-ex-select" data-i18n="label_exercise">Liike</label>
           <select id="gym-ex-select" required>
@@ -168,6 +169,10 @@
           <div class="form-group">
             <label for="gym-ex-rest" data-i18n="label_rest_seconds">Lepotauko (sekuntia)</label>
             <input type="number" id="gym-ex-rest" min="0" value="90">
+          </div>
+          <div class="form-group" id="gym-ex-failures-group" hidden>
+            <label for="gym-ex-failures" data-i18n="label_consecutive_failures">Epäonnistumisia putkessa</label>
+            <input type="number" id="gym-ex-failures" min="0" value="0">
           </div>
         </div>
         <div id="gym-modal-config-fields" hidden>

@@ -77,6 +77,7 @@
       deload_mode_reset: "Pohjapaino + nousu",
       deload_mode_percent: "\u221210\u00a0% (StrongLifts)",
       failure_threshold_label: "Epäonnistumisia ennen deloadia",
+      label_consecutive_failures: "Epäonnistumisia putkessa",
       autoinc_badge: "↑",
       fail_btn: "Fail",
       failed_label: "Failed ✗",
@@ -206,6 +207,7 @@
       deload_mode_reset: "Base weight + increase",
       deload_mode_percent: "\u221210\u00a0% (StrongLifts)",
       failure_threshold_label: "Failures before deload",
+      label_consecutive_failures: "Consecutive failures",
       autoinc_badge: "↑",
       fail_btn: "Fail",
       failed_label: "Failed ✗",
@@ -442,7 +444,7 @@
     var hashParts = location.hash.slice(1).split("/");
     var hashTab = hashParts[0] || "programs";
     var validTabs = ["programs", "workout", "history", "progress"];
-    gymCurrentTab = validTabs.indexOf(hashTab) !== -1 ? hashTab : "programs";
+    gymCurrentTab = validTabs.indexOf(hashTab) !== -1 ? hashTab : "workout";
     switchGymTab(gymCurrentTab);
   }
 
@@ -493,7 +495,7 @@
   var gymExerciseStates = {};
   var gymWorkoutWeights = {};
   var gymWorkoutRests = {};
-  var gymCurrentTab = "programs";
+  var gymCurrentTab = "workout";
   var gymPrograms = [];
   var selectedProgramId = null;
   var gymFailedExercises = new Set();
@@ -560,6 +562,9 @@
   var gymExSetsInput = document.getElementById("gym-ex-sets");
   var gymExRepsInput = document.getElementById("gym-ex-reps");
   var gymExRestInput = document.getElementById("gym-ex-rest");
+  var gymExFailuresInput = document.getElementById("gym-ex-failures");
+  var gymExFailuresGroup = document.getElementById("gym-ex-failures-group");
+  var gymModalLibraryExerciseId = document.getElementById("gym-modal-library-exercise-id");
   var gymModalCancelBtn = document.getElementById("gym-modal-cancel");
   var gymAutoincEnabled = document.getElementById("gym-autoinc-enabled");
   var gymAutoincSettings = document.getElementById("gym-autoinc-settings");
@@ -777,9 +782,11 @@
         '<div class="exercise-btns">' +
         '<button class="btn btn-icon btn-sm" data-action="edit-exercise"' +
         ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '"' +
+        ' data-library-ex-id="' + ex.exercise_id + '"' +
         ' data-ex-exercise-name="' + escapeHtml(ex.exercise_name) + '"' +
         ' data-ex-sets="' + ex.sets + '" data-ex-reps="' + ex.reps +
-        '" data-ex-rest="' + ex.rest_seconds + '">' + t("edit_exercise_btn") + '</button>' +
+        '" data-ex-rest="' + ex.rest_seconds +
+        '" data-ex-failures="' + (ex.consecutive_failures || 0) + '">' + t("edit_exercise_btn") + '</button>' +
         '<button class="btn btn-danger btn-sm" data-action="delete-exercise"' +
         ' data-ex-id="' + ex.id + '" data-program-id="' + program.id + '">' + t("delete_btn") + '</button>' +
         '</div></div>'
@@ -850,10 +857,12 @@
       openGymModal("edit", {
         programId: parseInt(btn.dataset.programId, 10),
         exerciseId: parseInt(btn.dataset.exId, 10),
+        libraryExerciseId: parseInt(btn.dataset.libraryExId, 10),
         exerciseName: btn.dataset.exExerciseName,
         sets: parseInt(btn.dataset.exSets, 10),
         reps: parseInt(btn.dataset.exReps, 10),
         rest_seconds: parseInt(btn.dataset.exRest, 10),
+        consecutive_failures: parseInt(btn.dataset.exFailures, 10) || 0,
       });
     } else if (action === "delete-exercise") {
       var programId = parseInt(btn.dataset.programId, 10);
@@ -954,6 +963,9 @@
     gymExSetsInput.value = data.sets || 3;
     gymExRepsInput.value = data.reps || 10;
     gymExRestInput.value = data.rest_seconds !== undefined ? data.rest_seconds : 90;
+    gymExFailuresInput.value = data.consecutive_failures || 0;
+    gymExFailuresGroup.hidden = (mode !== "edit");
+    gymModalLibraryExerciseId.value = data.libraryExerciseId || "";
     gymExWeightInput.value = data.weight !== undefined ? data.weight : 0;
     gymAutoincEnabled.checked = !!data.auto_increment;
     gymAutoincSettings.hidden = !data.auto_increment;
@@ -1030,13 +1042,16 @@
       updateExerciseConfig(exerciseId, configData);
     } else if (gymModalMode === "edit") {
       var programId = parseInt(gymModalProgramId.value, 10);
+      var libraryExId = gymModalLibraryExerciseId.value ? parseInt(gymModalLibraryExerciseId.value, 10) : null;
       var layoutData = {
         sets: parseInt(gymExSetsInput.value, 10) || 3,
         reps: parseInt(gymExRepsInput.value, 10) || 10,
         rest_seconds: parseInt(gymExRestInput.value, 10) || 0,
       };
+      var newFailures = parseInt(gymExFailuresInput.value, 10) || 0;
       closeGymModal();
       updateExercise(programId, exerciseId, layoutData);
+      if (libraryExId !== null) updateExerciseConfig(libraryExId, { consecutive_failures: newFailures });
     } else {
       var programId = parseInt(gymModalProgramId.value, 10);
       var selectedExId = parseInt(gymExSelectInput.value, 10);
