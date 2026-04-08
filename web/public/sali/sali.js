@@ -113,7 +113,6 @@
       no_sessions_text: "Ei treenejä vielä.",
       session_badge_done: "Valmis",
       session_badge_active: "Kesken",
-      resume_session_btn: "Jatka",
       no_sets_text: "Ei kirjattuja sarjoja.",
       sets_load_error: "Virhe haettaessa sarjoja.",
       sessions_load_error: "Virhe haettaessa treenejä.",
@@ -243,7 +242,6 @@
       no_sessions_text: "No workouts yet.",
       session_badge_done: "Done",
       session_badge_active: "Active",
-      resume_session_btn: "Resume",
       no_sets_text: "No logged sets.",
       sets_load_error: "Error loading sets.",
       sessions_load_error: "Error loading workouts.",
@@ -360,7 +358,6 @@
 
   function signOut() {
     stopAllGymTimers();
-    localStorage.removeItem("gymActiveSessionId");
     authToken = null;
     currentUser = null;
     localStorage.removeItem("authToken");
@@ -1100,7 +1097,6 @@
         return;
       }
     }
-    localStorage.removeItem("gymActiveSessionId");
 
     workoutIdleEl.hidden = false;
     workoutActiveEl.hidden = true;
@@ -1149,7 +1145,6 @@
       gymWorkoutWeights = {};
       gymWorkoutRests = {};
       gymFailedExercises.clear();
-      localStorage.setItem("gymActiveSessionId", String(session.id));
       var exercises = await apiFetch(GYM_API + "/programs/" + programId + "/exercises");
       gymActiveExercises = exercises || [];
       renderActiveWorkout();
@@ -1454,7 +1449,6 @@
       gymActiveExercises = [];
       gymSetsDone = {};
       gymExerciseStates = {};
-      localStorage.removeItem("gymActiveSessionId");
       workoutActiveEl.hidden = true;
       workoutIdleEl.hidden = false;
       await loadWorkoutTab();
@@ -1472,7 +1466,6 @@
       gymActiveExercises = [];
       gymSetsDone = {};
       gymExerciseStates = {};
-      localStorage.removeItem("gymActiveSessionId");
       workoutActiveEl.hidden = true;
       workoutIdleEl.hidden = false;
       await loadWorkoutTab();
