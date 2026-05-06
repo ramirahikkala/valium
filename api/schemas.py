@@ -459,13 +459,6 @@ class PlantCreate(BaseModel):
 
     latin_name: str | None = None
     common_name: str | None = None
-
-    @model_validator(mode="after")
-    def require_at_least_one_name(self) -> "PlantCreate":
-        """Require latin_name or common_name."""
-        if not self.latin_name and not self.common_name:
-            raise ValueError("latin_name or common_name is required")
-        return self
     cultivar: str | None = None
     year_acquired: int | None = None
     source: str | None = None
@@ -474,6 +467,13 @@ class PlantCreate(BaseModel):
     status: str = "active"
     lost_year: int | None = None
     notes: str | None = None
+
+    @model_validator(mode="after")
+    def require_at_least_one_name(self) -> "PlantCreate":
+        """Require latin_name or common_name."""
+        if not self.latin_name and not self.common_name:
+            raise ValueError("latin_name or common_name is required")
+        return self
     own_seeds: bool = False
 
 
@@ -517,7 +517,7 @@ class PlantResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    latin_name: str
+    latin_name: str | None
     common_name: str | None
     cultivar: str | None
     year_acquired: int | None
