@@ -1565,9 +1565,15 @@
   // Edit/add form submit
   plantEditForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+    var latinName = plantEditLatinNameInput.value.trim() || null;
+    var commonName = plantEditCommonNameInput.value.trim() || null;
+    if (!latinName && !commonName) {
+      alert("Anna vähintään tieteellinen tai suomalainen nimi.");
+      return;
+    }
     var payload = {
-      latin_name: plantEditLatinNameInput.value.trim(),
-      common_name: plantEditCommonNameInput.value.trim() || null,
+      latin_name: latinName,
+      common_name: commonName,
       cultivar: plantEditCultivarInput.value.trim() || null,
       category: plantEditCategoryInput.value,
       status: plantEditStatusInput.value,

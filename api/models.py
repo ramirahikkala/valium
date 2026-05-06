@@ -408,7 +408,7 @@ class Plant(Base):
     user_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
     )
-    latin_name: Mapped[str] = mapped_column(String(500), nullable=False)
+    latin_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     common_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cultivar: Mapped[str | None] = mapped_column(String(255), nullable=True)
     year_acquired: Mapped[int | None] = mapped_column(Integer, nullable=True)

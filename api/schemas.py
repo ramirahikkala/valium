@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 from models import NotificationChannel, RecurrenceType, TaskStatus
 
@@ -457,8 +457,15 @@ class PlantLocationResponse(BaseModel):
 class PlantCreate(BaseModel):
     """Schema for creating a plant."""
 
-    latin_name: str
+    latin_name: str | None = None
     common_name: str | None = None
+
+    @model_validator(mode="after")
+    def require_at_least_one_name(self) -> "PlantCreate":
+        """Require latin_name or common_name."""
+        if not self.latin_name and not self.common_name:
+            raise ValueError("latin_name or common_name is required")
+        return self
     cultivar: str | None = None
     year_acquired: int | None = None
     source: str | None = None
