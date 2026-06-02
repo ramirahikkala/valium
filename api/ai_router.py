@@ -176,33 +176,66 @@ async def read_plant_label(
     except json.JSONDecodeError:
         raise HTTPException(status_code=502, detail="AI returned invalid JSON")
 
-    latin_from_label = data_json.get("latin_name")
-    common_from_label = data_json.get("common_name")
-    cultivar = data_json.get("cultivar")
-    category = data_json.get("category")
+    label_texts = [v for v in data_json.values() if isinstance(v, str)]
 
-    # Look up verified names from iNaturalist/GBIF using whatever the label gave us
-    query = latin_from_label or common_from_label
-    if query:
-        lookup = await asyncio.to_thread(_lookup_plant_names, query)
-        if lookup:
-            # Label text is authoritative; lookup fills in the missing counterpart
-            latin_name = latin_from_label or lookup.get("latin_name")
-            common_name = common_from_label or lookup.get("common_name")
-            category = category or lookup.get("category")
-        else:
-            latin_name = latin_from_label
-            common_name = common_from_label
-    else:
-        latin_name = None
-        common_name = None
+    # Look up verified names from iNaturalist/GBIF
+    query = data_json.get("latin_name") or data_json.get("common_name")
+    lookup = await asyncio.to_thread(_lookup_plant_names, query) if query else None
+
+    # Second AI call: classify all available information into the correct fields
+    classify_prompt = _build_classify_prompt(label_texts, lookup)
+    try:
+        raw2 = await ai_complete(session, classify_prompt)
+    except AIError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI classification failed: {e}")
+
+    text2 = raw2.strip()
+    if text2.startswith("```"):
+        lines = text2.splitlines()
+        text2 = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    try:
+        result = json.loads(text2)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="AI returned invalid JSON")
 
     return PlantFillNameResponse(
-        latin_name=latin_name,
-        common_name=common_name,
-        cultivar=cultivar,
-        category=category,
+        latin_name=result.get("latin_name"),
+        common_name=result.get("common_name"),
+        cultivar=result.get("cultivar"),
+        category=result.get("category"),
     )
+
+
+def _build_classify_prompt(label_texts: list[str], lookup: dict | None) -> str:
+    """Build a prompt that asks AI to classify label texts + lookup data into correct fields."""
+    parts = [
+        "You are classifying plant name data into structured fields.",
+        f"Text found on the plant label: {label_texts}",
+    ]
+    if lookup:
+        verified = []
+        if lookup.get("latin_name"):
+            verified.append(f"scientific name: '{lookup['latin_name']}'")
+        if lookup.get("common_name"):
+            verified.append(f"Finnish name: '{lookup['common_name']}'")
+        if verified:
+            parts.append(f"Verified taxonomy data from iNaturalist/GBIF: {', '.join(verified)}")
+
+    parts += [
+        "Using all of the above, assign each piece of text to the correct field.",
+        "Rules:",
+        "- latin_name: binomial scientific name (Genus species). Prefer verified data.",
+        "- common_name: Finnish vernacular name. Prefer verified data.",
+        "- cultivar: variety/cultivar name — any proper name that is neither a scientific nor a Finnish name.",
+        "- category: perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other",
+        "Return ONLY valid JSON: "
+        '{"latin_name": "...", "common_name": "...", "cultivar": "...", "category": "..."}. '
+        "Use null for fields that cannot be determined.",
+    ]
+    return "\n".join(parts)
 
 
 def _lookup_plant_names(query: str) -> dict | None:
