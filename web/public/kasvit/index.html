@@ -108,8 +108,13 @@
           </div>
           <div class="plants-edit-heading-row">
             <h2 class="plants-edit-heading" id="plants-edit-heading" data-i18n="plant_modal_edit_heading">Muokkaa kasvia</h2>
-            <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-ai-fill-btn"
-                    data-i18n="plant_ai_fill_btn">✨ Täydennä AI:lla</button>
+            <div class="plants-edit-ai-btns">
+              <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-scan-btn"
+                      data-i18n="plant_scan_btn">📷 Lue nimilappu</button>
+              <input type="file" id="plant-edit-scan-input" accept="image/*" capture="environment" hidden>
+              <button type="button" class="btn btn-secondary btn-sm" id="plant-edit-ai-fill-btn"
+                      data-i18n="plant_ai_fill_btn">✨ Täydennä AI:lla</button>
+            </div>
           </div>
 
           <form id="plant-edit-form">

@@ -121,6 +121,8 @@
       plant_ai_search_btn: "✨ Hae",
       plant_ai_searching: "Haetaan...",
       plant_ai_summary_heading: "AI-yhteenveto",
+      plant_scan_btn: "📷 Lue nimilappu",
+      plant_scan_reading: "Luetaan...",
       plant_ai_fill_btn: "✨ Täydennä AI:lla",
       plant_ai_summary_btn: "✨ Luo AI-yhteenveto",
       plant_ai_regenerate_btn: "✨ Luo uudelleen",
@@ -259,6 +261,8 @@
       plant_ai_search_btn: "\u2728 Search",
       plant_ai_searching: "Searching...",
       plant_ai_summary_heading: "AI summary",
+      plant_scan_btn: "\uD83D\uDCF7 Read name tag",
+      plant_scan_reading: "Reading...",
       plant_ai_fill_btn: "\u2728 Fill with AI",
       plant_ai_summary_btn: "\u2728 Generate summary",
       plant_ai_regenerate_btn: "\u2728 Regenerate",
@@ -531,6 +535,8 @@
   // Plant edit section elements
   var plantsEditBackBtn = document.getElementById("plants-edit-back-btn");
   var plantsEditDeleteBtn = document.getElementById("plants-edit-delete-btn");
+  var plantEditScanBtn = document.getElementById("plant-edit-scan-btn");
+  var plantEditScanInput = document.getElementById("plant-edit-scan-input");
   var plantEditAiFillBtn = document.getElementById("plant-edit-ai-fill-btn");
   var plantEditForm = document.getElementById("plant-edit-form");
   var plantEditIdInput = document.getElementById("plant-edit-id");
@@ -1457,6 +1463,35 @@
   });
 
   // ---------- AI: fill missing fields (edit section) ----------
+
+  plantEditScanBtn.addEventListener("click", function () {
+    plantEditScanInput.value = "";
+    plantEditScanInput.click();
+  });
+
+  plantEditScanInput.addEventListener("change", async function () {
+    var file = plantEditScanInput.files[0];
+    if (!file) return;
+    plantEditScanBtn.disabled = true;
+    plantEditScanBtn.textContent = t("plant_scan_reading");
+    try {
+      var form = new FormData();
+      form.append("image", file);
+      var res = await apiFetch("/api/ai/plants/read-label", { method: "POST", body: form });
+      if (res) {
+        if (res.latin_name) plantEditLatinNameInput.value = res.latin_name;
+        if (res.common_name) plantEditCommonNameInput.value = res.common_name;
+        if (res.category) plantEditCategoryInput.value = res.category;
+      }
+    } catch (err) {
+      plantEditScanBtn.textContent = err.message || "Virhe";
+      setTimeout(function () { plantEditScanBtn.textContent = t("plant_scan_btn"); }, 4000);
+      plantEditScanBtn.disabled = false;
+      return;
+    }
+    plantEditScanBtn.disabled = false;
+    plantEditScanBtn.textContent = t("plant_scan_btn");
+  });
 
   plantEditAiFillBtn.addEventListener("click", async function () {
     var query = plantEditLatinNameInput.value.trim() || plantEditCommonNameInput.value.trim();

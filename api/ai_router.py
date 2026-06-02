@@ -7,13 +7,13 @@ from pathlib import Path
 from uuid import uuid4
 
 import requests as req
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from PIL import Image, ImageOps
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from admin_router import require_admin
-from ai_client import AIError, ai_complete
+from ai_client import AIError, ai_complete, ai_complete_with_image
 from auth import get_current_user
 from database import get_session
 from models import AIProvider, Plant, PlantImage, User
@@ -130,6 +130,52 @@ async def fill_plant_name(
         common_name=data.get("common_name"),
         category=data.get("category"),
         notes=data.get("notes"),
+    )
+
+
+@router.post("/plants/read-label", response_model=PlantFillNameResponse)
+async def read_plant_label(
+    image: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+) -> PlantFillNameResponse:
+    """Read a plant name tag photo and return structured field suggestions."""
+    data = await image.read()
+    mime = image.content_type or "image/jpeg"
+    if mime not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
+        raise HTTPException(status_code=400, detail="Unsupported image type")
+
+    prompt = (
+        "This is a photo of a plant name tag or label. "
+        "Read all text visible on the tag. "
+        "Return ONLY valid JSON with these keys: "
+        '{"latin_name": "...", "common_name": "...", '
+        '"category": "perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other"}. '
+        "common_name must be in Finnish if recognizable, otherwise use what is written. "
+        "latin_name must be the scientific Latin name if present, otherwise null. "
+        "If a field is not visible or cannot be determined, use null."
+    )
+    try:
+        raw = await ai_complete_with_image(session, data, mime, prompt)
+    except AIError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"AI call failed: {e}")
+
+    text = raw.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
+
+    try:
+        data_json = json.loads(text)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=502, detail="AI returned invalid JSON")
+
+    return PlantFillNameResponse(
+        latin_name=data_json.get("latin_name"),
+        common_name=data_json.get("common_name"),
+        category=data_json.get("category"),
     )
 
 
