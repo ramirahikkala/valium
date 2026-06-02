@@ -121,6 +121,7 @@
       plant_ai_search_btn: "✨ Hae",
       plant_ai_searching: "Haetaan...",
       plant_ai_summary_heading: "AI-yhteenveto",
+      plant_clear_btn: "Tyhjennä",
       plant_scan_btn: "📷 Lue nimilappu",
       plant_scan_reading: "Luetaan...",
       plant_ai_fill_btn: "✨ Täydennä AI:lla",
@@ -261,6 +262,7 @@
       plant_ai_search_btn: "\u2728 Search",
       plant_ai_searching: "Searching...",
       plant_ai_summary_heading: "AI summary",
+      plant_clear_btn: "Clear",
       plant_scan_btn: "\uD83D\uDCF7 Read name tag",
       plant_scan_reading: "Reading...",
       plant_ai_fill_btn: "\u2728 Fill with AI",
@@ -1302,6 +1304,7 @@
       plantsEditImagesSection.hidden = true;
       plantsEditAiSection.hidden = true;
       plantEditExtraFields.hidden = true;
+      plantEditCancelBtn.textContent = t("plant_clear_btn");
       plantsEditHeading.textContent = t("plant_modal_add_heading");
       plantEditSubmitBtn.textContent = t("plant_add_continue_btn");
     } else {
@@ -1323,6 +1326,7 @@
       plantsEditImagesSection.hidden = false;
       plantsEditAiSection.hidden = false;
       plantEditExtraFields.hidden = false;
+      plantEditCancelBtn.textContent = t("cancel");
       plantsEditHeading.textContent = t("plant_modal_edit_heading");
       plantEditSubmitBtn.textContent = t("save");
 
@@ -1368,7 +1372,23 @@
   // Back/cancel buttons delegate to browser history
   plantsDetailBackBtn.addEventListener("click", function () { history.back(); });
   plantsEditBackBtn.addEventListener("click", function () { history.back(); });
-  plantEditCancelBtn.addEventListener("click", function () { history.back(); });
+  plantEditCancelBtn.addEventListener("click", function () {
+    if (plantsCurrentDetail) {
+      history.back();
+    } else {
+      plantEditLatinNameInput.value = "";
+      plantEditCommonNameInput.value = "";
+      plantEditCultivarInput.value = "";
+      plantEditCategoryInput.value = "perennial";
+      plantEditStatusInput.value = "active";
+      plantEditLostYearInput.value = "";
+      plantEditLocationInput.value = "";
+      plantEditYearAcquiredInput.value = "";
+      plantEditSourceInput.value = "";
+      plantEditOwnSeedsInput.checked = false;
+      plantEditNotesInput.value = "";
+    }
+  });
 
   plantsDetailEditBtn.addEventListener("click", function () {
     if (plantsCurrentDetail) openPlantEdit(plantsCurrentDetail);
