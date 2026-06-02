@@ -1481,6 +1481,7 @@
       if (res) {
         if (res.latin_name) plantEditLatinNameInput.value = res.latin_name;
         if (res.common_name) plantEditCommonNameInput.value = res.common_name;
+        if (res.cultivar) plantEditCultivarInput.value = res.cultivar;
         if (res.category) plantEditCategoryInput.value = res.category;
       }
     } catch (err) {

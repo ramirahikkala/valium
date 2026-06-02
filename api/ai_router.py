@@ -147,13 +147,23 @@ async def read_plant_label(
 
     prompt = (
         "This is a photo of a plant name tag or label. "
-        "Read all text visible on the tag. "
-        "Return ONLY valid JSON with these keys: "
-        '{"latin_name": "...", "common_name": "...", '
+        "Read all text on the tag and identify what each piece of text is: "
+        "a scientific Latin name (genus + species, possibly with cultivar in quotes), "
+        "a Finnish common name, a cultivar name, or other text. "
+        "Then return ONLY valid JSON with these keys: "
+        '{"latin_name": "...", "common_name": "...", "cultivar": "...", '
         '"category": "perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other"}. '
-        "common_name must be in Finnish if recognizable, otherwise use what is written. "
-        "latin_name must be the scientific Latin name if present, otherwise null. "
-        "If a field is not visible or cannot be determined, use null."
+        "Rules: "
+        "1. latin_name: use the scientific name from the tag if present. "
+        "   If only a Finnish or common name is on the tag but you know the correct scientific name "
+        "   with HIGH confidence, fill it in — otherwise null. "
+        "2. common_name: use the Finnish name from the tag if present. "
+        "   If only a scientific name is on the tag and you know the Finnish name "
+        "   with HIGH confidence, fill it in — otherwise null. "
+        "3. cultivar: only fill if a cultivar name is explicitly present (often in quotes or after the species name). "
+        "4. category: infer from the plant type. "
+        "5. Use null for any field you are not confident about. "
+        "Do not guess — only fill inferred fields when confidence is very high."
     )
     try:
         raw = await ai_complete_with_image(session, data, mime, prompt)
@@ -175,6 +185,7 @@ async def read_plant_label(
     return PlantFillNameResponse(
         latin_name=data_json.get("latin_name"),
         common_name=data_json.get("common_name"),
+        cultivar=data_json.get("cultivar"),
         category=data_json.get("category"),
     )
 

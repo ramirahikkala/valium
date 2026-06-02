@@ -671,6 +671,7 @@ class PlantFillNameResponse(BaseModel):
 
     latin_name: str | None = None
     common_name: str | None = None
+    cultivar: str | None = None
     category: str | None = None
     notes: str | None = None
 
