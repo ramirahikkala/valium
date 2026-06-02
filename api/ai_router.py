@@ -3,8 +3,11 @@
 import asyncio
 import io
 import json
+import logging
 from pathlib import Path
 from uuid import uuid4
+
+logger = logging.getLogger(__name__)
 
 import requests as req
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
@@ -177,13 +180,16 @@ async def read_plant_label(
         raise HTTPException(status_code=502, detail="AI returned invalid JSON")
 
     label_texts = [v for v in data_json.values() if isinstance(v, str)]
+    logger.info("read-label step 1 (OCR): %s", data_json)
 
     # Look up verified names from iNaturalist/GBIF
     query = data_json.get("latin_name") or data_json.get("common_name")
     lookup = await asyncio.to_thread(_lookup_plant_names, query) if query else None
+    logger.info("read-label step 2 (lookup query=%r): %s", query, lookup)
 
     # Second AI call: classify all available information into the correct fields
     classify_prompt = _build_classify_prompt(label_texts, lookup)
+    logger.info("read-label step 3 classify prompt: %s", classify_prompt)
     try:
         raw2 = await ai_complete(session, classify_prompt)
     except AIError as e:
@@ -200,6 +206,8 @@ async def read_plant_label(
         result = json.loads(text2)
     except json.JSONDecodeError:
         raise HTTPException(status_code=502, detail="AI returned invalid JSON")
+
+    logger.info("read-label step 4 (final): %s", result)
 
     return PlantFillNameResponse(
         latin_name=result.get("latin_name"),
@@ -227,9 +235,13 @@ def _build_classify_prompt(label_texts: list[str], lookup: dict | None) -> str:
     parts += [
         "Using all of the above, assign each piece of text to the correct field.",
         "Rules:",
-        "- latin_name: binomial scientific name (Genus species). Prefer verified data.",
-        "- common_name: Finnish vernacular name. Prefer verified data.",
-        "- cultivar: variety/cultivar name — any proper name that is neither a scientific nor a Finnish name.",
+        "- latin_name: binomial scientific name (Genus species). Prefer verified taxonomy data.",
+        "- common_name: Finnish vernacular name. "
+        "If the label contains a Finnish word for the plant, use that — it is authoritative. "
+        "Use verified taxonomy data only if no Finnish name is on the label. "
+        "Reject any verified name that is clearly not Finnish (e.g. Dutch, German, English).",
+        "- cultivar: any name on the label that is neither the scientific name nor the Finnish name "
+        "(e.g. English proper names like 'Melton Pastels', color descriptors, variety names).",
         "- category: perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other",
         "Return ONLY valid JSON: "
         '{"latin_name": "...", "common_name": "...", "cultivar": "...", "category": "..."}. '
