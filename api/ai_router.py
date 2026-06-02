@@ -147,23 +147,18 @@ async def read_plant_label(
 
     prompt = (
         "This is a photo of a plant name tag or label. "
-        "Read all text on the tag and identify what each piece of text is: "
-        "a scientific Latin name (genus + species, possibly with cultivar in quotes), "
-        "a Finnish common name, a cultivar name, or other text. "
-        "Then return ONLY valid JSON with these keys: "
-        '{"latin_name": "...", "common_name": "...", "cultivar": "...", '
-        '"category": "perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other"}. '
-        "Rules: "
-        "1. latin_name: use the scientific name from the tag if present. "
-        "   If only a Finnish or common name is on the tag but you know the correct scientific name "
-        "   with HIGH confidence, fill it in — otherwise null. "
-        "2. common_name: use the Finnish name from the tag if present. "
-        "   If only a scientific name is on the tag and you know the Finnish name "
-        "   with HIGH confidence, fill it in — otherwise null. "
-        "3. cultivar: only fill if a cultivar name is explicitly present (often in quotes or after the species name). "
-        "4. category: infer from the plant type. "
-        "5. Use null for any field you are not confident about. "
-        "Do not guess — only fill inferred fields when confidence is very high."
+        "Read all text and classify each part using these rules:\n"
+        "- latin_name: binomial scientific name in Genus species format (Latin, italicized on tags). "
+        "  Never a Finnish word. If absent but you know it with HIGH confidence from the common name, fill it in.\n"
+        "- common_name: the plain plant name in Finnish or another vernacular language. "
+        "  If only a latin name is present and you know the Finnish name with HIGH confidence, fill it in.\n"
+        "- cultivar: a variety/color/form descriptor — typically in parentheses like '(valkoinen)', "
+        "  in single quotes like 'Alba', or appended after the main name. "
+        "  Strip the parentheses and keep only the descriptor text.\n"
+        "- category: infer from plant type: perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other\n"
+        "Return ONLY valid JSON: "
+        '{"latin_name": "...", "common_name": "...", "cultivar": "...", "category": "..."}. '
+        "Use null for fields you cannot determine or are not confident about."
     )
     try:
         raw = await ai_complete_with_image(session, data, mime, prompt)
