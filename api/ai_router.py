@@ -149,16 +149,15 @@ async def read_plant_label(
         "This is a photo of a plant name tag or label. "
         "Read all text and classify each part using these rules:\n"
         "- latin_name: binomial scientific name in Genus species format (Latin, italicized on tags). "
-        "  Never a Finnish word. If absent but you know it with HIGH confidence from the common name, fill it in.\n"
-        "- common_name: the plain plant name in Finnish or another vernacular language. "
-        "  If only a latin name is present and you know the Finnish name with HIGH confidence, fill it in.\n"
+        "  Never a Finnish word.\n"
+        "- common_name: the plain plant name in Finnish or another vernacular language.\n"
         "- cultivar: a variety/color/form descriptor — typically in parentheses like '(valkoinen)', "
         "  in single quotes like 'Alba', or appended after the main name. "
         "  Strip the parentheses and keep only the descriptor text.\n"
         "- category: infer from plant type: perennial|annual|shrub|tree|houseplant|vegetable|herb|bulb|other\n"
         "Return ONLY valid JSON: "
         '{"latin_name": "...", "common_name": "...", "cultivar": "...", "category": "..."}. '
-        "Use null for fields you cannot determine or are not confident about."
+        "Use null for fields not present on the tag. Do not infer or guess — just read what is written."
     )
     try:
         raw = await ai_complete_with_image(session, data, mime, prompt)
@@ -177,12 +176,99 @@ async def read_plant_label(
     except json.JSONDecodeError:
         raise HTTPException(status_code=502, detail="AI returned invalid JSON")
 
+    latin_from_label = data_json.get("latin_name")
+    common_from_label = data_json.get("common_name")
+    cultivar = data_json.get("cultivar")
+    category = data_json.get("category")
+
+    # Look up verified names from iNaturalist/GBIF using whatever the label gave us
+    query = latin_from_label or common_from_label
+    if query:
+        lookup = await asyncio.to_thread(_lookup_plant_names, query)
+        if lookup:
+            # Label text is authoritative; lookup fills in the missing counterpart
+            latin_name = latin_from_label or lookup.get("latin_name")
+            common_name = common_from_label or lookup.get("common_name")
+            category = category or lookup.get("category")
+        else:
+            latin_name = latin_from_label
+            common_name = common_from_label
+    else:
+        latin_name = None
+        common_name = None
+
     return PlantFillNameResponse(
-        latin_name=data_json.get("latin_name"),
-        common_name=data_json.get("common_name"),
-        cultivar=data_json.get("cultivar"),
-        category=data_json.get("category"),
+        latin_name=latin_name,
+        common_name=common_name,
+        cultivar=cultivar,
+        category=category,
     )
+
+
+def _lookup_plant_names(query: str) -> dict | None:
+    """Look up verified latin + Finnish name via iNaturalist, fallback to GBIF."""
+    return _lookup_inaturalist(query) or _lookup_gbif_names(query)
+
+
+def _lookup_inaturalist(query: str) -> dict | None:
+    """Search iNaturalist taxa with Finnish locale. Returns {latin_name, common_name} or None."""
+    try:
+        resp = req.get(
+            "https://api.inaturalist.org/v1/taxa",
+            params={
+                "q": query,
+                "locale": "fi",
+                "preferred_place_id": 7506,  # Finland
+                "rank": "species,subspecies,variety,form",
+                "per_page": 3,
+            },
+            timeout=10,
+            headers={"User-Agent": "Valium-plant-app/1.0"},
+        )
+        resp.raise_for_status()
+        for taxon in resp.json().get("results", []):
+            latin = taxon.get("name")
+            finnish = taxon.get("preferred_common_name")
+            if latin:
+                return {"latin_name": latin, "common_name": finnish}
+    except Exception:
+        pass
+    return None
+
+
+def _lookup_gbif_names(query: str) -> dict | None:
+    """Search GBIF species match + vernacular names. Returns {latin_name, common_name} or None."""
+    try:
+        match = req.get(
+            "https://api.gbif.org/v1/species/match",
+            params={"name": query, "kingdom": "Plantae"},
+            timeout=10,
+            headers={"User-Agent": "Valium-plant-app/1.0"},
+        )
+        match.raise_for_status()
+        data = match.json()
+        if data.get("matchType") == "NONE":
+            return None
+        latin = data.get("canonicalName") or data.get("scientificName")
+        usage_key = data.get("usageKey")
+        if not latin or not usage_key:
+            return None
+        # Fetch Finnish vernacular name
+        vern = req.get(
+            f"https://api.gbif.org/v1/species/{usage_key}/vernacularNames",
+            params={"limit": 50},
+            timeout=10,
+            headers={"User-Agent": "Valium-plant-app/1.0"},
+        )
+        vern.raise_for_status()
+        finnish = next(
+            (v["vernacularName"] for v in vern.json().get("results", []) if v.get("language") == "fin"),
+            None,
+        )
+        return {"latin_name": latin, "common_name": finnish}
+    except Exception:
+        pass
+    return None
 
 
 @router.post("/plants/fill-guide", response_model=PlantGrowingGuideFillResponse)
