@@ -206,8 +206,24 @@ async def read_plant_label(
 
 
 def _lookup_plant_names(query: str) -> dict | None:
-    """Look up verified latin + Finnish name via iNaturalist, fallback to GBIF."""
-    return _lookup_inaturalist(query) or _lookup_gbif_names(query)
+    """Look up verified latin + Finnish name. Tries multiple strategies for typo tolerance."""
+    queries = _search_candidates(query)
+    for q in queries:
+        result = _lookup_inaturalist(q) or _lookup_gbif_names(q)
+        if result:
+            return result
+    return None
+
+
+def _search_candidates(query: str) -> list[str]:
+    """Return a list of search queries to try, from most to least specific."""
+    query = query.strip()
+    candidates = [query]
+    words = query.split()
+    # If multi-word query, also try just the first word (genus or first word of Finnish name)
+    if len(words) > 1:
+        candidates.append(words[0])
+    return candidates
 
 
 def _lookup_inaturalist(query: str) -> dict | None:
@@ -237,16 +253,17 @@ def _lookup_inaturalist(query: str) -> dict | None:
 
 
 def _lookup_gbif_names(query: str) -> dict | None:
-    """Search GBIF species match + vernacular names. Returns {latin_name, common_name} or None."""
+    """Search GBIF species match (fuzzy) + vernacular names. Returns {latin_name, common_name} or None."""
     try:
         match = req.get(
             "https://api.gbif.org/v1/species/match",
-            params={"name": query, "kingdom": "Plantae"},
+            params={"name": query, "kingdom": "Plantae", "verbose": "false"},
             timeout=10,
             headers={"User-Agent": "Valium-plant-app/1.0"},
         )
         match.raise_for_status()
         data = match.json()
+        # Accept EXACT, FUZZY, HIGHERRANK matches but not NONE
         if data.get("matchType") == "NONE":
             return None
         latin = data.get("canonicalName") or data.get("scientificName")
