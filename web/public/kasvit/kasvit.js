@@ -1019,9 +1019,10 @@
       return;
     }
 
+    var searchTerm = plantsSearchInput.value.trim().toLowerCase();
     if (!plantsGroupBy) {
       plants.forEach(function (p) {
-        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p) : createPlantCard(p));
+        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p, searchTerm) : createPlantCard(p, searchTerm));
       });
       return;
     }
@@ -1040,7 +1041,7 @@
       heading.textContent = plantGroupLabel(key, plantsGroupBy);
       plantsGridEl.appendChild(heading);
       groups[key].forEach(function (p) {
-        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p) : createPlantCard(p));
+        plantsGridEl.appendChild(plantsViewMode === "list" ? createPlantRow(p, searchTerm) : createPlantCard(p, searchTerm));
       });
     });
   }
@@ -1059,21 +1060,23 @@
     return key;
   }
 
-  function createPlantRow(plant) {
+  function createPlantRow(plant, searchTerm) {
     var row = document.createElement("div");
     row.className = "plant-list-row";
     row.dataset.id = plant.id;
     var name = '<span class="plant-card-latin" style="font-style:italic">' + escapeHtml(plant.latin_name) + "</span>" +
       (plant.cultivar ? ' <span class="plant-card-cultivar">\u2018' + escapeHtml(plant.cultivar) + "\u2019</span>" : "") +
       (plant.common_name ? ' <span class="plant-list-common">\u2013 ' + escapeHtml(plant.common_name) + "</span>" : "");
+    var showSource = searchTerm && plant.source && plant.source.toLowerCase().includes(searchTerm);
     row.innerHTML = '<span class="plant-list-name">' + name + "</span>" +
+      (showSource ? '<span class="plant-list-source">' + escapeHtml(plant.source) + "</span>" : "") +
       (plant.status !== "active"
         ? '<span class="plant-badge plant-status-' + plant.status + '">' + escapeHtml(plantStatusLabel(plant.status)) + "</span>"
         : "");
     return row;
   }
 
-  function createPlantCard(plant) {
+  function createPlantCard(plant, searchTerm) {
     var card = document.createElement("div");
     card.className = "plant-card";
     card.dataset.id = plant.id;
@@ -1097,6 +1100,9 @@
     }
     if (plant.year_acquired) {
       meta.push('<span class="plant-year-tag">' + plant.year_acquired + "</span>");
+    }
+    if (searchTerm && plant.source && plant.source.toLowerCase().includes(searchTerm)) {
+      meta.push('<span class="plant-source-tag">\uD83C\uDFEA ' + escapeHtml(plant.source) + "</span>");
     }
     if (plant.own_seeds) {
       meta.push('<span class="plant-badge plant-own-seeds-badge" title="' + t("plant_label_own_seeds") + '">\uD83C\uDF31</span>');

@@ -2423,7 +2423,9 @@ input[type="datetime-local"]:focus {
 }
 
 .plant-location-tag,
-.plant-year-tag {
+.plant-year-tag,
+.plant-source-tag,
+.plant-list-source {
   font-size: 0.75em;
   color: var(--color-text-muted);
   align-self: center;
