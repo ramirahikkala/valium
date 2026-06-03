@@ -193,6 +193,7 @@ async def list_plants(
                 Plant.latin_name.ilike(like),
                 Plant.common_name.ilike(like),
                 Plant.cultivar.ilike(like),
+                Plant.source.ilike(like),
             )
         )
     result = await session.execute(stmt)
