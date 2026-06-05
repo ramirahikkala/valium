@@ -1302,7 +1302,7 @@
       plantEditLostYearGroup.hidden = true;
       plantEditLostYearInput.value = "";
       plantEditLocationInput.value = "";
-      plantEditYearAcquiredInput.value = "";
+      plantEditYearAcquiredInput.value = new Date().getFullYear();
       plantEditSourceInput.value = "";
       plantEditOwnSeedsInput.checked = false;
       plantEditNotesInput.value = "";
@@ -1389,7 +1389,7 @@
       plantEditStatusInput.value = "active";
       plantEditLostYearInput.value = "";
       plantEditLocationInput.value = "";
-      plantEditYearAcquiredInput.value = "";
+      plantEditYearAcquiredInput.value = new Date().getFullYear();
       plantEditSourceInput.value = "";
       plantEditOwnSeedsInput.checked = false;
       plantEditNotesInput.value = "";
