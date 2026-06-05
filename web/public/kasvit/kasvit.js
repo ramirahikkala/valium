@@ -1646,8 +1646,11 @@
       own_seeds: plantEditOwnSeedsInput.checked,
       notes: plantEditNotesInput.value.trim() || null,
     };
-    if (plantsEditIsNew) {
-      try {
+    plantEditSubmitBtn.disabled = true;
+    var origLabel = plantEditSubmitBtn.textContent;
+    plantEditSubmitBtn.textContent = "...";
+    try {
+      if (plantsEditIsNew) {
         var created = await apiFetch(PLANTS_API, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -1658,11 +1661,9 @@
           var fresh = plantsData.find(function (p) { return p.id === created.id; });
           if (fresh) openPlantEdit(fresh, true);
         }
-      } catch (_) {}
-    } else {
-      var id = plantEditIdInput.value;
-      if (!id) return;
-      try {
+      } else {
+        var id = plantEditIdInput.value;
+        if (!id) return;
         await apiFetch(PLANTS_API + "/" + id, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -1678,7 +1679,10 @@
           plantsListSection.hidden = false;
           plantsCurrentDetail = null;
         }
-      } catch (_) {}
+      }
+    } finally {
+      plantEditSubmitBtn.disabled = false;
+      plantEditSubmitBtn.textContent = origLabel;
     }
   });
 
