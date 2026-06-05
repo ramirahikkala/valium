@@ -1510,14 +1510,10 @@
         if (res.cultivar) plantEditCultivarInput.value = res.cultivar;
         if (res.category) plantEditCategoryInput.value = res.category;
       }
-    } catch (err) {
-      plantEditScanBtn.textContent = err.message || "Virhe";
-      setTimeout(function () { plantEditScanBtn.textContent = t("plant_scan_btn"); }, 4000);
+    } finally {
       plantEditScanBtn.disabled = false;
-      return;
+      plantEditScanBtn.textContent = t("plant_scan_btn");
     }
-    plantEditScanBtn.disabled = false;
-    plantEditScanBtn.textContent = t("plant_scan_btn");
   });
 
   plantEditAiFillBtn.addEventListener("click", async function () {
