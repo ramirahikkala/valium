@@ -347,6 +347,19 @@
     setTimeout(function () { errorEl.hidden = true; }, 5000);
   }
 
+  // Disable btn and show loadingLabel while fn() runs, restore afterwards.
+  // Errors are shown by apiFetch via showError — no extra handling needed.
+  async function withBtnLoading(btn, loadingLabel, restoreLabel, fn) {
+    btn.disabled = true;
+    btn.textContent = loadingLabel;
+    try {
+      await fn();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = typeof restoreLabel === "function" ? restoreLabel() : restoreLabel;
+    }
+  }
+
   async function apiFetch(url, options) {
     try {
       options = options || {};
@@ -870,8 +883,6 @@
     document.getElementById("guide-edit-plant-name").value = guide ? guide.plant_name : "";
     document.getElementById("guide-edit-latin-name").value = guide ? guide.latin_name : "";
     document.getElementById("guide-edit-text").value = guide ? guide.guide_text : "";
-    var errEl = document.getElementById("guide-ai-error");
-    if (errEl) errEl.hidden = true;
     window.scrollTo(0, 0);
   }
 
@@ -911,7 +922,8 @@
     var latinName = document.getElementById("guide-edit-latin-name").value.trim();
     var guideText = document.getElementById("guide-edit-text").value;
     if (!plantName) return;
-    try {
+    var btn = this;
+    await withBtnLoading(btn, "…", t("save"), async function () {
       var body = { plant_name: plantName, latin_name: latinName, guide_text: guideText };
       var result;
       if (plantsCurrentGuide) {
@@ -930,7 +942,7 @@
         plantsCurrentGuide = plantsGuidesData.find(function (g) { return g.id === result.id; }) || result;
         openPlantGuideDetail(plantsCurrentGuide);
       }
-    } catch (_) {}
+    });
   });
 
   document.getElementById("add-guide-btn").addEventListener("click", function () {
@@ -942,24 +954,16 @@
   document.getElementById("guide-ai-fill-btn").addEventListener("click", async function () {
     var query = document.getElementById("guide-edit-latin-name").value.trim() ||
                 document.getElementById("guide-edit-plant-name").value.trim();
-    var errEl = document.getElementById("guide-ai-error");
     if (!query) return;
-    var btn = document.getElementById("guide-ai-fill-btn");
-    btn.disabled = true;
-    btn.textContent = "\u2026";
-    if (errEl) errEl.hidden = true;
-    try {
+    var btn = this;
+    await withBtnLoading(btn, "…", t("plants_guide_ai_btn"), async function () {
       var result = await apiFetch("/api/ai/plants/fill-guide?query=" + encodeURIComponent(query));
       if (result) {
         if (result.plant_name) document.getElementById("guide-edit-plant-name").value = result.plant_name;
         if (result.latin_name) document.getElementById("guide-edit-latin-name").value = result.latin_name;
         if (result.guide_text) document.getElementById("guide-edit-text").value = result.guide_text;
       }
-    } catch (e) {
-      if (errEl) { errEl.textContent = e.message || t("error_generic"); errEl.hidden = false; }
-    }
-    btn.disabled = false;
-    btn.textContent = t("plants_guide_ai_btn");
+    });
   });
 
   // ---------- Plants list ----------
@@ -1505,9 +1509,7 @@
   plantEditScanInput.addEventListener("change", async function () {
     var file = plantEditScanInput.files[0];
     if (!file) return;
-    plantEditScanBtn.disabled = true;
-    plantEditScanBtn.textContent = t("plant_scan_reading");
-    try {
+    await withBtnLoading(plantEditScanBtn, t("plant_scan_reading"), t("plant_scan_btn"), async function () {
       var form = new FormData();
       form.append("image", file);
       var res = await apiFetch("/api/ai/plants/read-label", { method: "POST", body: form });
@@ -1517,30 +1519,21 @@
         if (res.cultivar) plantEditCultivarInput.value = res.cultivar;
         if (res.category) plantEditCategoryInput.value = res.category;
       }
-    } finally {
-      plantEditScanBtn.disabled = false;
-      plantEditScanBtn.textContent = t("plant_scan_btn");
-    }
+      plantEditScanInput.value = "";
+    });
   });
 
   plantEditAiFillBtn.addEventListener("click", async function () {
     var query = plantEditLatinNameInput.value.trim() || plantEditCommonNameInput.value.trim();
     if (!query) return;
-    plantEditAiFillBtn.disabled = true;
-    plantEditAiFillBtn.textContent = t("plant_ai_searching");
-    try {
+    await withBtnLoading(plantEditAiFillBtn, t("plant_ai_searching"), t("plant_ai_fill_btn"), async function () {
       var res = await apiFetch("/api/ai/plants/fill-name?query=" + encodeURIComponent(query), { method: "POST" });
       if (res) {
         if (!plantEditLatinNameInput.value.trim() && res.latin_name) plantEditLatinNameInput.value = res.latin_name;
         if (!plantEditCommonNameInput.value.trim() && res.common_name) plantEditCommonNameInput.value = res.common_name;
         if (!plantEditCategoryInput.value && res.category) plantEditCategoryInput.value = res.category;
       }
-    } catch (err) {
-      plantEditAiFillBtn.textContent = err.message || "Virhe";
-      setTimeout(function () { plantEditAiFillBtn.textContent = t("plant_ai_fill_btn"); }, 4000);
-    }
-    plantEditAiFillBtn.disabled = false;
-    plantEditAiFillBtn.textContent = t("plant_ai_fill_btn");
+    });
   });
 
   // ---------- AI: plant summary (edit section) ----------
@@ -1553,9 +1546,7 @@
 
   plantsEditAiSummaryBtn.addEventListener("click", async function () {
     if (!plantsCurrentDetail) return;
-    plantsEditAiSummaryBtn.disabled = true;
-    plantsEditAiSummaryBtn.textContent = t("plant_ai_summarizing");
-    try {
+    await withBtnLoading(plantsEditAiSummaryBtn, t("plant_ai_summarizing"), summaryBtnLabel, async function () {
       var updated = await apiFetch(
         "/api/ai/plants/" + plantsCurrentDetail.id + "/summary", { method: "POST" });
       if (updated && updated.ai_summary) {
@@ -1563,30 +1554,17 @@
         plantsEditAiSummarySection.hidden = false;
         plantsCurrentDetail = updated;
       }
-    } catch (err) {
-      plantsEditAiSummaryBtn.textContent = err.message || "Virhe";
-      setTimeout(function () { plantsEditAiSummaryBtn.textContent = summaryBtnLabel(); }, 4000);
-    }
-    plantsEditAiSummaryBtn.disabled = false;
-    plantsEditAiSummaryBtn.textContent = summaryBtnLabel();
+    });
   });
 
   // ---------- AI: image fetch (edit section) ----------
 
   plantsEditWikiImageBtn.addEventListener("click", async function () {
     if (!plantsCurrentDetail) return;
-    plantsEditWikiImageBtn.disabled = true;
-    plantsEditWikiImageBtn.textContent = t("plant_ai_fetching_image");
-    try {
-      await apiFetch(
-        "/api/ai/plants/" + plantsCurrentDetail.id + "/fetch-image", { method: "POST" });
+    await withBtnLoading(plantsEditWikiImageBtn, t("plant_ai_fetching_image"), t("plant_ai_fetch_image_btn"), async function () {
+      await apiFetch("/api/ai/plants/" + plantsCurrentDetail.id + "/fetch-image", { method: "POST" });
       await reloadCurrentEdit();
-    } catch (err) {
-      plantsEditWikiImageBtn.textContent = err.message || "Virhe";
-      setTimeout(function () { plantsEditWikiImageBtn.textContent = t("plant_ai_fetch_image_btn"); }, 4000);
-    }
-    plantsEditWikiImageBtn.disabled = false;
-    plantsEditWikiImageBtn.textContent = t("plant_ai_fetch_image_btn");
+    });
   });
 
   // ---------- Lightbox ----------
@@ -1649,10 +1627,8 @@
       own_seeds: plantEditOwnSeedsInput.checked,
       notes: plantEditNotesInput.value.trim() || null,
     };
-    plantEditSubmitBtn.disabled = true;
     var origLabel = plantEditSubmitBtn.textContent;
-    plantEditSubmitBtn.textContent = "...";
-    try {
+    await withBtnLoading(plantEditSubmitBtn, "...", origLabel, async function () {
       if (plantsEditIsNew) {
         var created = await apiFetch(PLANTS_API, {
           method: "POST",
@@ -1683,10 +1659,7 @@
           plantsCurrentDetail = null;
         }
       }
-    } finally {
-      plantEditSubmitBtn.disabled = false;
-      plantEditSubmitBtn.textContent = origLabel;
-    }
+    });
   });
 
   // ---------- initApp ----------
