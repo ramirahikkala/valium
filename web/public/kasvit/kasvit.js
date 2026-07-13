@@ -1447,26 +1447,33 @@
 
   // ---------- Image upload (edit section) ----------
 
-  async function uploadPlantImage(file) {
-    if (!file || !plantsCurrentDetail) return;
+  async function uploadPlantImage(file, triggerInput) {
+    if (!file) return;
+    if (!plantsCurrentDetail) {
+      showError("Tallenna kasvi ensin ennen kuvan lisäämistä.");
+      return;
+    }
+    var labels = document.querySelectorAll(".plants-upload-btn");
+    labels.forEach(function (l) { l.classList.add("plants-upload-btn--loading"); });
     var fd = new FormData();
     fd.append("file", file);
     try {
       await apiFetch(PLANTS_API + "/" + plantsCurrentDetail.id + "/images", { method: "POST", body: fd });
       await reloadCurrentEdit();
-    } catch (_) {}
+    } finally {
+      labels.forEach(function (l) { l.classList.remove("plants-upload-btn--loading"); });
+      if (triggerInput) triggerInput.value = "";
+    }
   }
 
   plantsEditImageUpload.addEventListener("change", async function () {
     var file = this.files[0];
-    this.value = "";
-    await uploadPlantImage(file);
+    await uploadPlantImage(file, this);
   });
 
   plantsEditImageCamera.addEventListener("change", async function () {
     var file = this.files[0];
-    this.value = "";
-    await uploadPlantImage(file);
+    await uploadPlantImage(file, this);
   });
 
   plantsEditGallery.addEventListener("click", async function (e) {

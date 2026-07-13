@@ -1,6 +1,7 @@
 """Plants module: locations and plant catalogue CRUD endpoints."""
 
 import io
+import logging
 from pathlib import Path
 from uuid import uuid4
 
@@ -29,6 +30,8 @@ from schemas import (
     PlantResponse,
     PlantUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/plants", tags=["plants"])
 
@@ -418,8 +421,13 @@ async def upload_plant_image(
         raise HTTPException(status_code=400, detail="File must be an image")
 
     data = await file.read()
-    img = Image.open(io.BytesIO(data))
-    img = ImageOps.exif_transpose(img)
+    logger.info("upload_plant_image plant=%s size=%d content_type=%s", plant_id, len(data), file.content_type)
+    try:
+        img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
+    except Exception as exc:
+        logger.exception("upload_plant_image: failed to open image plant=%s", plant_id)
+        raise HTTPException(status_code=400, detail=f"Could not read image: {exc}") from exc
 
     if img.width > 1600:
         ratio = 1600 / img.width
@@ -433,6 +441,7 @@ async def upload_plant_image(
     dest = UPLOAD_DIR / str(plant_id)
     dest.mkdir(parents=True, exist_ok=True)
     img.save(dest / Path(filename).name, format="JPEG", quality=85)
+    logger.info("upload_plant_image: saved %s", filename)
 
     image = PlantImage(
         plant_id=plant_id,
