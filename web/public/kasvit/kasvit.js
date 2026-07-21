@@ -398,6 +398,9 @@
     authToken = null;
     currentUser = null;
     localStorage.removeItem("authToken");
+    if (typeof google !== "undefined" && google.accounts) {
+      google.accounts.id.disableAutoSelect();
+    }
     showLogin();
   }
 
