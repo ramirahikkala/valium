@@ -399,7 +399,6 @@
     currentUser = null;
     localStorage.removeItem("authToken");
     showLogin();
-    initGoogleSignIn();
   }
 
   async function handleGoogleCredential(response) {
