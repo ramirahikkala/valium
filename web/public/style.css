@@ -2718,7 +2718,7 @@ input[type="datetime-local"]:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100;
 }
 .plant-lightbox[hidden] {
   display: none !important;
@@ -3719,4 +3719,22 @@ input[type="datetime-local"]:focus {
   .kasvit-layout .main-content {
     padding: 1rem 0.75rem;
   }
+}
+
+/* Plants moved to kasvio.app — old list is read-only */
+.readonly-banner {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  padding: 0.6rem 1rem;
+  background: #fff3cd;
+  color: #664d03;
+  border-bottom: 1px solid #ffe69c;
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.readonly-banner a {
+  color: inherit;
+  font-weight: 600;
 }
