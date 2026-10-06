@@ -20,7 +20,7 @@ from ai_client import AIError, ai_complete, ai_complete_with_image
 from auth import get_current_user
 from database import get_session
 from models import AIProvider, Plant, PlantImage, User
-from plants_router import UPLOAD_DIR, _load_plant, _plant_response
+from plants_router import UPLOAD_DIR, _load_plant, _plant_response, block_plant_writes
 from schemas import (
     AIProviderCreate,
     AIProviderResponse,
@@ -373,7 +373,7 @@ async def fill_plant_guide(
     )
 
 
-@router.post("/plants/{plant_id}/summary", response_model=PlantResponse)
+@router.post("/plants/{plant_id}/summary", response_model=PlantResponse, dependencies=[Depends(block_plant_writes)])
 async def generate_plant_summary(
     plant_id: int,
     current_user: User = Depends(get_current_user),
@@ -398,7 +398,7 @@ async def generate_plant_summary(
     return _plant_response(plant)
 
 
-@router.post("/plants/{plant_id}/fetch-image", response_model=PlantResponse)
+@router.post("/plants/{plant_id}/fetch-image", response_model=PlantResponse, dependencies=[Depends(block_plant_writes)])
 async def fetch_plant_image(
     plant_id: int,
     current_user: User = Depends(get_current_user),

@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from PIL import Image, ImageOps
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +33,19 @@ from schemas import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/plants", tags=["plants"])
+READ_ONLY_DETAIL = (
+    "Valiumin kasvilista on vain luku -tilassa. "
+    "Tee muutokset uudessa sovelluksessa: https://kasvio.app"
+)
+
+
+def block_plant_writes(request: Request) -> None:
+    """Reject all write requests: the plant list has moved to kasvio.app."""
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        raise HTTPException(status_code=403, detail=READ_ONLY_DETAIL)
+
+
+router = APIRouter(prefix="/plants", tags=["plants"], dependencies=[Depends(block_plant_writes)])
 
 UPLOAD_DIR = Path("/app/plant_images")
 
